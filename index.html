@@ -96,7 +96,6 @@
     </div>
 
     <script>
-        // Use relative path for Nginx proxying
         const API_BASE = '/api';
         
         let state = {
@@ -186,27 +185,25 @@
             console.log("System: Starting initialization sequence...");
             const saved = localStorage.getItem('hr_user');
             
-            // EMERGENCY BYPASS: If API hangs, show UI after 3 seconds
+            // EMERGENCY BYPASS: If API hangs, show UI after 2.5 seconds
             const failSafe = setTimeout(() => {
-                console.warn("System: Connection timeout reached. Forcing UI display.");
-                bypassSync();
-            }, 3000);
+                hideLoading();
+                if (saved) { state.user = JSON.parse(saved); showApp(); } else showLogin();
+            }, 2500);
 
             try {
                 if (saved) {
                     state.user = JSON.parse(saved);
-                    console.log("System: Cached session detected. Syncing...");
                     await syncData();
                     clearTimeout(failSafe);
                     showApp();
                 } else {
-                    console.log("System: No session. Showing login.");
                     clearTimeout(failSafe);
                     hideLoading();
                     showLogin();
                 }
             } catch (err) {
-                console.error("System Error: Initialization Failure.", err);
+                console.error("Init Error:", err);
                 hideLoading();
                 showLogin();
             }
@@ -254,7 +251,7 @@
         
         function showApp() {
             try {
-                hideLoading(); // CRITICAL: Ensure loader is gone
+                hideLoading();
                 hideLogin();
                 document.getElementById('app-shell').classList.remove('hidden');
                 if (state.user) {
@@ -304,7 +301,7 @@
 
         function renderView(id) {
             const container = document.getElementById('view-container');
-            container.innerHTML = `<div class="p-20 text-center text-slate-300 font-black animate-pulse">SYNCHRONIZING...</div>`;
+            container.innerHTML = `<div class="p-20 text-center text-slate-300 font-black animate-pulse">UPDATING MATRIX...</div>`;
             try {
                 switch(id) {
                     case 'dashboard': return renderDashboard();
@@ -327,12 +324,22 @@
             const annual = Number(state.user.leave_annual || 0);
             const wop = Number(state.user.leave_casual || 0);
             container.innerHTML = `
-                <div class="animate-fade-in space-y-8 text-slate-900">
-                    <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase font-sans">Dashboard</h2>
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 font-sans">
-                        <div class="bg-gradient-to-br from-green-600 to-green-700 p-8 rounded-[2rem] text-white shadow-xl"><p class="text-[10px] font-black uppercase opacity-60">Status</p><p class="text-3xl font-black mt-2 uppercase">${(state.attendance && state.attendance[0]?.type === 'Clock In') ? 'Active' : 'Offline'}</p></div>
-                        <div class="bg-gradient-to-br from-blue-600 to-blue-700 p-8 rounded-[2rem] text-white shadow-xl"><p class="text-[10px] font-black uppercase opacity-60">Leaves Bal</p><p class="text-3xl font-black mt-2">${annual + wop} Days</p></div>
+                <div class="animate-fade-in space-y-8 text-slate-900 font-sans">
+                    <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Dashboard</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div class="bg-gradient-to-br from-green-600 to-green-700 p-8 rounded-[2rem] text-white shadow-xl">
+                            <p class="text-[10px] font-black uppercase opacity-60">Session</p>
+                            <p class="text-3xl font-black mt-2 uppercase">${(state.attendance && state.attendance[0]?.type === 'Clock In') ? 'Active' : 'Offline'}</p>
+                        </div>
+                        <div class="bg-gradient-to-br from-blue-600 to-blue-700 p-8 rounded-[2rem] text-white shadow-xl">
+                            <p class="text-[10px] font-black uppercase opacity-60">Leaves Bal</p>
+                            <div class="flex items-end gap-2 mt-2">
+                                <p class="text-3xl font-black">${annual}</p><span class="text-[8px] font-bold uppercase text-blue-100 mb-1">AL</span>
+                                <p class="text-3xl font-black ml-2">${wop}</p><span class="text-[8px] font-bold uppercase text-blue-100 mb-1">WOP</span>
+                            </div>
+                        </div>
                         <div class="bg-white p-8 rounded-[2rem] border shadow-sm"><p class="text-[10px] font-black uppercase text-slate-400">Payroll Status</p><p class="text-2xl font-black text-slate-800 mt-2">Verified</p></div>
+                        <div class="bg-white p-8 rounded-[2rem] border shadow-sm"><p class="text-[10px] font-black uppercase text-slate-400">Role</p><p class="text-2xl font-black text-slate-800 mt-2 capitalize">${state.user.role}</p></div>
                     </div>
                 </div>
             `;
@@ -346,13 +353,13 @@
             container.innerHTML = `
                 <div class="animate-fade-in space-y-8 text-slate-900 font-sans">
                     <div class="flex justify-between items-center">
-                        <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Attendance Hub</h2>
+                        <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Attendance</h2>
                         <input type="month" value="${state.selectedAttendanceMonth}" onchange="state.selectedAttendanceMonth=this.value; renderAttendance()" class="p-3 border-2 rounded-2xl font-bold shadow-sm">
                     </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 font-sans">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div class="bg-white border-2 p-8 rounded-[2rem] flex items-center gap-6 shadow-sm">
                             <div class="h-14 w-14 rounded-2xl bg-green-50 text-green-700 flex items-center justify-center shadow-inner"><i data-lucide="calendar"></i></div>
-                            <div><p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Monthly Days</p><p class="text-3xl font-black">${stats.daysPresent} Days</p></div>
+                            <div><p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Monthly Days</p><p class="text-3xl font-black">${stats.daysPresent}</p></div>
                         </div>
                         <div class="bg-white border-2 p-8 rounded-[2rem] flex items-center gap-6 shadow-sm">
                             <div class="h-14 w-14 rounded-2xl bg-blue-50 text-blue-700 flex items-center justify-center shadow-inner"><i data-lucide="clock"></i></div>
@@ -365,6 +372,11 @@
                             <button onclick="logAttendance('Clock In')" class="bg-green-700 text-white px-10 py-5 rounded-2xl font-black uppercase shadow-xl hover:bg-green-800 active:scale-95 transition-all">Clock In</button>
                             <button onclick="logAttendance('Clock Out')" class="bg-white border-2 border-slate-200 px-10 py-5 rounded-2xl font-black uppercase text-slate-700 hover:bg-slate-50 transition-all active:scale-95">Clock Out</button>
                         </div>
+                    </div>
+                    <div class="bg-white rounded-[2.5rem] p-10 border border-slate-100 shadow-sm max-h-[400px] overflow-y-auto custom-scrollbar">
+                         <h4 class="text-xs font-black uppercase text-slate-400 mb-6">Activity Logs</h4>
+                         ${filtered.map(l => `<div class="flex justify-between py-4 border-b"><div><p class="font-black text-slate-700">${l.type}</p><p class="text-xs text-slate-400 font-bold">${formatDate(l.date_str)}</p></div><p class="font-mono font-bold text-slate-500">${l.time_str}</p></div>`).join('')}
+                         ${filtered.length === 0 ? '<p class="py-10 text-center text-slate-300 font-bold uppercase">No records found</p>' : ''}
                     </div>
                 </div>
             `;
@@ -383,7 +395,7 @@
                     if (res.ok) { alert(`${type} Successful!`); await syncData(); renderAttendance(); }
                 } catch(e) { alert("Matrix Sync Error."); }
                 finally { hideLoading(); }
-            }, () => { alert("GPS identity verification required."); hideLoading(); });
+            }, () => { alert("Location required for identity verification."); hideLoading(); });
         }
 
         function renderPayroll() {
@@ -396,10 +408,10 @@
                     <div class="overflow-x-auto rounded-[2rem] border bg-white shadow-xl">
                         <table class="w-full text-left text-sm">
                             <thead class="bg-slate-50 border-b font-black text-slate-400 uppercase tracking-widest">
-                                <tr><th class="p-6">ID</th><th class="p-6">Member</th><th class="p-6 text-right">Basic</th><th class="p-6 text-right">Net Pay</th>${isAdmin ? `<th class="p-6 text-center">Action</th>` : ''}</tr>
+                                <tr><th class="p-6">ID</th><th class="p-6">Member</th><th class="p-6 text-right">Net Pay</th>${isAdmin ? `<th class="p-6 text-center">Action</th>` : ''}</tr>
                             </thead>
                             <tbody class="divide-y divide-slate-50 font-bold">
-                                ${list.map(emp => `<tr><td class="p-6 font-black">${emp.id}</td><td class="p-6 uppercase">${emp.name}</td><td class="p-6 text-right font-black">Rs. ${calculateNet(emp).toLocaleString()}</td>${isAdmin ? `<td class="p-6 text-center"><button onclick="switchTab('directory')" class="text-blue-500 hover:scale-110 transition-transform"><i data-lucide="eye" size="18"></i></button></td>` : ''}</tr>`).join('')}
+                                ${list.map(emp => `<tr><td class="p-6 font-black">${emp.id}</td><td class="p-6 uppercase text-xs text-slate-500">${emp.name}</td><td class="p-6 text-right font-black">Rs. ${calculateNet(emp).toLocaleString()}</td>${isAdmin ? `<td class="p-6 text-center"><button onclick="switchTab('directory')" class="text-blue-500 hover:scale-110 transition-transform"><i data-lucide="eye" size="18"></i></button></td>` : ''}</tr>`).join('')}
                             </tbody>
                         </table>
                     </div>
@@ -412,16 +424,16 @@
             const container = document.getElementById('view-container');
             container.innerHTML = `
                 <div class="animate-fade-in space-y-8 text-slate-900 font-sans">
-                    <div class="flex justify-between items-center"><h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Staff Hub</h2><button onclick="openAddMember()" class="bg-green-700 text-white px-10 py-3 rounded-2xl font-black uppercase text-xs shadow-xl active:scale-95 transition-all">New Member</button></div>
+                    <div class="flex justify-between items-center"><h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Staff Hub</h2><button onclick="openAddMember()" class="bg-green-700 text-white px-10 py-3 rounded-2xl font-black uppercase text-xs shadow-xl active:scale-95 transition-all hover:bg-green-800">New Member</button></div>
                     <div id="member-form-container" class="${state.memberFormVisible ? '' : 'hidden'} bg-white p-10 rounded-[3rem] border-4 shadow-2xl mb-12 animate-slide-up">
                         <form id="member-form" class="space-y-6">
                             <div class="grid md:grid-cols-2 gap-8">
-                                <input type="text" id="m-id" class="p-4 rounded-2xl border-2 font-bold bg-slate-50 outline-none" placeholder="ID" ${state.editingMemberId ? 'disabled' : ''}>
+                                <input type="text" id="m-id" class="p-4 rounded-2xl border-2 font-bold bg-slate-50 outline-none" placeholder="Employee ID" ${state.editingMemberId ? 'disabled' : ''}>
                                 <input type="email" id="m-email" class="p-4 rounded-2xl border-2 font-bold bg-slate-50 outline-none" placeholder="Email Address">
-                                <input type="text" id="m-name" class="p-4 rounded-2xl border-2 font-bold bg-slate-50 outline-none" placeholder="Full Name" required>
+                                <input type="text" id="m-name" class="p-4 rounded-2xl border-2 font-bold bg-slate-50 outline-none" placeholder="Legal Name" required>
                                 <select id="m-role" class="p-4 rounded-2xl border-2 border-slate-50 font-black text-sm bg-slate-50 outline-none"><option value="employee">Staff Member</option><option value="admin">System Admin</option></select>
-                                <div class="space-y-1"><label class="text-[10px] font-black uppercase text-slate-400 ml-2">AL ALLOCATION</label><input type="number" id="m-leave-annual" class="p-4 w-full rounded-2xl border-2 font-bold" placeholder="Annual Bal"></div>
-                                <div class="space-y-1"><label class="text-[10px] font-black uppercase text-slate-400 ml-2">WOP ALLOCATION</label><input type="number" id="m-leave-wop" class="p-4 w-full rounded-2xl border-2 font-bold" placeholder="WOP Bal"></div>
+                                <div class="space-y-1"><label class="text-[10px] uppercase font-black text-slate-400 ml-2">AL ALLOCATION</label><input type="number" id="m-leave-annual" class="p-4 w-full rounded-2xl border-2 font-bold" placeholder="Annual Bal"></div>
+                                <div class="space-y-1"><label class="text-[10px] uppercase font-black text-slate-400 ml-2">WOP ALLOCATION</label><input type="number" id="m-leave-wop" class="p-4 w-full rounded-2xl border-2 font-bold" placeholder="WOP Bal"></div>
                             </div>
                             <div class="flex justify-end gap-3 pt-6 border-t"><button type="button" onclick="state.memberFormVisible=false; renderDirectory()" class="px-8 py-3 text-slate-400 font-bold uppercase text-xs">Cancel</button><button type="submit" class="bg-green-700 text-white px-12 py-3 rounded-2xl font-black uppercase shadow-lg">Confirm & Sync</button></div>
                         </form>
@@ -433,6 +445,7 @@
                                 <div class="flex-1 overflow-hidden"> 
                                     <h4 class="font-black uppercase truncate leading-none text-slate-800">${emp.name}</h4>
                                     <p class="text-[9px] font-bold text-slate-400 uppercase mt-2">ID: ${emp.id}</p>
+                                    <p class="text-[8px] font-black text-slate-300 uppercase tracking-tighter mt-1">AL: ${emp.leave_annual || 0} | WOP: ${emp.leave_casual || 0}</p>
                                 </div>
                                 <div class="opacity-0 group-hover:opacity-100 flex gap-2 absolute right-6">
                                     <button onclick="editMember('${emp.id}')" class="p-2.5 bg-white border shadow-xl rounded-xl text-blue-500 hover:scale-110 transition-all"><i data-lucide="pencil" size="14"></i></button>
@@ -464,7 +477,7 @@
                                     <input type="date" id="l-date" class="w-full p-4 rounded-2xl border-2 font-bold bg-slate-50 shadow-inner" required>
                                     <input type="number" id="l-days" class="w-full p-4 rounded-2xl border-2 font-bold bg-slate-50 shadow-inner" placeholder="Days" required>
                                 </div>
-                                <textarea id="l-reason" class="w-full p-4 rounded-2xl border-2 border-bold bg-slate-50 h-32 shadow-inner" placeholder="Provide description for HR..." required></textarea>
+                                <textarea id="l-reason" class="w-full p-4 rounded-2xl border-2 border-bold bg-slate-50 h-32 shadow-inner" placeholder="Description for HR..." required></textarea>
                                 <button type="submit" class="w-full py-5 bg-green-700 text-white font-black rounded-3xl shadow-xl hover:bg-green-800 transition-all uppercase tracking-widest active:scale-95">Confirm Request</button>
                             </form>
                         </div>
@@ -520,7 +533,7 @@
         function renderSettings() {
              document.getElementById('view-container').innerHTML = `
                 <div class="animate-fade-in space-y-8 text-slate-900 font-sans text-center">
-                    <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase leading-none">Security</h2>
+                    <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase leading-none">Security Matrix</h2>
                     <div class="bg-white border p-12 shadow-2xl rounded-[3rem] max-w-xl mx-auto mt-10 relative overflow-hidden shadow-xl">
                         <div class="absolute top-0 right-0 w-32 h-32 bg-red-50 rounded-full blur-3xl -mr-16 -mt-16"></div>
                         <div class="space-y-8 relative z-10">
