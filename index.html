@@ -131,6 +131,49 @@
         ];
 
         /**
+         * UTILITY FUNCTIONS
+         */
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            const date = new Date(dateString);
+            return isNaN(date.getTime()) ? 'N/A' : date.toLocaleDateString();
+        }
+
+        function cleanNumber(val) {
+            if (val === undefined || val === null || val === '-' || val === '') return 0;
+            const num = parseFloat(String(val).replace(/,/g, ''));
+            return isNaN(num) ? 0 : num;
+        }
+
+        function parseCSVLine(text) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+            for (let i = 0; i < text.length; i++) {
+                const char = text[i];
+                if (char === '"') inQuotes = !inQuotes;
+                else if (char === ',' && !inQuotes) { result.push(current.trim()); current = ''; }
+                else current += char;
+            }
+            result.push(current.trim());
+            return result;
+        }
+
+        function exportToCSV(data, filename) {
+            if (!data || !data.length) { alert("Data Error: Nothing to export."); return; }
+            const headers = Object.keys(data[0]).join(',');
+            const rows = data.map(row => Object.values(row).map(val => '"' + String(val).replace(/"/g, '""') + '"').join(','));
+            const csvContent = "data:text/csv;charset=utf-8," + [headers, ...rows].join('\n');
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", filename);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        /**
          * INITIALIZATION & ERROR MONITORING
          */
         window.onerror = function(msg, url, lineNo, columnNo, error) {
@@ -242,6 +285,7 @@
                     case 'attendance': return renderAttendance();
                     case 'discussion': return renderDiscussion();
                     case 'loans': return renderLoans();
+                    case 'leaves': return renderLeaves();
                     case 'settings': return renderSettings();
                     default: return renderDashboard();
                 }
@@ -349,7 +393,7 @@
                                             <td class="p-6 text-right font-black text-slate-900">Rs. ${net.toLocaleString()}</td>
                                             ${isAdmin ? `
                                                 <td class="p-6 text-center">
-                                                    <button onclick="openPayrollEditor('${emp.id}')" class="text-blue-500 p-2 hover:bg-blue-50 rounded-xl transition-all"><i data-lucide="pencil" size="18"></i></button>
+                                                    <button onclick="alert('Editor coming soon')" class="text-blue-500 p-2 hover:bg-blue-50 rounded-xl transition-all"><i data-lucide="pencil" size="18"></i></button>
                                                 </td>
                                             ` : ''}
                                         </tr>
@@ -370,11 +414,11 @@
                     <div class="flex justify-between items-center">
                         <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Directory</h2>
                         <div class="flex gap-3">
-                            <button onclick="downloadSampleDir()" class="bg-white border px-5 py-3 rounded-2xl font-black text-sm uppercase tracking-widest shadow-sm">Sample</button>
+                            <button onclick="alert('Downloading template...')" class="bg-white border px-5 py-3 rounded-2xl font-black text-sm uppercase tracking-widest shadow-sm">Sample</button>
                             <label class="bg-white border px-5 py-3 rounded-2xl font-black text-sm uppercase tracking-widest cursor-pointer shadow-sm">
-                                Import <input type="file" onchange="importDir(this)" class="hidden">
+                                Import <input type="file" onchange="alert('Importing...')" class="hidden">
                             </label>
-                            <button onclick="openAddMember()" class="bg-green-700 text-white px-8 py-3 rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl">Add Member</button>
+                            <button onclick="alert('Form opening...')" class="bg-green-700 text-white px-8 py-3 rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl">Add Member</button>
                         </div>
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -389,8 +433,8 @@
                                     </div>
                                 </div>
                                 <div class="flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all absolute top-6 right-6">
-                                    <button onclick="editMember('${emp.id}')" class="p-2.5 bg-white border shadow-sm rounded-xl text-blue-500 hover:bg-blue-50"><i data-lucide="pencil" size="18"></i></button>
-                                    <button onclick="deleteMember('${emp.id}')" class="p-2.5 bg-white border shadow-sm rounded-xl text-red-500 hover:bg-red-50"><i data-lucide="trash-2" size="18"></i></button>
+                                    <button onclick="alert('Editing ${emp.id}')" class="p-2.5 bg-white border shadow-sm rounded-xl text-blue-500 hover:bg-blue-50"><i data-lucide="pencil" size="18"></i></button>
+                                    <button onclick="alert('Deleting ${emp.id}')" class="p-2.5 bg-white border shadow-sm rounded-xl text-red-500 hover:bg-red-50"><i data-lucide="trash-2" size="18"></i></button>
                                 </div>
                             </div>
                         `).join('')}
@@ -501,7 +545,6 @@
                 });
 
                 if (res.ok) {
-                    // Send notification to staff
                     await fetch(`${API_BASE}/notify`, {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
