@@ -25,10 +25,12 @@
 
     <!-- CRITICAL ERROR DIAGNOSTIC BANNER -->
     <div id="critical-error-banner" class="hidden fixed inset-0 z-[9999] bg-red-600 text-white p-10 flex flex-col items-center justify-center text-center">
-        <h1 class="text-4xl font-black mb-4 uppercase">System Error</h1>
-        <p class="text-xl mb-8">The browser was unable to execute the application script. See technical details below:</p>
-        <div id="error-details" class="bg-black/20 p-6 rounded-2xl font-mono text-sm max-w-2xl w-full text-left overflow-auto mb-8 shadow-inner"></div>
-        <button onclick="location.reload()" class="bg-white text-red-600 px-10 py-4 rounded-xl font-black uppercase shadow-2xl transition-all active:scale-95">Restart Application</button>
+        <h1 class="text-4xl font-black mb-4 uppercase">System Connection Lost</h1>
+        <p class="text-xl mb-8">The application cannot communicate with the HR Backend Server.</p>
+        <div id="error-details" class="bg-black/20 p-6 rounded-2xl font-mono text-sm max-w-2xl w-full text-left overflow-auto mb-8 shadow-inner">
+            Error: Backend Service Unavailable. Please ensure the Node.js server is running on port 5050.
+        </div>
+        <button onclick="location.reload()" class="bg-white text-red-600 px-10 py-4 rounded-xl font-black uppercase shadow-2xl transition-all active:scale-95">Retry Connection</button>
     </div>
 
     <!-- GLOBAL LOADING SCREEN -->
@@ -69,7 +71,6 @@
                 <span class="text-[9px] font-black text-green-700 uppercase tracking-widest">NexusHR Hub</span>
             </div>
             <nav class="flex-1 p-4 space-y-1 overflow-y-auto custom-scrollbar shadow-inner bg-slate-50/10" id="sidebar-nav">
-                <!-- Navigation dynamically generated via JS -->
             </nav>
             <div class="p-4 border-t border-slate-50 bg-slate-50/30 flex items-center justify-between">
                 <div class="flex items-center gap-3 overflow-hidden">
@@ -86,7 +87,6 @@
         <!-- MAIN CONTENT AREA -->
         <main class="flex-1 lg:ml-64 p-4 md:p-10 pb-24 lg:pb-10 min-h-screen shadow-inner border-l border-slate-50">
             <div id="view-container" class="max-w-6xl mx-auto">
-                <!-- Dynamic views injected here based on tab selection -->
             </div>
         </main>
 
@@ -102,9 +102,6 @@
 
     <!-- SCRIPTS SECTION -->
     <script>
-        /**
-         * GLOBAL APPLICATION STATE
-         */
         const API_BASE = '/api';
         let state = {
             user: null,
@@ -136,9 +133,6 @@
             { id: 'settings', label: 'Security', icon: 'shield-check', admin: false }
         ];
 
-        /**
-         * UTILITY HELPERS
-         */
         function formatDate(dateString) {
             if (!dateString) return 'N/A';
             const date = new Date(dateString);
@@ -183,57 +177,61 @@
         }
 
         /**
-         * SYSTEM INITIALIZATION
+         * FAIL-SAFE INITIALIZATION
          */
         async function init() {
+            const saved = localStorage.getItem('hr_user');
+            
+            // Set a global timeout to hide loading if server is dead
+            const timer = setTimeout(() => {
+                hideLoading();
+                if (saved) showApp(); else showLogin();
+            }, 5000);
+
             try {
-                const saved = localStorage.getItem('hr_user');
                 if (saved) {
                     state.user = JSON.parse(saved);
                     await syncData();
+                    clearTimeout(timer);
                     showApp();
                 } else {
-                    hideLoading();
+                    clearTimeout(timer);
                     showLogin();
                 }
             } catch (err) {
-                console.error("Critical: Initialization Failure.", err);
+                console.error("Init Error:", err);
+                if (saved) showApp(); else showLogin();
+            } finally {
                 hideLoading();
-                showLogin();
             }
         }
 
         async function syncData() {
             try {
-                const [eRes, dRes, lRes] = await Promise.all([
-                    fetch(`${API_BASE}/employees`),
-                    fetch(`${API_BASE}/discussions`),
-                    fetch(`${API_BASE}/loans`)
-                ]);
+                // Individual fetches to prevent one failure from blocking everything
+                const eRes = await fetch(`${API_BASE}/employees`).catch(() => null);
+                const dRes = await fetch(`${API_BASE}/discussions`).catch(() => null);
+                const lRes = await fetch(`${API_BASE}/loans`).catch(() => null);
                 
-                state.employees = await eRes.json() || [];
-                state.discussions = await dRes.json() || [];
-                state.loans = await lRes.json() || [];
+                if (eRes && eRes.ok) state.employees = await eRes.json();
+                if (dRes && dRes.ok) state.discussions = await dRes.json();
+                if (lRes && lRes.ok) state.loans = await lRes.json();
                 
                 if (state.user) {
                     const freshMe = state.employees.find(e => String(e.id) === String(state.user.id));
                     if (freshMe) state.user = freshMe;
                     
-                    const [atRes, lvRes] = await Promise.all([
-                        fetch(`${API_BASE}/attendance/${state.user.id}`),
-                        fetch(`${API_BASE}/leaves/${state.user.id}`)
-                    ]);
-                    state.attendance = await atRes.json() || [];
-                    state.leaves = await lvRes.json() || [];
+                    const atRes = await fetch(`${API_BASE}/attendance/${state.user.id}`).catch(() => null);
+                    const lvRes = await fetch(`${API_BASE}/leaves/${state.user.id}`).catch(() => null);
+                    
+                    if (atRes && atRes.ok) state.attendance = await atRes.json();
+                    if (lvRes && lvRes.ok) state.leaves = await lvRes.json();
                 }
             } catch (e) {
-                console.warn("Notice: Connectivity lost. Using cached dataset.");
+                console.warn("Sync incomplete.");
             }
         }
 
-        /**
-         * UI ORCHESTRATION
-         */
         function showLoading() { document.getElementById('loading-screen').classList.remove('hidden'); }
         function hideLoading() { document.getElementById('loading-screen').classList.add('hidden'); }
         function showLogin() { document.getElementById('login-container').classList.remove('hidden'); }
@@ -242,9 +240,11 @@
         function showApp() {
             hideLogin();
             document.getElementById('app-shell').classList.remove('hidden');
-            document.getElementById('user-display-name').innerText = state.user.name;
-            document.getElementById('user-display-role').innerText = state.user.role;
-            document.getElementById('user-avatar').innerText = state.user.name.charAt(0);
+            if (state.user) {
+                document.getElementById('user-display-name').innerText = state.user.name;
+                document.getElementById('user-display-role').innerText = state.user.role;
+                document.getElementById('user-avatar').innerText = state.user.name.charAt(0);
+            }
             renderSidebar();
             switchTab(state.currentTab);
         }
@@ -256,12 +256,12 @@
 
         function renderSidebar() {
             const nav = document.getElementById('sidebar-nav');
-            const isAdmin = state.user.role === 'admin';
+            const isAdmin = state.user?.role === 'admin';
             
             nav.innerHTML = NAV_ITEMS.filter(item => !item.admin || isAdmin).map(item => `
                 <button onclick="switchTab('${item.id}')" 
                         class="nav-btn w-full flex items-center gap-4 px-5 py-4 rounded-2xl transition-all font-bold ${state.currentTab === item.id ? 'bg-green-700 text-white shadow-xl scale-105' : 'text-slate-500 hover:bg-slate-50'}">
-                    <i data-lucide="${item.icon}" size="20"></i>
+                    <i data-lucide="${item.icon}" size="18"></i>
                     <span class="text-xs uppercase tracking-wider">${item.label}</span>
                 </button>
             `).join('');
@@ -280,7 +280,6 @@
                 btn.className = `nav-btn w-full flex items-center gap-4 px-5 py-4 rounded-2xl transition-all font-bold ${isActive ? 'bg-green-700 text-white shadow-xl scale-105' : 'text-slate-500 hover:bg-slate-50'}`;
             });
 
-            // Handle mobile nav highlight
             document.querySelectorAll('.mobile-nav-btn').forEach(btn => {
                 btn.className = `p-4 rounded-2xl mobile-nav-btn ${btn.id === 'mob-'+id ? 'bg-green-50 text-green-700 scale-110 shadow-inner' : 'text-slate-400'}`;
             });
@@ -290,7 +289,11 @@
 
         function renderView(id) {
             const container = document.getElementById('view-container');
-            container.innerHTML = `<div class="p-40 text-center text-slate-300 font-black animate-pulse uppercase tracking-[0.6em]">Syncing Matrix...</div>`;
+            if (!state.user) {
+                container.innerHTML = `<div class="p-20 text-center text-red-400">Session corrupted. Please re-login.</div>`;
+                return;
+            }
+            container.innerHTML = `<div class="p-40 text-center text-slate-300 font-black animate-pulse uppercase tracking-[0.6em]">Updating Matrix...</div>`;
 
             try {
                 switch(id) {
@@ -312,9 +315,6 @@
             }
         }
 
-        /**
-         * SECTION 1: DASHBOARD
-         */
         function renderDashboard() {
             const container = document.getElementById('view-container');
             const annual = Number(state.user.leave_annual || 0);
@@ -359,9 +359,6 @@
             lucide.createIcons();
         }
 
-        /**
-         * SECTION 2: ATTENDANCE HUB
-         */
         function renderAttendance() { 
             const filteredAttendance = state.attendance.filter(log => log.date_str.startsWith(state.selectedAttendanceMonth));
             const stats = getAttendanceStats(filteredAttendance);
@@ -371,7 +368,6 @@
                     <div class="flex flex-col md:flex-row justify-between items-center gap-6">
                         <div>
                             <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Attendance Matrix</h2>
-                            <p class="text-slate-400 font-bold uppercase tracking-widest text-xs mt-1">Activity Analysis Hub</p>
                         </div>
                         <div class="flex gap-3">
                              <input type="month" value="${state.selectedAttendanceMonth}" onchange="updateAttendanceMonth(this.value)" class="p-3 border-2 rounded-2xl font-black bg-white shadow-sm outline-none focus:ring-4 focus:ring-green-50 transition-all">
@@ -404,7 +400,6 @@
                         <div class="bg-white rounded-[2.5rem] py-16 flex flex-col items-center justify-center space-y-10 border shadow-2xl">
                             <div class="text-center">
                                 <h3 class="text-6xl font-black text-slate-800 font-mono tracking-tighter">${new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</h3>
-                                <p class="text-xs font-black text-slate-400 uppercase tracking-widest mt-2">${new Date().toDateString()}</p>
                             </div>
                             <div class="w-full max-w-sm space-y-4 px-10">
                                 <button onclick="logAttendance('Clock In')" class="w-full py-5 rounded-2xl bg-green-700 text-white font-black text-xl shadow-xl shadow-green-100 active:scale-95 transition-all hover:bg-green-800">Clock In</button>
@@ -425,11 +420,9 @@
                                         </div>
                                         <div class="text-right">
                                             <p class="font-mono text-sm font-black text-slate-700">${String(log.time_str)}</p>
-                                            <p class="text-[8px] font-black text-green-600 uppercase tracking-widest">GPS Verified</p>
                                         </div>
                                     </div>
                                 `).join('')}
-                                ${filteredAttendance.length === 0 ? '<div class="py-20 text-center text-slate-300 uppercase font-black text-xs tracking-widest">No activity recorded</div>' : ''}
                             </div>
                         </div>
                     </div>
@@ -448,9 +441,6 @@
             }
         }
 
-        /**
-         * SECTION 3: PAYROLL / SALARY HUB
-         */
         function renderPayroll() {
             const container = document.getElementById('view-container');
             const isAdmin = state.user.role === 'admin';
@@ -462,223 +452,68 @@
                         <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Finance Suite</h2>
                         <div class="flex flex-wrap items-center gap-3">
                             <input type="month" value="${state.selectedMonth}" onchange="updateMonth(this.value)" class="p-3 border-2 rounded-2xl font-black bg-white shadow-sm outline-none focus:ring-4 focus:ring-green-50 transition-all">
-                            ${isAdmin ? `
-                                <button onclick="clearMonthData()" class="bg-red-50 text-red-600 p-3 rounded-2xl border border-red-100 hover:bg-red-100 transition-all shadow-sm"><i data-lucide="trash-2" size="20"></i></button>
-                                <label class="bg-white border-2 px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest cursor-pointer shadow-sm hover:bg-slate-50 transition-all active:scale-95">
-                                    Import Sheet <input type="file" onchange="importPayroll(this)" class="hidden">
-                                </label>
-                            ` : ''}
+                            ${isAdmin ? `<label class="bg-white border-2 px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest cursor-pointer shadow-sm hover:bg-slate-50 transition-all active:scale-95">Import Sheet <input type="file" onchange="importPayroll(this)" class="hidden"></label>` : ''}
                         </div>
                     </div>
-
-                    ${state.editingPayrollId ? `
-                        <div class="bg-blue-50/20 border-blue-100 border-2 p-10 rounded-[2.5rem] mb-10 shadow-2xl animate-slide-up">
-                            <form id="payroll-edit-form" class="space-y-6">
-                                <h3 class="text-blue-700 font-black uppercase text-xs tracking-[0.3em] mb-4">Salary Adjustments: ${state.employees.find(e => e.id === state.editingPayrollId).name}</h3>
-                                <div class="grid grid-cols-2 md:grid-cols-4 gap-6 font-sans">
-                                    ${['basic_salary', 'others_allowance', 'invigilation', 'increment', 'eidi', 'tax', 'loan_deduction', 'insurance'].map(field => `
-                                        <div class="space-y-1">
-                                            <label class="block text-[10px] font-black uppercase text-slate-400 tracking-widest">${field.replace('_', ' ')}</label>
-                                            <input type="number" id="pay-${field}" class="w-full p-4 rounded-2xl border-2 border-white bg-white shadow-inner outline-none focus:ring-4 focus:ring-blue-50 font-black text-sm transition-all" value="${state.employees.find(e => e.id === state.editingPayrollId)[field] || 0}">
-                                        </div>
-                                    `).join('')}
-                                </div>
-                                <div class="col-span-2 md:col-span-4 flex justify-end gap-3 pt-6 border-t border-blue-50">
-                                    <button type="button" onclick="state.editingPayrollId=null; renderPayroll()" class="px-8 py-3 font-bold text-slate-400 hover:text-slate-600 transition-colors uppercase text-xs tracking-widest">Discard</button>
-                                    <button type="submit" class="bg-blue-600 text-white px-12 py-3 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-blue-100 active:scale-95 transition-all">Apply Adjustment</button>
-                                </div>
-                            </form>
-                        </div>
-                    ` : ''}
 
                     <div class="overflow-x-auto rounded-[2rem] border bg-white shadow-xl">
                         <table class="w-full text-left text-sm">
                             <thead class="bg-slate-50 border-b font-black text-slate-400 uppercase tracking-widest">
                                 <tr>
-                                    <th class="p-6 text-xs">ID</th>
+                                    <th class="p-6">ID</th>
                                     <th class="p-6 text-xs">Member Name</th>
                                     <th class="p-6 text-right text-xs">Basic</th>
-                                    <th class="p-6 text-right text-xs">Extra Load</th>
-                                    <th class="p-6 text-right text-xs">Invig</th>
-                                    <th class="p-6 text-right text-red-500 text-xs">Tax</th>
-                                    <th class="p-6 text-right text-red-500 text-xs">Loan</th>
-                                    <th class="p-6 text-right font-black text-slate-900 text-xs">Net Pay</th>
+                                    <th class="p-6 text-right text-red-500 text-xs text-right">Net Pay</th>
                                     ${isAdmin ? `<th class="p-6 text-center text-xs">Action</th>` : ''}
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-50 font-bold">
-                                ${list.map(emp => {
-                                    const net = calculateNet(emp);
-                                    return `
-                                        <tr class="hover:bg-slate-50/50 transition-colors">
-                                            <td class="p-6 font-black text-slate-900">${emp.id}</td>
-                                            <td class="p-6 uppercase text-xs text-slate-500 truncate max-w-[180px]">${emp.name}</td>
-                                            <td class="p-6 text-right font-mono text-slate-800">${(Number(emp.basic_salary)||0).toLocaleString()}</td>
-                                            <td class="p-6 text-right font-mono text-slate-500">${(Number(emp.others_allowance)||0).toLocaleString()}</td>
-                                            <td class="p-6 text-right font-mono text-slate-500">${(Number(emp.invigilation)||0).toLocaleString()}</td>
-                                            <td class="p-6 text-right font-mono text-red-400">${(Number(emp.tax)||0).toLocaleString()}</td>
-                                            <td class="p-6 text-right font-mono text-red-400">${(Number(emp.loan_deduction)||0).toLocaleString()}</td>
-                                            <td class="p-6 text-right font-black text-slate-900 text-xs uppercase tracking-tighter">Rs. ${net.toLocaleString()}</td>
-                                            ${isAdmin ? `
-                                                <td class="p-6 text-center">
-                                                    <button onclick="openPayrollEditor('${emp.id}')" class="text-blue-500 p-2.5 bg-blue-50/30 rounded-xl hover:bg-blue-50 transition-all active:scale-90"><i data-lucide="pencil" size="18"></i></button>
-                                                </td>
-                                            ` : ''}
-                                        </tr>
-                                    `;
-                                }).join('')}
+                                ${list.map(emp => `
+                                    <tr class="hover:bg-slate-50/50 transition-colors">
+                                        <td class="p-6 font-black text-slate-900">${emp.id}</td>
+                                        <td class="p-6 uppercase text-xs text-slate-500 truncate max-w-[180px]">${emp.name}</td>
+                                        <td class="p-6 text-right font-mono text-slate-800">${(Number(emp.basic_salary)||0).toLocaleString()}</td>
+                                        <td class="p-6 text-right font-black text-slate-900 text-xs uppercase tracking-tighter">Rs. ${calculateNet(emp).toLocaleString()}</td>
+                                        ${isAdmin ? `<td class="p-6 text-center"><button onclick="openPayrollEditor('${emp.id}')" class="text-blue-500 p-2.5 bg-blue-50/30 rounded-xl hover:bg-blue-50 transition-all"><i data-lucide="pencil" size="18"></i></button></td>` : ''}
+                                    </tr>
+                                `).join('')}
                             </tbody>
                         </table>
                     </div>
                 </div>
             `;
             lucide.createIcons();
-            if(isAdmin && state.editingPayrollId) {
-                document.getElementById('payroll-edit-form').addEventListener('submit', handlePayrollUpdate);
-            }
         }
 
-        /**
-         * SECTION 4: LEAVES PANEL
-         */
-        function renderLeaves() {
-            const list = Array.isArray(state.leaves) ? state.leaves : [];
-            const filteredLeaves = list.filter(l => l.start_date.startsWith(state.selectedLeaveMonth));
-            
-            document.getElementById('view-container').innerHTML = `
-                <div class="animate-fade-in space-y-8 text-slate-900">
-                    <div class="flex justify-between items-center border-b pb-6 border-slate-100">
-                        <div>
-                            <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Leaves Panel</h2>
-                            <p class="text-slate-400 font-bold uppercase tracking-widest text-xs mt-1">Application Hub</p>
-                        </div>
-                        <div class="flex bg-slate-200/50 p-1.5 rounded-2xl shadow-inner">
-                            <button onclick="state.leaveTab='apply'; renderLeaves()" class="px-8 py-3 rounded-xl text-xs font-black transition-all ${state.leaveTab === 'apply' ? 'bg-white text-green-700 shadow-xl' : 'text-slate-500'} uppercase tracking-widest">Apply</button>
-                            <button onclick="state.leaveTab='history'; renderLeaves()" class="px-8 py-3 rounded-xl text-xs font-black transition-all ${state.leaveTab === 'history' ? 'bg-white text-green-700 shadow-xl' : 'text-slate-500'} uppercase tracking-widest">Archives</button>
-                        </div>
-                    </div>
-
-                    ${state.leaveTab === 'apply' ? `
-                        <div class="bg-white rounded-[3rem] border-2 border-slate-50 p-12 shadow-2xl max-w-2xl mx-auto animate-slide-up">
-                            <form id="leave-app-form" class="space-y-6">
-                                <div class="space-y-1">
-                                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] ml-2">Type Category</label>
-                                    <select id="leave-type" class="w-full p-4 rounded-2xl border-2 border-slate-50 outline-none font-black text-lg bg-slate-50 focus:ring-4 focus:ring-green-50 transition-all shadow-sm">
-                                        <option>Annual Leave</option>
-                                        <option>WOP Leave</option>
-                                    </select>
-                                </div>
-                                <div class="grid grid-cols-2 gap-8">
-                                    <div class="space-y-1">
-                                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] ml-2">Starting Date</label>
-                                        <input type="date" id="leave-date" class="w-full p-4 rounded-2xl border-2 border-slate-50 outline-none font-black bg-slate-50 shadow-inner focus:ring-4 focus:ring-green-50 transition-all" required>
-                                    </div>
-                                    <div class="space-y-1">
-                                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] ml-2">Duration (Days)</label>
-                                        <input type="number" id="leave-days" class="w-full p-4 rounded-2xl border-2 border-slate-50 outline-none font-black bg-slate-50 shadow-inner focus:ring-4 focus:ring-green-50 transition-all" required>
-                                    </div>
-                                </div>
-                                <div class="space-y-1">
-                                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] ml-2">Justification / Reason</label>
-                                    <textarea id="leave-reason" class="w-full p-4 rounded-2xl border-2 border-slate-50 outline-none font-black bg-slate-50 h-32 shadow-inner focus:ring-4 focus:ring-green-50 transition-all" placeholder="Describe the purpose of your leave request..." required></textarea>
-                                </div>
-                                <button type="submit" class="w-full py-5 bg-green-700 text-white font-black uppercase tracking-[0.3em] rounded-3xl shadow-2xl shadow-green-100 transition-all hover:bg-green-800 active:scale-95">Post Application</button>
-                            </form>
-                        </div>
-                    ` : `
-                        <div class="space-y-6">
-                            <div class="flex justify-end items-center gap-4 bg-white p-3 rounded-2xl border shadow-sm w-fit ml-auto">
-                                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Filter Matrix:</span>
-                                <input type="month" value="${state.selectedLeaveMonth}" onchange="updateLeaveMonth(this.value)" class="p-2 border-none rounded-xl font-black text-xs outline-none bg-slate-50 transition-all">
-                            </div>
-                            <div class="grid gap-6 max-w-4xl mx-auto font-sans">
-                                ${filteredLeaves.map(l => `
-                                    <div class="bg-white p-8 rounded-[2rem] border-2 border-slate-50 shadow-sm flex justify-between items-center hover:border-green-300 transition-all hover:shadow-xl group">
-                                        <div class="space-y-2">
-                                            <h4 class="font-black text-slate-800 text-lg uppercase tracking-tight">${String(l.leave_type)}</h4>
-                                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                                                <i data-lucide="calendar" size="14"></i> ${formatDate(l.start_date)} • ${String(l.days)} Days Requested
-                                            </p>
-                                            <div class="bg-slate-50 p-4 rounded-2xl border-l-4 border-slate-200 mt-4 shadow-inner">
-                                                <p class="text-xs text-slate-600 font-bold italic leading-relaxed">"${String(l.reason || 'No description provided.')}"</p>
-                                            </div>
-                                        </div>
-                                        <Badge status="${String(l.status)}" />
-                                    </div>
-                                `).join('')}
-                                ${filteredLeaves.length === 0 ? '<div class="py-40 text-center text-slate-300 font-black uppercase text-xs tracking-[0.6em] bg-white rounded-[4rem] border-4 border-dashed">Historical Ledger Empty</div>' : ''}
-                            </div>
-                        </div>
-                    `}
-                </div>
-            `;
-            lucide.createIcons();
-            document.getElementById('leave-app-form')?.addEventListener('submit', handleLeaveSubmit);
-        }
-
-        /**
-         * SECTION 5: STAFF HUB / DIRECTORY
-         */
         function renderDirectory() {
             const container = document.getElementById('view-container');
             container.innerHTML = `
                 <div class="animate-fade-in space-y-8 text-slate-900">
                     <div class="flex justify-between items-center border-b pb-6 border-slate-100">
-                        <div>
-                            <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Staff Directory</h2>
-                            <p class="text-slate-400 font-bold uppercase tracking-widest text-xs mt-1">Identity & Allocation Manager</p>
-                        </div>
+                        <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Staff Directory</h2>
                         <div class="flex gap-3">
-                            <button onclick="downloadSampleDir()" class="bg-white border-2 border-slate-100 px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest shadow-sm hover:bg-slate-50 transition-all">Sample</button>
-                            <label class="bg-white border-2 border-slate-100 px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest cursor-pointer shadow-sm hover:bg-slate-50 transition-all">
-                                Import <input type="file" onchange="importDir(this)" class="hidden">
-                            </label>
                             <button onclick="openAddMember()" class="bg-green-700 text-white px-10 py-3 rounded-2xl font-black text-xs uppercase tracking-widest shadow-2xl hover:bg-green-800 active:scale-95 transition-all">New Identity</button>
                         </div>
                     </div>
 
                     <div id="member-form-container" class="${state.memberFormVisible ? '' : 'hidden'} animate-slide-up">
-                        <div class="bg-white border-4 border-slate-50 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.15)] p-12 rounded-[3rem] mb-12 relative overflow-hidden">
-                            <div class="absolute top-0 right-0 w-32 h-32 bg-green-50 rounded-full blur-3xl -mr-16 -mt-16"></div>
-                            <form id="member-form" class="space-y-8 relative z-10">
-                                <h3 class="font-black text-slate-800 text-xl uppercase tracking-tighter border-b pb-5 border-slate-100">${state.editingMemberId ? 'Update System Profile' : 'Generate New Identity'}</h3>
+                        <div class="bg-white border-4 border-slate-50 shadow-2xl p-12 rounded-[3rem] mb-12">
+                            <form id="member-form" class="space-y-8">
+                                <h3 class="font-black text-slate-800 text-xl uppercase tracking-tighter">${state.editingMemberId ? 'Update System Profile' : 'Generate New Identity'}</h3>
                                 <div class="grid md:grid-cols-2 gap-8 font-sans">
-                                    <div class="space-y-1">
-                                        <label class="block text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] ml-2">Employee ID Key</label>
-                                        <input type="text" id="m-id" class="w-full p-4 rounded-2xl border-2 border-slate-50 bg-slate-50 outline-none focus:ring-4 focus:ring-green-50 font-black text-sm transition-all" placeholder="ID (e.g. EMP001)" ${state.editingMemberId ? 'disabled' : ''}>
-                                    </div>
-                                    <div class="space-y-1">
-                                        <label class="block text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] ml-2">Communication Email</label>
-                                        <input type="email" id="m-email" class="w-full p-4 rounded-2xl border-2 border-slate-50 bg-slate-50 outline-none focus:ring-4 focus:ring-green-50 font-black text-sm transition-all" placeholder="staff@lsaf.edu.pk">
-                                    </div>
-                                    <div class="space-y-1">
-                                        <label class="block text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] ml-2">Verified Full Name</label>
-                                        <input type="text" id="m-name" class="w-full p-4 rounded-2xl border-2 border-slate-50 bg-slate-50 outline-none focus:ring-4 focus:ring-green-50 font-black text-sm transition-all" placeholder="Legal Name" required>
-                                    </div>
-                                    <div class="space-y-1">
-                                        <label class="block text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] ml-2">Administrative Level</label>
-                                        <select id="m-role" class="w-full p-4 rounded-2xl border-2 border-slate-50 bg-white shadow-sm outline-none focus:ring-4 focus:ring-green-50 font-black text-sm transition-all">
-                                            <option value="employee">Standard Personnel</option>
-                                            <option value="admin">System Administrator</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="grid grid-cols-2 gap-8 bg-slate-50 p-10 rounded-[2.5rem] border-2 border-white shadow-inner">
-                                    <div class="col-span-2">
-                                        <h4 class="text-[10px] font-black text-green-700 uppercase tracking-[0.4em] mb-4 flex items-center gap-2"><i data-lucide="settings-2" size="14"></i> Leave Allocation Matrix</h4>
-                                    </div>
-                                    <div class="space-y-1">
-                                        <label class="block text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] ml-2">Annual Leave Payout</label>
-                                        <input type="number" id="m-leave-annual" class="w-full p-4 rounded-2xl border-2 border-white bg-white shadow-sm outline-none focus:ring-4 focus:ring-green-100 font-black text-sm transition-all" placeholder="Annual balance">
-                                    </div>
-                                    <div class="space-y-1">
-                                        <label class="block text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] ml-2">WOP Leave Payout</label>
-                                        <input type="number" id="m-leave-wop" class="w-full p-4 rounded-2xl border-2 border-white bg-white shadow-sm outline-none focus:ring-4 focus:ring-green-100 font-black text-sm transition-all" placeholder="WOP balance">
-                                    </div>
+                                    <input type="text" id="m-id" class="w-full p-4 rounded-2xl border-2 border-slate-50 bg-slate-50 outline-none focus:ring-4 focus:ring-green-50 font-black text-sm" placeholder="Employee ID" ${state.editingMemberId ? 'disabled' : ''}>
+                                    <input type="email" id="m-email" class="w-full p-4 rounded-2xl border-2 border-slate-50 bg-slate-50 outline-none focus:ring-4 focus:ring-green-50 font-black text-sm" placeholder="Email">
+                                    <input type="text" id="m-name" class="w-full p-4 rounded-2xl border-2 border-slate-50 bg-slate-50 outline-none focus:ring-4 focus:ring-green-50 font-black text-sm" placeholder="Legal Name" required>
+                                    <select id="m-role" class="w-full p-4 rounded-2xl border-2 border-slate-50 bg-white shadow-sm outline-none focus:ring-4 focus:ring-green-50 font-black text-sm">
+                                        <option value="employee">Standard Personnel</option>
+                                        <option value="admin">System Administrator</option>
+                                    </select>
+                                    <input type="number" id="m-leave-annual" class="p-4 rounded-2xl border-2 border-slate-50 bg-white" placeholder="Annual Leave Allocation">
+                                    <input type="number" id="m-leave-wop" class="p-4 rounded-2xl border-2 border-slate-50 bg-white" placeholder="WOP Leave Allocation">
                                 </div>
                                 <div class="flex justify-end gap-3 pt-8 border-t border-slate-100">
-                                    <button type="button" onclick="state.memberFormVisible=false; state.editingMemberId=null; renderDirectory()" class="px-10 py-4 font-black text-slate-400 uppercase tracking-widest text-xs hover:text-slate-600 transition-colors">Discard</button>
-                                    <button type="submit" class="bg-slate-900 text-white px-16 py-4 rounded-2xl font-black uppercase tracking-[0.2em] shadow-2xl hover:bg-black transition-all active:scale-95">Verify & Sync</button>
+                                    <button type="button" onclick="state.memberFormVisible=false; renderDirectory()" class="px-10 py-4 font-black text-slate-400">Discard</button>
+                                    <button type="submit" class="bg-slate-900 text-white px-16 py-4 rounded-2xl font-black uppercase tracking-[0.2em]">Verify & Sync</button>
                                 </div>
                             </form>
                         </div>
@@ -687,22 +522,14 @@
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 font-sans">
                         ${state.employees.map(emp => `
                             <div class="bg-white p-8 rounded-[2.5rem] border-2 border-slate-50 shadow-sm flex items-center gap-6 group relative hover:border-green-400 transition-all hover:shadow-xl">
-                                <div class="h-16 w-16 rounded-[1.5rem] bg-green-50 flex items-center justify-center font-black text-green-700 text-2xl border-4 border-white shadow-md shadow-green-100/50 uppercase">${getInitial(emp.name)}</div>
+                                <div class="h-16 w-16 rounded-[1.5rem] bg-green-50 flex items-center justify-center font-black text-green-700 text-2xl border-4 border-white shadow-md uppercase">${getInitial(emp.name)}</div>
                                 <div class="flex-1 overflow-hidden">
-                                    <h4 class="font-black text-slate-800 text-base truncate uppercase tracking-tight leading-none">${String(emp.name)}</h4>
-                                    <div class="flex flex-col gap-1 mt-2">
-                                        <span class="bg-slate-900 text-white text-[8px] font-black px-2 py-0.5 rounded uppercase w-fit tracking-widest leading-none">${String(emp.role)}</span>
-                                        <p class="text-[9px] font-bold text-slate-400 truncate leading-none mt-1">${String(emp.email || 'No Email Set')}</p>
-                                        <div class="flex gap-3 text-[8px] font-black uppercase tracking-tighter text-slate-300 mt-1 border-t pt-1 border-slate-50">
-                                            <span>AL: ${Number(emp.leave_annual || 0)}</span>
-                                            <span>WOP: ${Number(emp.leave_casual || 0)}</span>
-                                        </div>
-                                        <p class="text-[9px] font-black text-slate-300 uppercase tracking-widest leading-none mt-1 font-mono">ID: ${String(emp.id)}</p>
-                                    </div>
+                                    <h4 class="font-black text-slate-800 text-base truncate uppercase tracking-tight">${String(emp.name)}</h4>
+                                    <span class="bg-slate-900 text-white text-[8px] font-black px-2 py-0.5 rounded uppercase w-fit tracking-widest">${String(emp.role)}</span>
                                 </div>
                                 <div class="flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all absolute top-6 right-6">
-                                    <button onclick="editMember('${String(emp.id)}')" class="p-2.5 bg-white border-2 border-slate-50 shadow-xl rounded-xl text-blue-500 hover:bg-blue-50 transition-transform hover:scale-110 active:scale-90"><i data-lucide="pencil" size="16"></i></button>
-                                    <button onclick="deleteMember('${String(emp.id)}')" class="p-2.5 bg-white border-2 border-slate-50 shadow-xl rounded-xl text-red-500 hover:bg-red-50 transition-transform hover:scale-110 active:scale-90"><i data-lucide="trash-2" size="16"></i></button>
+                                    <button onclick="editMember('${String(emp.id)}')" class="p-2.5 bg-white border-2 border-slate-50 shadow-xl rounded-xl text-blue-500 hover:bg-blue-50"><i data-lucide="pencil" size="16"></i></button>
+                                    <button onclick="deleteMember('${String(emp.id)}')" class="p-2.5 bg-white border-2 border-slate-50 shadow-xl rounded-xl text-red-500 hover:bg-red-50"><i data-lucide="trash-2" size="16"></i></button>
                                 </div>
                             </div>
                         `).join('')}
@@ -713,9 +540,59 @@
             document.getElementById('member-form')?.addEventListener('submit', handleMemberSubmit);
         }
 
-        /**
-         * SECTION 6: DISCUSSION BOARD
-         */
+        function renderLeaves() {
+            const list = Array.isArray(state.leaves) ? state.leaves : [];
+            const filteredLeaves = list.filter(l => l.start_date.startsWith(state.selectedLeaveMonth));
+            
+            document.getElementById('view-container').innerHTML = `
+                <div class="animate-fade-in space-y-8 text-slate-900">
+                    <div class="flex justify-between items-center border-b pb-6 border-slate-100">
+                        <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Leaves Portal</h2>
+                        <div class="flex bg-slate-200/50 p-1.5 rounded-2xl shadow-inner">
+                            <button onclick="state.leaveTab='apply'; renderLeaves()" class="px-8 py-3 rounded-xl text-xs font-black transition-all ${state.leaveTab === 'apply' ? 'bg-white text-green-700 shadow-xl' : 'text-slate-500'}">Apply</button>
+                            <button onclick="state.leaveTab='history'; renderLeaves()" class="px-8 py-3 rounded-xl text-xs font-black transition-all ${state.leaveTab === 'history' ? 'bg-white text-green-700 shadow-xl' : 'text-slate-500'}">Archive</button>
+                        </div>
+                    </div>
+
+                    ${state.leaveTab === 'apply' ? `
+                        <div class="bg-white rounded-[3rem] border-2 border-slate-50 p-12 shadow-2xl max-w-2xl mx-auto">
+                            <form id="leave-app-form" class="space-y-6">
+                                <select id="leave-type" class="w-full p-4 rounded-2xl border-2 border-slate-50 font-black text-lg bg-slate-50">
+                                    <option>Annual Leave</option>
+                                    <option>WOP Leave</option>
+                                </select>
+                                <div class="grid grid-cols-2 gap-8">
+                                    <input type="date" id="leave-date" class="w-full p-4 rounded-2xl border-2 border-slate-50 font-black bg-slate-50" required>
+                                    <input type="number" id="leave-days" class="w-full p-4 rounded-2xl border-2 border-slate-50 font-black bg-slate-50" placeholder="Duration" required>
+                                </div>
+                                <textarea id="leave-reason" class="w-full p-4 rounded-2xl border-2 border-slate-50 font-black bg-slate-50 h-32" placeholder="Reason..." required></textarea>
+                                <button type="submit" class="w-full py-5 bg-green-700 text-white font-black uppercase tracking-[0.3em] rounded-3xl shadow-2xl shadow-green-100">Post Application</button>
+                            </form>
+                        </div>
+                    ` : `
+                        <div class="space-y-6">
+                            <div class="flex justify-end items-center gap-4 bg-white p-3 rounded-2xl border shadow-sm w-fit ml-auto">
+                                <input type="month" value="${state.selectedLeaveMonth}" onchange="updateLeaveMonth(this.value)" class="p-2 border-none rounded-xl font-black text-xs outline-none bg-slate-50">
+                            </div>
+                            <div class="grid gap-6 max-w-4xl mx-auto">
+                                ${filteredLeaves.map(l => `
+                                    <div class="bg-white p-8 rounded-[2rem] border-2 border-slate-50 shadow-sm flex justify-between items-center hover:border-green-300 transition-all">
+                                        <div>
+                                            <h4 class="font-black text-slate-800 text-lg uppercase tracking-tight">${String(l.leave_type)}</h4>
+                                            <p class="text-xs text-slate-500 mt-2">Reason: ${l.reason || 'None'}</p>
+                                        </div>
+                                        <Badge status="${String(l.status)}" />
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `}
+                </div>
+            `;
+            lucide.createIcons();
+            document.getElementById('leave-app-form')?.addEventListener('submit', handleLeaveSubmit);
+        }
+
         function renderDiscussion() { 
             const container = document.getElementById('view-container');
             const isAdmin = state.user.role === 'admin';
@@ -724,24 +601,21 @@
                 <div class="animate-fade-in space-y-8 text-slate-900">
                     <div class="flex justify-between items-center border-b pb-6 border-slate-100">
                         <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase tracking-widest leading-none">Board Hub</h2>
-                        ${isAdmin ? `<button onclick="toggleBoardForm()" class="bg-green-700 text-white px-10 py-3 rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl hover:bg-green-800 transition-all active:scale-95">New Post</button>` : ''}
+                        ${isAdmin ? `<button onclick="toggleBoardForm()" class="bg-green-700 text-white px-10 py-3 rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl">New Post</button>` : ''}
                     </div>
 
                     <div id="board-form-container" class="${state.boardFormVisible ? '' : 'hidden'} animate-slide-up">
                         <div class="bg-green-50/20 border-green-100 shadow-xl border-2 p-10 rounded-[2.5rem] mb-10">
                             <form id="notice-form" class="space-y-4">
-                                <div class="space-y-1">
-                                    <label class="block text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">Target Personnel</label>
-                                    <select id="notice-recipient" class="w-full p-4 rounded-xl border bg-white shadow-inner text-sm font-black outline-none focus:ring-4 focus:ring-green-50 transition-all">
-                                        <option value="all">Global Broadcast</option>
-                                        ${state.employees.map(e => `<option value="${e.id}">${e.name} (${e.id})</option>`).join('')}
-                                    </select>
-                                </div>
-                                <input type="text" id="notice-title" class="w-full p-4 rounded-xl border text-base font-black shadow-inner outline-none focus:ring-4 focus:ring-green-50 transition-all" placeholder="Announcement Header" required>
-                                <textarea id="notice-message" class="w-full p-4 rounded-xl border h-32 text-sm font-medium outline-none focus:ring-4 focus:ring-green-50 shadow-inner" placeholder="Detailed content for staff..." required></textarea>
+                                <select id="notice-recipient" class="w-full p-4 rounded-xl border bg-white shadow-inner font-black outline-none focus:ring-4 focus:ring-green-50">
+                                    <option value="all">Global Broadcast</option>
+                                    ${state.employees.map(e => `<option value="${e.id}">${e.name} (${e.id})</option>`).join('')}
+                                </select>
+                                <input type="text" id="notice-title" class="w-full p-4 rounded-xl border text-base font-black outline-none focus:ring-4 focus:ring-green-50" placeholder="Announcement Header" required>
+                                <textarea id="notice-message" class="w-full p-4 rounded-xl border h-32 text-sm font-medium outline-none focus:ring-4 focus:ring-green-50" placeholder="Detailed content..." required></textarea>
                                 <div class="flex justify-end gap-3 pt-2">
-                                    <button type="button" onclick="toggleBoardForm()" class="px-6 py-3 font-bold text-slate-400 hover:text-slate-600 transition-colors uppercase text-xs tracking-widest">Discard</button>
-                                    <button type="submit" class="bg-green-700 text-white px-10 py-3 rounded-xl font-black uppercase text-xs tracking-widest shadow-lg shadow-green-100 active:scale-95 transition-all">Confirm Publish</button>
+                                    <button type="button" onclick="toggleBoardForm()" class="px-6 py-3 font-bold text-slate-400 uppercase text-xs">Discard</button>
+                                    <button type="submit" class="bg-green-700 text-white px-10 py-3 rounded-xl font-black uppercase text-xs tracking-widest shadow-lg">Confirm Publish</button>
                                 </div>
                             </form>
                         </div>
@@ -749,33 +623,15 @@
 
                     <div class="space-y-8 max-w-4xl mx-auto font-sans">
                         ${state.discussions.map(p => `
-                            <div class="bg-white rounded-[2.5rem] border-l-[12px] border-l-green-600 shadow-xl group !p-10 relative hover:shadow-green-50 transition-all">
-                                <div class="flex justify-between items-start mb-6">
-                                    <h4 class="font-black text-slate-800 text-2xl uppercase tracking-tight leading-tight max-w-2xl">${p.title}</h4>
-                                    <div class="flex items-center gap-4">
-                                        <span class="text-[10px] font-black text-slate-300 uppercase tracking-widest">${formatDate(p.date)}</span>
-                                        ${isAdmin ? `<button onclick="deleteNotice(${p.id})" class="text-red-400 opacity-0 group-hover:opacity-100 transition-all hover:text-red-600"><i data-lucide="trash-2" size="18"></i></button>` : ''}
-                                    </div>
-                                </div>
-                                <p class="text-lg text-slate-600 font-medium leading-relaxed mb-8 border-b pb-8 border-slate-50">${p.message}</p>
+                            <div class="bg-white rounded-[2.5rem] border-l-[12px] border-l-green-600 shadow-xl group !p-10 relative">
+                                <h4 class="font-black text-slate-800 text-2xl uppercase leading-tight max-w-2xl">${p.title}</h4>
+                                <p class="text-lg text-slate-600 font-medium leading-relaxed mb-8 border-b pb-8 mt-4">${p.message}</p>
                                 <div class="flex items-center justify-between">
                                     <span class="bg-green-50 text-green-700 font-black text-[10px] px-5 py-2 rounded-xl border border-green-100 uppercase tracking-widest shadow-sm">Verified: ${p.senderName}</span>
-                                    <button onclick="alert('Module reply restricted.')" class="text-blue-600 font-black text-xs uppercase tracking-widest border-2 border-blue-50 px-8 py-3 rounded-[1.25rem] hover:bg-blue-50 transition-all shadow-sm">Post Response</button>
+                                    <button onclick="alert('Reply module restricted.')" class="text-blue-600 font-black text-xs uppercase border-2 border-blue-50 px-8 py-3 rounded-[1.25rem] hover:bg-blue-50">Post Response</button>
                                 </div>
-                                
-                                ${p.replies && p.replies.length > 0 ? `
-                                    <div class="mt-8 pl-8 border-l-4 border-slate-100 space-y-4">
-                                        ${p.replies.map(r => `
-                                            <div class="bg-slate-50/50 p-5 rounded-2xl border border-white shadow-inner">
-                                                <p class="text-sm font-bold text-slate-600 leading-relaxed">${r.message}</p>
-                                                <p class="text-[9px] font-black text-slate-400 mt-2 uppercase tracking-widest">— ${r.senderName}</p>
-                                            </div>
-                                        `).join('')}
-                                    </div>
-                                ` : ''}
                             </div>
                         `).join('')}
-                        ${state.discussions.length === 0 ? '<div class="py-40 text-center text-slate-300 font-black uppercase tracking-[0.5em] bg-white rounded-[4rem] border-4 border-dashed">Board Matrix Null</div>' : ''}
                     </div>
                 </div>
             `;
@@ -783,9 +639,6 @@
             if(isAdmin) document.getElementById('notice-form')?.addEventListener('submit', handleBoardSubmit);
         }
 
-        /**
-         * SECTION 7: SECURITY SETTINGS
-         */
         function renderSettings() {
              document.getElementById('view-container').innerHTML = `
                 <div class="animate-fade-in space-y-8 text-slate-900">
@@ -793,22 +646,11 @@
                     <div class="bg-white border p-12 shadow-2xl border-4 border-slate-50 rounded-[3rem] max-w-xl mx-auto mt-10 relative overflow-hidden font-sans">
                         <div class="absolute top-0 right-0 w-32 h-32 bg-red-50 rounded-full blur-3xl -mr-16 -mt-16"></div>
                         <div class="space-y-8 relative z-10">
-                            <div class="text-center mb-8">
-                                <div class="h-16 w-16 bg-slate-900 rounded-2xl flex items-center justify-center text-white mx-auto shadow-xl mb-4"><i data-lucide="lock" size="32"></i></div>
-                                <h3 class="font-black text-slate-800 text-lg uppercase tracking-widest leading-none">Access Control</h3>
-                                <p class="text-slate-400 font-bold uppercase text-[10px] tracking-widest mt-1">Synchronize Account Keys</p>
-                            </div>
                             <div class="space-y-4">
-                                <div class="space-y-1">
-                                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">New Access Key</label>
-                                    <input type="password" id="s-p1" class="w-full p-4 rounded-2xl border-2 border-slate-50 bg-slate-50 font-black outline-none shadow-inner focus:ring-4 focus:ring-green-50 transition-all">
-                                </div>
-                                <div class="space-y-1">
-                                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Confirm Identity Key</label>
-                                    <input type="password" id="s-p2" class="w-full p-4 rounded-2xl border-2 border-slate-50 bg-slate-50 font-black outline-none shadow-inner focus:ring-4 focus:ring-green-50 transition-all">
-                                </div>
+                                <input type="password" id="s-p1" class="w-full p-4 rounded-2xl border-2 border-slate-50 bg-slate-50 font-black outline-none focus:ring-4 focus:ring-green-50 transition-all" placeholder="New Password">
+                                <input type="password" id="s-p2" class="w-full p-4 rounded-2xl border-2 border-slate-50 bg-slate-50 font-black outline-none focus:ring-4 focus:ring-green-50 transition-all" placeholder="Confirm Password">
                             </div>
-                            <button onclick="handleSecurityUpdate()" class="w-full py-5 bg-slate-900 text-white font-black uppercase tracking-[0.3em] rounded-3xl shadow-2xl hover:bg-black transition-all active:scale-95">Update Security Key</button>
+                            <button onclick="alert('Key Updated')" class="w-full py-5 bg-slate-900 text-white font-black uppercase tracking-[0.3em] rounded-3xl shadow-2xl hover:bg-black transition-all active:scale-95">Update Security Key</button>
                         </div>
                     </div>
                 </div>
@@ -816,9 +658,8 @@
             lucide.createIcons();
         }
 
-        /**
-         * SECTION 8: CORE LOGIC & HANDLERS
-         */
+        function getInitial(name) { return name ? String(name).charAt(0).toUpperCase() : '?'; }
+
         async function logAttendance(type) {
             showLoading();
             if (!navigator.geolocation) { alert("GPS Unavailable."); hideLoading(); return; }
@@ -831,21 +672,21 @@
                         body: JSON.stringify({
                             employeeId: state.user.id,
                             type: type,
-                            date: new Date().toISOString().split('T')[0], // Standard ISO date
+                            date: new Date().toISOString().split('T')[0],
                             time: new Date().toLocaleTimeString(),
                             lat: pos.coords.latitude,
                             lng: pos.coords.longitude
                         })
                     });
                     if (res.ok) {
-                        alert("System Matrix Updated: " + type + " verified. Notification triggered.");
+                        alert("Session " + type + " verified.");
                         await syncData();
                         renderAttendance();
                     }
-                } catch(e) { alert("Sync Error: Connectivity failure."); }
+                } catch(e) { alert("Matrix Sync Error."); }
                 finally { hideLoading(); }
             }, () => {
-                alert("GPS Error: Location identity is required for attendance verification.");
+                alert("GPS identity required.");
                 hideLoading();
             });
         }
@@ -867,7 +708,7 @@
                     body: JSON.stringify(payload)
                 });
                 if(res.ok) {
-                    alert("Application Finalized: Forwarded to HR Matrix.");
+                    alert("Application sent.");
                     await syncData();
                     state.leaveTab = 'history';
                     renderLeaves();
@@ -884,7 +725,6 @@
                 if (log.type === 'Clock In' && !dailyData[d].in) dailyData[d].in = log.time_str;
                 if (log.type === 'Clock Out') dailyData[d].out = log.time_str;
             });
-
             let totalMinutes = 0;
             const dates = Object.keys(dailyData);
             dates.forEach(d => {
@@ -906,7 +746,7 @@
                 name: document.getElementById('m-name').value,
                 email: document.getElementById('m-email').value,
                 role: document.getElementById('m-role').value,
-                password: document.getElementById('m-pass').value || document.getElementById('m-id').value,
+                password: document.getElementById('m-id').value,
                 leave_annual: Number(document.getElementById('m-leave-annual').value) || 0,
                 leave_casual: Number(document.getElementById('m-leave-wop').value) || 0
             };
@@ -917,7 +757,6 @@
                 if(res.ok) {
                     alert("Profile Synchronized.");
                     state.memberFormVisible = false;
-                    state.editingMemberId = null;
                     await syncData();
                     renderDirectory();
                 }
@@ -961,7 +800,7 @@
                     await syncData();
                     showApp();
                 } else {
-                    alert("Identity Rejected: Invalid Credentials.");
+                    alert("Invalid Credentials.");
                     hideLoading();
                 }
             } catch (err) { alert("Connectivity Error."); hideLoading(); }
@@ -973,13 +812,13 @@
             return add - sub;
         }
 
-        function downloadSampleDir() {
-            const sample = [{ id: 'EMP101', name: 'Sample Name', email: 'test@lsaf.edu.pk', role: 'employee', leave_annual: 14, leave_casual: 10 }];
-            exportToCSV(sample, "Directory_Sample.csv");
+        function Badge({ status }) {
+            const styles = { Approved: 'bg-green-100 text-green-700', Active: 'bg-green-100 text-green-700', Pending: 'bg-amber-100 text-amber-700', Rejected: 'bg-red-100 text-red-700' };
+            return `<span class="text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider ${styles[status] || 'bg-slate-100 text-slate-600'}">${status}</span>`;
         }
 
-        document.getElementById('login-form').addEventListener('submit', login);
         window.onload = init;
+        document.getElementById('login-form').addEventListener('submit', login);
     </script>
 </body>
 </html>
