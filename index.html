@@ -54,7 +54,7 @@
                     <input type="text" id="login-id" class="w-full p-4 rounded-2xl border-2 border-slate-50 bg-slate-50 outline-none focus:border-green-500 focus:bg-white transition-all font-bold" placeholder="EMP001" required>
                 </div>
                 <div class="space-y-1">
-                    <label class="block text-[10px] font-black text-slate-500 uppercase ml-2 tracking-widest">System Key</label>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase ml-2 tracking-widest">Password</label>
                     <input type="password" id="login-pass" class="w-full p-4 rounded-2xl border-2 border-slate-50 bg-slate-50 outline-none focus:border-green-500 focus:bg-white transition-all font-bold" placeholder="••••••••" required>
                 </div>
                 <button type="submit" class="w-full bg-green-700 text-white py-4 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-green-100 hover:bg-green-800 transition-all mt-4 active:scale-95">Sign In</button>
@@ -96,7 +96,7 @@
     </div>
 
     <script>
-        // Automatic API Base detection for your specific environment
+        // Automatic API Base detection
         const API_BASE = window.location.port === '5050' ? '/api' : `http://${window.location.hostname}:5050/api`;
         
         let state = {
@@ -128,7 +128,7 @@
         ];
 
         /**
-         * GLOBAL UI HELPERS
+         * UI HELPERS
          */
         function formatDate(dateString) {
             if (!dateString) return 'N/A';
@@ -181,9 +181,9 @@
          * INITIALIZATION WITH FAIL-SAFE
          */
         async function init() {
+            console.log("System: Starting initialization sequence...");
             const saved = localStorage.getItem('hr_user');
             
-            // EMERGENCY BYPASS: If API hangs, show UI after 2.5 seconds
             const failSafe = setTimeout(() => {
                 hideLoading();
                 if (saved) { state.user = JSON.parse(saved); showApp(); } else showLogin();
@@ -403,8 +403,8 @@
                                 <input type="email" id="m-email" class="p-4 rounded-2xl border-2 font-bold bg-slate-50 outline-none" placeholder="Email Address">
                                 <input type="text" id="m-name" class="p-4 rounded-2xl border-2 font-bold bg-slate-50 outline-none" placeholder="Full Name" required>
                                 <select id="m-role" class="p-4 rounded-2xl border-2 border-slate-50 font-black text-sm bg-slate-50 outline-none"><option value="employee">Staff Member</option><option value="admin">System Admin</option></select>
-                                <div class="space-y-1"><label class="text-[10px] font-black text-slate-400 ml-2">AL ALLOCATION</label><input type="number" id="m-leave-annual" class="p-4 w-full rounded-2xl border-2 font-bold" placeholder="Annual Bal"></div>
-                                <div class="space-y-1"><label class="text-[10px] font-black text-slate-400 ml-2">WOP ALLOCATION</label><input type="number" id="m-leave-wop" class="p-4 w-full rounded-2xl border-2 font-bold" placeholder="WOP Bal"></div>
+                                <input type="number" id="m-leave-annual" class="p-4 rounded-2xl border-2 font-bold shadow-inner" placeholder="Annual Bal">
+                                <input type="number" id="m-leave-wop" class="p-4 rounded-2xl border-2 font-bold shadow-inner" placeholder="WOP Bal">
                             </div>
                             <div class="flex justify-end gap-3 pt-6 border-t"><button type="button" onclick="state.memberFormVisible=false; renderDirectory()" class="px-8 py-3 text-slate-400 font-bold uppercase text-xs">Cancel</button><button type="submit" class="bg-green-700 text-white px-12 py-3 rounded-2xl font-black uppercase shadow-lg">Confirm & Sync</button></div>
                         </form>
@@ -503,7 +503,7 @@
         function renderSettings() {
              document.getElementById('view-container').innerHTML = `
                 <div class="animate-fade-in space-y-8 text-slate-900 font-sans text-center">
-                    <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase leading-none">Security Matrix</h2>
+                    <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase leading-none">Security</h2>
                     <div class="bg-white border p-12 shadow-2xl rounded-[3rem] max-w-xl mx-auto mt-10 relative overflow-hidden shadow-xl">
                         <div class="absolute top-0 right-0 w-32 h-32 bg-red-50 rounded-full blur-3xl -mr-16 -mt-16"></div>
                         <div class="space-y-8 relative z-10">
