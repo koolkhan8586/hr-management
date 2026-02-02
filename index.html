@@ -25,36 +25,36 @@
 
     <!-- CRITICAL ERROR DIAGNOSTIC BANNER -->
     <div id="critical-error-banner" class="hidden fixed inset-0 z-[9999] bg-red-600 text-white p-10 flex flex-col items-center justify-center text-center">
-        <h1 class="text-4xl font-black mb-4">SYSTEM INITIALIZATION FAILURE</h1>
+        <h1 class="text-4xl font-black mb-4 uppercase">System Error</h1>
         <p class="text-xl mb-8">The browser was unable to execute the application script. See technical details below:</p>
-        <div id="error-details" class="bg-black/20 p-6 rounded-2xl font-mono text-sm max-w-2xl w-full text-left overflow-auto mb-8"></div>
-        <button onclick="location.reload()" class="bg-white text-red-600 px-10 py-4 rounded-xl font-black uppercase shadow-2xl">Restart Application</button>
+        <div id="error-details" class="bg-black/20 p-6 rounded-2xl font-mono text-sm max-w-2xl w-full text-left overflow-auto mb-8 shadow-inner"></div>
+        <button onclick="location.reload()" class="bg-white text-red-600 px-10 py-4 rounded-xl font-black uppercase shadow-2xl transition-all active:scale-95">Restart Application</button>
     </div>
 
     <!-- GLOBAL LOADING SCREEN -->
     <div id="loading-screen" class="fixed inset-0 bg-white z-[999] flex flex-col items-center justify-center">
         <div class="loader w-16 h-16 border-4 border-slate-100 border-t-green-700 rounded-full mb-4"></div>
-        <p class="text-slate-400 font-black uppercase tracking-[0.3em] text-sm animate-pulse">Syncing LSAF-HR Core</p>
+        <p class="text-slate-400 font-black uppercase tracking-[0.3em] text-sm animate-pulse">Synchronizing LSAF Matrix</p>
     </div>
 
     <!-- LOGIN INTERFACE -->
     <div id="login-container" class="hidden min-h-screen flex items-center justify-center p-4">
-        <div class="bg-white w-full max-w-md p-10 rounded-[2.5rem] shadow-2xl border border-slate-100">
+        <div class="bg-white w-full max-w-md p-10 rounded-[2.5rem] shadow-2xl border border-slate-100 animate-slide-up">
             <div class="text-center mb-10">
-                <img src="/cropped-UOL-Green-V1.png" alt="Logo" class="h-20 mx-auto mb-4 object-contain" id="login-logo">
+                <img src="/cropped-UOL-Green-V1.png" alt="Logo" class="h-20 mx-auto mb-4 object-contain" id="login-logo" onerror="this.src='https://via.placeholder.com/150?text=LSAF'">
                 <h1 class="text-2xl font-black text-slate-800 leading-tight uppercase tracking-tighter">Lahore School of Accountancy</h1>
-                <p class="text-slate-400 text-xs font-bold mt-2 uppercase tracking-widest">Administrative Access Portal</p>
+                <p class="text-slate-400 text-xs font-bold mt-2 uppercase tracking-widest">Administrative Hub v4.3.4</p>
             </div>
             <form id="login-form" class="space-y-5">
                 <div class="space-y-1">
-                    <label class="block text-[10px] font-black text-slate-500 uppercase ml-2 tracking-widest">Account ID</label>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase ml-2 tracking-widest">System Identity ID</label>
                     <input type="text" id="login-id" class="w-full p-4 rounded-2xl border-2 border-slate-50 bg-slate-50 outline-none focus:border-green-500 focus:bg-white transition-all font-bold" placeholder="e.g. EMP001" required>
                 </div>
                 <div class="space-y-1">
-                    <label class="block text-[10px] font-black text-slate-500 uppercase ml-2 tracking-widest">Password</label>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase ml-2 tracking-widest">Security Password</label>
                     <input type="password" id="login-pass" class="w-full p-4 rounded-2xl border-2 border-slate-50 bg-slate-50 outline-none focus:border-green-500 focus:bg-white transition-all font-bold" placeholder="••••••••" required>
                 </div>
-                <button type="submit" class="w-full bg-green-700 text-white py-4 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-green-100 hover:bg-green-800 transition-all mt-4">Initialize Session</button>
+                <button type="submit" class="w-full bg-green-700 text-white py-4 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-green-100 hover:bg-green-800 transition-all mt-4 active:scale-95">Initialize Session</button>
             </form>
         </div>
     </div>
@@ -65,45 +65,45 @@
         <!-- SIDEBAR NAVIGATION -->
         <aside class="w-64 bg-white border-r border-slate-100 fixed h-full hidden lg:flex flex-col z-50">
             <div class="p-8 border-b border-slate-50 text-center">
-                <img src="/cropped-UOL-Green-V1.png" class="h-10 mx-auto mb-2" alt="">
-                <span class="text-[9px] font-black text-green-700 uppercase tracking-widest">LSAF - System Hub</span>
+                <img src="/cropped-UOL-Green-V1.png" class="h-10 mx-auto mb-2" alt="LSAF">
+                <span class="text-[9px] font-black text-green-700 uppercase tracking-widest">NexusHR Hub</span>
             </div>
-            <nav class="flex-1 p-4 space-y-1 overflow-y-auto custom-scrollbar" id="sidebar-nav">
-                <!-- Nav items generated via JS -->
+            <nav class="flex-1 p-4 space-y-1 overflow-y-auto custom-scrollbar shadow-inner bg-slate-50/10" id="sidebar-nav">
+                <!-- Navigation dynamically generated via JS -->
             </nav>
             <div class="p-4 border-t border-slate-50 bg-slate-50/30 flex items-center justify-between">
                 <div class="flex items-center gap-3 overflow-hidden">
-                    <div id="user-avatar" class="h-9 w-9 rounded-xl bg-green-100 text-green-700 flex items-center justify-center font-black text-sm border-2 border-white shadow-sm uppercase">?</div>
+                    <div id="user-avatar" class="h-9 w-9 min-w-[36px] rounded-xl bg-green-100 text-green-700 flex items-center justify-center font-black text-sm border-2 border-white shadow-sm uppercase">?</div>
                     <div class="flex flex-col overflow-hidden">
                         <span id="user-display-name" class="text-[11px] font-black text-slate-800 uppercase truncate">User</span>
-                        <span id="user-display-role" class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Role</span>
+                        <span id="user-display-role" class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Staff</span>
                     </div>
                 </div>
-                <button onclick="logout()" class="text-red-500 p-2 hover:bg-red-50 rounded-xl transition-all"><i data-lucide="log-out" size="20"></i></button>
+                <button onclick="logout()" class="text-red-500 p-2 hover:bg-red-50 rounded-xl transition-all active:scale-95"><i data-lucide="log-out" size="20"></i></button>
             </div>
         </aside>
 
         <!-- MAIN CONTENT AREA -->
-        <main class="flex-1 lg:ml-64 p-4 md:p-10 pb-24 lg:pb-10">
+        <main class="flex-1 lg:ml-64 p-4 md:p-10 pb-24 lg:pb-10 min-h-screen shadow-inner border-l border-slate-50">
             <div id="view-container" class="max-w-6xl mx-auto">
-                <!-- Dynamic views injected here -->
+                <!-- Dynamic views injected here based on tab selection -->
             </div>
         </main>
 
         <!-- MOBILE NAV -->
         <nav class="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 p-3 flex justify-around shadow-2xl z-50 rounded-t-[2rem]">
-            <button onclick="switchTab('dashboard')" class="p-3 rounded-2xl mobile-nav-btn" id="mob-dashboard"><i data-lucide="home"></i></button>
-            <button onclick="switchTab('attendance')" class="p-3 rounded-2xl mobile-nav-btn" id="mob-attendance"><i data-lucide="clock"></i></button>
-            <button onclick="switchTab('payroll')" class="p-3 rounded-2xl mobile-nav-btn" id="mob-payroll"><i data-lucide="dollar-sign"></i></button>
-            <button onclick="switchTab('directory')" class="p-3 rounded-2xl mobile-nav-btn" id="mob-directory"><i data-lucide="users"></i></button>
-            <button onclick="switchTab('discussion')" class="p-3 rounded-2xl mobile-nav-btn" id="mob-discussion"><i data-lucide="message-square"></i></button>
+            <button onclick="switchTab('dashboard')" class="p-4 rounded-2xl mobile-nav-btn" id="mob-dashboard"><i data-lucide="home"></i></button>
+            <button onclick="switchTab('attendance')" class="p-4 rounded-2xl mobile-nav-btn" id="mob-attendance"><i data-lucide="clock"></i></button>
+            <button onclick="switchTab('payroll')" class="p-4 rounded-2xl mobile-nav-btn" id="mob-payroll"><i data-lucide="dollar-sign"></i></button>
+            <button onclick="switchTab('directory')" class="p-4 rounded-2xl mobile-nav-btn" id="mob-directory"><i data-lucide="users"></i></button>
+            <button onclick="switchTab('discussion')" class="p-4 rounded-2xl mobile-nav-btn" id="mob-discussion"><i data-lucide="message-square"></i></button>
         </nav>
     </div>
 
-    <!-- SCRIPTS -->
+    <!-- SCRIPTS SECTION -->
     <script>
         /**
-         * GLOBAL STATE & CONFIG
+         * GLOBAL APPLICATION STATE
          */
         const API_BASE = '/api';
         let state = {
@@ -126,18 +126,18 @@
         };
 
         const NAV_ITEMS = [
-            { id: 'dashboard', label: 'Dashboard', icon: 'home', admin: false },
+            { id: 'dashboard', label: 'Portal Home', icon: 'home', admin: false },
             { id: 'attendance', label: 'Attendance', icon: 'clock', admin: false },
-            { id: 'payroll', label: 'Salary Sheet', icon: 'dollar-sign', admin: false },
-            { id: 'directory', label: 'Staff Hub', icon: 'users', admin: true },
-            { id: 'loans', label: 'Loans', icon: 'wallet', admin: false },
-            { id: 'leaves', label: 'Leaves', icon: 'calendar', admin: false },
+            { id: 'payroll', label: 'Salary Hub', icon: 'dollar-sign', admin: false },
+            { id: 'directory', label: 'Staff Directory', icon: 'users', admin: true },
+            { id: 'loans', label: 'Loan Tracker', icon: 'wallet', admin: false },
+            { id: 'leaves', label: 'Leave Portal', icon: 'calendar', admin: false },
             { id: 'discussion', label: 'Board', icon: 'message-square', admin: false },
             { id: 'settings', label: 'Security', icon: 'shield-check', admin: false }
         ];
 
         /**
-         * UTILITY FUNCTIONS
+         * UTILITY HELPERS
          */
         function formatDate(dateString) {
             if (!dateString) return 'N/A';
@@ -166,9 +166,12 @@
         }
 
         function exportToCSV(data, filename) {
-            if (!data || !data.length) { alert("Data Error: Nothing to export."); return; }
+            if (!data || !data.length) { alert("Data Matrix Error: No records found for export."); return; }
             const headers = Object.keys(data[0]).join(',');
-            const rows = data.map(row => Object.values(row).map(val => '"' + String(val).replace(/"/g, '""') + '"').join(','));
+            const rows = data.map(row => Object.values(row).map(val => {
+                const safeVal = String(val === null || val === undefined ? '' : val);
+                return '"' + safeVal.replace(/"/g, '""') + '"';
+            }).join(','));
             const csvContent = "data:text/csv;charset=utf-8," + [headers, ...rows].join('\n');
             const encodedUri = encodeURI(csvContent);
             const link = document.createElement("a");
@@ -180,20 +183,8 @@
         }
 
         /**
-         * INITIALIZATION & ERROR MONITORING
+         * SYSTEM INITIALIZATION
          */
-        window.onerror = function(msg, url, lineNo, columnNo, error) {
-            const banner = document.getElementById('critical-error-banner');
-            const details = document.getElementById('error-details');
-            banner.classList.remove('hidden');
-            details.innerHTML = `
-                <p><strong>Message:</strong> ${msg}</p>
-                <p><strong>Source:</strong> ${url} (Line: ${lineNo})</p>
-                <p><strong>Stack:</strong> ${error?.stack || 'Unavailable'}</p>
-            `;
-            return false;
-        };
-
         async function init() {
             try {
                 const saved = localStorage.getItem('hr_user');
@@ -205,7 +196,7 @@
                     showLogin();
                 }
             } catch (err) {
-                console.error("Init Failure:", err);
+                console.error("Critical: Initialization Failure.", err);
                 showLogin();
             } finally {
                 hideLoading();
@@ -236,7 +227,7 @@
                     state.leaves = await lvRes.json() || [];
                 }
             } catch (e) {
-                console.warn("Sync error: Working offline/cache.");
+                console.warn("Notice: Connectivity lost. Using cached dataset.");
             }
         }
 
@@ -270,8 +261,8 @@
             nav.innerHTML = NAV_ITEMS.filter(item => !item.admin || isAdmin).map(item => `
                 <button onclick="switchTab('${item.id}')" 
                         class="nav-btn w-full flex items-center gap-4 px-5 py-4 rounded-2xl transition-all font-bold ${state.currentTab === item.id ? 'bg-green-700 text-white shadow-xl scale-105' : 'text-slate-500 hover:bg-slate-50'}">
-                    <i data-lucide="${item.icon}" size="20"></i>
-                    <span class="text-sm">${item.label}</span>
+                    <i data-lucide="${item.icon}" size="18"></i>
+                    <span class="text-xs uppercase tracking-wider">${item.label}</span>
                 </button>
             `).join('');
             lucide.createIcons();
@@ -288,12 +279,18 @@
                 const isActive = btn.outerHTML.includes(`switchTab('${id}')`);
                 btn.className = `nav-btn w-full flex items-center gap-4 px-5 py-4 rounded-2xl transition-all font-bold ${isActive ? 'bg-green-700 text-white shadow-xl scale-105' : 'text-slate-500 hover:bg-slate-50'}`;
             });
+
+            // Handle mobile nav highlight
+            document.querySelectorAll('.mobile-nav-btn').forEach(btn => {
+                btn.className = `p-4 rounded-2xl mobile-nav-btn ${btn.id === 'mob-'+id ? 'bg-green-50 text-green-700 scale-110 shadow-inner' : 'text-slate-400'}`;
+            });
+
             renderView(id);
         }
 
         function renderView(id) {
             const container = document.getElementById('view-container');
-            container.innerHTML = `<div class="p-20 text-center text-slate-300 font-black animate-pulse uppercase tracking-[0.3em]">Syncing Matrix...</div>`;
+            container.innerHTML = `<div class="p-40 text-center text-slate-300 font-black animate-pulse uppercase tracking-[0.6em]">Syncing Matrix...</div>`;
 
             try {
                 switch(id) {
@@ -308,13 +305,16 @@
                     default: return renderDashboard();
                 }
             } catch (err) {
-                container.innerHTML = `<div class="bg-red-50 p-10 rounded-3xl border border-red-200">
-                    <h3 class="text-red-600 font-black mb-2">RENDER ERROR</h3>
-                    <p class="text-sm text-slate-600">${err.message}</p>
+                container.innerHTML = `<div class="bg-red-50 p-10 rounded-3xl border border-red-200 shadow-xl">
+                    <h3 class="text-red-600 font-black mb-2 uppercase tracking-widest">Interface Crash</h3>
+                    <p class="text-sm text-slate-600 font-mono">${err.message}</p>
                 </div>`;
             }
         }
 
+        /**
+         * SECTION 1: DASHBOARD
+         */
         function renderDashboard() {
             const container = document.getElementById('view-container');
             const annual = Number(state.user.leave_annual || 0);
@@ -323,21 +323,21 @@
             container.innerHTML = `
                 <div class="animate-fade-in space-y-8">
                     <div class="flex items-center justify-between">
-                        <div><h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Dashboard</h2><p class="text-slate-400 font-bold uppercase tracking-widest text-xs mt-1">Lahore School Hub</p></div>
-                        <div class="bg-white border p-3 rounded-2xl shadow-sm text-right">
-                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Network Status</p>
-                            <p class="text-green-600 font-black text-sm uppercase flex items-center gap-1 justify-end">Secure Connection <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span></p>
+                        <div><h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Portal Home</h2><p class="text-slate-400 font-bold uppercase tracking-widest text-xs mt-1">LSAF Administrative Matrix</p></div>
+                        <div class="bg-white border p-3 rounded-2xl shadow-sm text-right px-6">
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">System Clock</p>
+                            <p class="text-green-600 font-black text-sm uppercase flex items-center gap-1 justify-end">${new Date().toDateString()}</p>
                         </div>
                     </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        <div class="bg-gradient-to-br from-green-600 to-green-700 p-8 rounded-[2rem] text-white shadow-xl hover:scale-105 transition-all">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 font-sans">
+                        <div class="bg-gradient-to-br from-green-600 to-green-700 p-8 rounded-[2rem] text-white shadow-xl shadow-green-100 hover:scale-105 transition-all">
                             <i data-lucide="clock" class="mb-3 opacity-50" size="32"></i>
                             <p class="text-[10px] font-black text-green-100 uppercase tracking-widest">Session Status</p>
-                            <p class="text-3xl font-black block mt-2">Active</p>
+                            <p class="text-3xl font-black block mt-2 uppercase">${state.attendance?.[0]?.type === 'Clock In' ? 'Active' : 'Offline'}</p>
                         </div>
-                        <div class="bg-gradient-to-br from-blue-600 to-blue-700 p-8 rounded-[2rem] text-white shadow-xl hover:scale-105 transition-all">
+                        <div class="bg-gradient-to-br from-blue-600 to-blue-700 p-8 rounded-[2rem] text-white shadow-xl shadow-blue-100 hover:scale-105 transition-all">
                             <i data-lucide="calendar" class="mb-3 opacity-50" size="32"></i>
-                            <p class="text-[10px] font-black text-blue-100 uppercase tracking-widest">Leaves Credit</p>
+                            <p class="text-[10px] font-black text-blue-100 uppercase tracking-widest">Leave Matrix</p>
                             <div class="flex items-end gap-2 mt-2">
                                 <p class="text-3xl font-black block">${annual}</p><span class="text-[8px] font-bold uppercase text-blue-100 mb-1">Annual</span>
                                 <p class="text-3xl font-black block ml-2">${wop}</p><span class="text-[8px] font-bold uppercase text-blue-100 mb-1">WOP</span>
@@ -346,12 +346,12 @@
                         <div class="bg-white border p-8 rounded-[2rem] shadow-sm">
                             <i data-lucide="dollar-sign" class="mb-3 text-slate-200" size="32"></i>
                             <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Payroll</p>
-                            <p class="text-2xl font-black text-slate-800 block mt-2">Verified</p>
+                            <p class="text-2xl font-black text-slate-800 block mt-2">VERIFIED</p>
                         </div>
                         <div class="bg-white border p-8 rounded-[2rem] shadow-sm">
                             <i data-lucide="shield" class="mb-3 text-slate-200" size="32"></i>
                             <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Permission</p>
-                            <p class="text-2xl font-black text-slate-800 block mt-2 capitalize">${state.user.role}</p>
+                            <p class="text-2xl font-black text-slate-800 block mt-2 capitalize">${String(state.user.role)}</p>
                         </div>
                     </div>
                 </div>
@@ -359,6 +359,99 @@
             lucide.createIcons();
         }
 
+        /**
+         * SECTION 2: ATTENDANCE HUB
+         */
+        function renderAttendance() { 
+            const isAdmin = state.user.role === 'admin';
+            const filteredAttendance = state.attendance.filter(log => log.date_str.startsWith(state.selectedAttendanceMonth));
+            const stats = getAttendanceStats(filteredAttendance);
+            
+            document.getElementById('view-container').innerHTML = `
+                <div class="animate-fade-in space-y-8">
+                    <div class="flex flex-col md:flex-row justify-between items-center gap-6">
+                        <div>
+                            <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Attendance Matrix</h2>
+                            <p class="text-slate-400 font-bold uppercase tracking-widest text-xs mt-1">Activity Analysis Hub</p>
+                        </div>
+                        <div class="flex gap-3">
+                             <input type="month" value="${state.selectedAttendanceMonth}" onchange="updateAttendanceMonth(this.value)" class="p-3 border-2 rounded-2xl font-black bg-white shadow-sm outline-none focus:ring-4 focus:ring-green-50 transition-all">
+                             <button onclick="handleAttendanceExport()" class="bg-white border-2 border-slate-100 px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest shadow-sm hover:bg-slate-50">Export Logs</button>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 font-sans">
+                        <div class="bg-white border-2 border-slate-50 p-8 rounded-[2rem] shadow-sm flex items-center gap-6">
+                            <div class="h-14 w-14 rounded-2xl bg-green-50 text-green-700 flex items-center justify-center shadow-inner"><i data-lucide="calendar-check" size="28"></i></div>
+                            <div>
+                                <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Monthly Presence</p>
+                                <p class="text-3xl font-black text-slate-800 tracking-tighter">${stats.daysPresent} <span class="text-xs text-slate-400 uppercase">Days</span></p>
+                            </div>
+                        </div>
+                        <div class="bg-white border-2 border-slate-50 p-8 rounded-[2rem] shadow-sm flex items-center gap-6">
+                            <div class="h-14 w-14 rounded-2xl bg-blue-50 text-blue-700 flex items-center justify-center shadow-inner"><i data-lucide="clock" size="28"></i></div>
+                            <div>
+                                <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Validated Hours</p>
+                                <p class="text-3xl font-black text-slate-800 tracking-tighter">${stats.hours}<span class="text-xs text-slate-400 uppercase">h Total</span></p>
+                            </div>
+                        </div>
+                        <button onclick="logAttendance('Clock In')" class="bg-slate-900 text-white rounded-[2rem] shadow-2xl font-black uppercase text-xs tracking-[0.2em] flex flex-col items-center justify-center gap-2 hover:bg-black transition-all active:scale-95 group">
+                            <i data-lucide="zap" class="text-green-400 group-hover:scale-125 transition-transform" size="24"></i>
+                            Quick Session Init
+                        </button>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-8">
+                        <div class="bg-white rounded-[2.5rem] py-16 flex flex-col items-center justify-center space-y-10 border shadow-2xl">
+                            <div class="text-center">
+                                <h3 class="text-6xl font-black text-slate-800 font-mono tracking-tighter">${new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</h3>
+                                <p class="text-xs font-black text-slate-400 uppercase tracking-widest mt-2">${new Date().toDateString()}</p>
+                            </div>
+                            <div class="w-full max-w-sm space-y-4 px-10">
+                                <button onclick="logAttendance('Clock In')" class="w-full py-5 rounded-2xl bg-green-700 text-white font-black text-xl shadow-xl shadow-green-100 active:scale-95 transition-all hover:bg-green-800">Clock In</button>
+                                <button onclick="logAttendance('Clock Out')" class="w-full py-5 rounded-2xl bg-white border-2 border-slate-100 text-slate-700 font-black text-xl hover:bg-slate-50 active:scale-95 transition-all">Clock Out</button>
+                            </div>
+                        </div>
+                        <div class="bg-white rounded-[2.5rem] flex flex-col p-10 border-dashed border-4 border-slate-50 overflow-hidden max-h-[500px]">
+                            <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-6 flex justify-between">
+                                <span>Recent Logs Archive</span>
+                                <span>${state.selectedAttendanceMonth}</span>
+                            </h4>
+                            <div class="w-full space-y-4 overflow-y-auto custom-scrollbar pr-4 flex-1">
+                                ${filteredAttendance.map(log => `
+                                    <div class="flex justify-between items-center p-4 bg-slate-50/50 rounded-2xl border-2 border-transparent hover:border-slate-100 transition-all">
+                                        <div>
+                                            <p class="text-sm font-black text-slate-800">${String(log.type)}</p>
+                                            <p class="text-[10px] font-bold text-slate-400 uppercase mt-0.5">${formatDate(log.date_str)}</p>
+                                        </div>
+                                        <div class="text-right">
+                                            <p class="font-mono text-sm font-black text-slate-700">${String(log.time_str)}</p>
+                                            <p class="text-[8px] font-black text-green-600 uppercase tracking-widest">GPS Verified</p>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                                ${filteredAttendance.length === 0 ? '<div class="py-20 text-center text-slate-300 uppercase font-black text-xs tracking-widest">Log stream empty</div>' : ''}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+        }
+
+        async function handleAttendanceExport() {
+            if (state.user.role === 'admin') {
+                const res = await fetch(`${API_BASE}/attendance`);
+                const data = await res.json();
+                exportToCSV(data, "LSAF_All_Staff_Attendance.csv");
+            } else {
+                exportToCSV(state.attendance, "My_Attendance_Logs.csv");
+            }
+        }
+
+        /**
+         * SECTION 3: PAYROLL / SALARY HUB
+         */
         function renderPayroll() {
             const container = document.getElementById('view-container');
             const isAdmin = state.user.role === 'admin';
@@ -367,12 +460,12 @@
             container.innerHTML = `
                 <div class="animate-fade-in space-y-8">
                     <div class="flex flex-col md:flex-row justify-between items-center gap-6">
-                        <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Salary Portal</h2>
+                        <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Finance Suite</h2>
                         <div class="flex flex-wrap items-center gap-3">
-                            <input type="month" value="${state.selectedMonth}" onchange="updateMonth(this.value)" class="p-3 border rounded-2xl font-bold bg-white shadow-sm outline-none focus:ring-2 focus:ring-green-500">
+                            <input type="month" value="${state.selectedMonth}" onchange="updateMonth(this.value)" class="p-3 border-2 rounded-2xl font-black bg-white shadow-sm outline-none focus:ring-4 focus:ring-green-50 transition-all">
                             ${isAdmin ? `
-                                <button onclick="clearMonthData()" class="bg-red-50 text-red-600 p-3 rounded-2xl border border-red-100 hover:bg-red-100 transition-all"><i data-lucide="trash-2" size="20"></i></button>
-                                <label class="bg-white border px-6 py-3 rounded-2xl font-black text-sm uppercase tracking-widest cursor-pointer shadow-sm hover:bg-slate-50">
+                                <button onclick="clearMonthData()" class="bg-red-50 text-red-600 p-3 rounded-2xl border border-red-100 hover:bg-red-100 transition-all shadow-sm"><i data-lucide="trash-2" size="20"></i></button>
+                                <label class="bg-white border-2 px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest cursor-pointer shadow-sm hover:bg-slate-50 transition-all">
                                     Import Sheet <input type="file" onchange="importPayroll(this)" class="hidden">
                                 </label>
                             ` : ''}
@@ -380,17 +473,20 @@
                     </div>
 
                     ${state.editingPayrollId ? `
-                        <div class="bg-blue-50/20 border-blue-100 border-2 p-8 rounded-[2rem] mb-10 shadow-xl animate-slide-up">
-                            <form id="payroll-edit-form" class="grid grid-cols-2 md:grid-cols-4 gap-6">
-                                ${['basic_salary', 'others_allowance', 'invigilation', 'increment', 'eidi', 'tax', 'loan_deduction', 'insurance'].map(field => `
-                                    <div class="space-y-1">
-                                        <label class="block text-[10px] font-black uppercase text-slate-400 tracking-widest">${field.replace('_', ' ')}</label>
-                                        <input type="number" id="pay-${field}" class="w-full p-3 rounded-xl border-2 border-white bg-white shadow-sm outline-none focus:ring-4 focus:ring-blue-50 font-bold" value="${state.employees.find(e => e.id === state.editingPayrollId)[field] || 0}">
-                                    </div>
-                                `).join('')}
-                                <div class="col-span-2 md:col-span-4 flex justify-end gap-3 pt-4 border-t border-blue-50">
-                                    <button type="button" onclick="state.editingPayrollId=null; renderPayroll()" class="px-6 py-3 font-bold text-slate-400">Discard</button>
-                                    <button type="submit" class="bg-blue-600 text-white px-10 py-3 rounded-xl font-black uppercase tracking-widest shadow-lg">Save Salary Data</button>
+                        <div class="bg-blue-50/20 border-blue-100 border-2 p-10 rounded-[2.5rem] mb-10 shadow-2xl animate-slide-up">
+                            <form id="payroll-edit-form" class="space-y-6">
+                                <h3 class="text-blue-700 font-black uppercase text-xs tracking-[0.3em] mb-4">Salary Adjustments: ${state.employees.find(e => e.id === state.editingPayrollId).name}</h3>
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+                                    ${['basic_salary', 'others_allowance', 'invigilation', 'increment', 'eidi', 'tax', 'loan_deduction', 'insurance'].map(field => `
+                                        <div class="space-y-1">
+                                            <label class="block text-[10px] font-black uppercase text-slate-400 tracking-widest">${field.replace('_', ' ')}</label>
+                                            <input type="number" id="pay-${field}" class="w-full p-4 rounded-2xl border-2 border-white bg-white shadow-inner outline-none focus:ring-4 focus:ring-blue-50 font-black text-sm" value="${state.employees.find(e => e.id === state.editingPayrollId)[field] || 0}">
+                                        </div>
+                                    `).join('')}
+                                </div>
+                                <div class="col-span-2 md:col-span-4 flex justify-end gap-3 pt-6 border-t border-blue-50">
+                                    <button type="button" onclick="state.editingPayrollId=null; renderPayroll()" class="px-8 py-3 font-bold text-slate-400 hover:text-slate-600 transition-colors uppercase text-xs tracking-widest">Discard</button>
+                                    <button type="submit" class="bg-blue-600 text-white px-12 py-3 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-blue-100 active:scale-95 transition-all">Apply Adjustment</button>
                                 </div>
                             </form>
                         </div>
@@ -400,15 +496,15 @@
                         <table class="w-full text-left text-sm">
                             <thead class="bg-slate-50 border-b font-black text-slate-400 uppercase tracking-widest">
                                 <tr>
-                                    <th class="p-6">ID</th>
-                                    <th class="p-6">Staff Member</th>
-                                    <th class="p-6 text-right">Basic</th>
-                                    <th class="p-6 text-right">Extra</th>
-                                    <th class="p-6 text-right">Invig</th>
-                                    <th class="p-6 text-right text-red-500">Tax</th>
-                                    <th class="p-6 text-right text-red-500">Loan</th>
-                                    <th class="p-6 text-right font-black text-slate-900">Net Pay</th>
-                                    ${isAdmin ? `<th class="p-6 text-center">Edit</th>` : ''}
+                                    <th class="p-6 text-xs">ID</th>
+                                    <th class="p-6 text-xs">Member Name</th>
+                                    <th class="p-6 text-right text-xs">Basic</th>
+                                    <th class="p-6 text-right text-xs">Extra Load</th>
+                                    <th class="p-6 text-right text-xs">Invig</th>
+                                    <th class="p-6 text-right text-red-500 text-xs">Tax</th>
+                                    <th class="p-6 text-right text-red-500 text-xs">Loan</th>
+                                    <th class="p-6 text-right font-black text-slate-900 text-xs">Net Pay</th>
+                                    ${isAdmin ? `<th class="p-6 text-center text-xs">Action</th>` : ''}
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-50 font-bold">
@@ -416,17 +512,17 @@
                                     const net = calculateNet(emp);
                                     return `
                                         <tr class="hover:bg-slate-50/50 transition-colors">
-                                            <td class="p-6 font-black">${emp.id}</td>
-                                            <td class="p-6 uppercase text-xs text-slate-500 truncate max-w-[150px]">${emp.name}</td>
+                                            <td class="p-6 font-black text-slate-900">${emp.id}</td>
+                                            <td class="p-6 uppercase text-xs text-slate-500 truncate max-w-[180px]">${emp.name}</td>
                                             <td class="p-6 text-right font-mono text-slate-800">${(Number(emp.basic_salary)||0).toLocaleString()}</td>
                                             <td class="p-6 text-right font-mono text-slate-500">${(Number(emp.others_allowance)||0).toLocaleString()}</td>
                                             <td class="p-6 text-right font-mono text-slate-500">${(Number(emp.invigilation)||0).toLocaleString()}</td>
                                             <td class="p-6 text-right font-mono text-red-400">${(Number(emp.tax)||0).toLocaleString()}</td>
                                             <td class="p-6 text-right font-mono text-red-400">${(Number(emp.loan_deduction)||0).toLocaleString()}</td>
-                                            <td class="p-6 text-right font-black text-slate-900">Rs. ${net.toLocaleString()}</td>
+                                            <td class="p-6 text-right font-black text-slate-900 text-xs uppercase tracking-tighter">Rs. ${net.toLocaleString()}</td>
                                             ${isAdmin ? `
                                                 <td class="p-6 text-center">
-                                                    <button onclick="openPayrollEditor('${emp.id}')" class="text-blue-500 p-2 hover:bg-blue-50 rounded-xl transition-all"><i data-lucide="pencil" size="18"></i></button>
+                                                    <button onclick="openPayrollEditor('${emp.id}')" class="text-blue-500 p-2.5 bg-blue-50/30 rounded-xl hover:bg-blue-50 transition-all active:scale-90"><i data-lucide="pencil" size="18"></i></button>
                                                 </td>
                                             ` : ''}
                                         </tr>
@@ -443,66 +539,147 @@
             }
         }
 
+        /**
+         * SECTION 4: LEAVES PANEL
+         */
+        function renderLeaves() {
+            const list = Array.isArray(state.leaves) ? state.leaves : [];
+            const filteredLeaves = list.filter(l => l.start_date.startsWith(state.selectedLeaveMonth));
+            
+            document.getElementById('view-container').innerHTML = `
+                <div class="animate-fade-in space-y-8">
+                    <div class="flex justify-between items-center border-b pb-6 border-slate-100">
+                        <div>
+                            <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Leaves Panel</h2>
+                            <p class="text-slate-400 font-bold uppercase tracking-widest text-xs mt-1">Application Hub</p>
+                        </div>
+                        <div class="flex bg-slate-200/50 p-1.5 rounded-2xl shadow-inner">
+                            <button onclick="state.leaveTab='apply'; renderLeaves()" class="px-8 py-3 rounded-xl text-xs font-black transition-all ${state.leaveTab === 'apply' ? 'bg-white text-green-700 shadow-xl' : 'text-slate-500'} uppercase tracking-widest">Apply</button>
+                            <button onclick="state.leaveTab='history'; renderLeaves()" class="px-8 py-3 rounded-xl text-xs font-black transition-all ${state.leaveTab === 'history' ? 'bg-white text-green-700 shadow-xl' : 'text-slate-500'} uppercase tracking-widest">Archive</button>
+                        </div>
+                    </div>
+
+                    ${state.leaveTab === 'apply' ? `
+                        <div class="bg-white rounded-[3rem] border-2 border-slate-50 p-12 shadow-2xl max-w-2xl mx-auto animate-slide-up">
+                            <form id="leave-app-form" class="space-y-6">
+                                <div class="space-y-1">
+                                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] ml-2">Type Category</label>
+                                    <select id="leave-type" class="w-full p-4 rounded-2xl border-2 border-slate-50 outline-none font-black text-lg bg-slate-50 focus:ring-4 focus:ring-green-50 transition-all">
+                                        <option>Annual Leave</option>
+                                        <option>WOP Leave</option>
+                                    </select>
+                                </div>
+                                <div class="grid grid-cols-2 gap-8">
+                                    <div class="space-y-1">
+                                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] ml-2">Starting Date</label>
+                                        <input type="date" id="leave-date" class="w-full p-4 rounded-2xl border-2 border-slate-50 outline-none font-black bg-slate-50 shadow-inner focus:ring-4 focus:ring-green-50 transition-all" required>
+                                    </div>
+                                    <div class="space-y-1">
+                                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] ml-2">Quantity (Days)</label>
+                                        <input type="number" id="leave-days" class="w-full p-4 rounded-2xl border-2 border-slate-50 outline-none font-black bg-slate-50 shadow-inner focus:ring-4 focus:ring-green-50 transition-all" required>
+                                    </div>
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] ml-2">Justification / Reason</label>
+                                    <textarea id="leave-reason" class="w-full p-4 rounded-2xl border-2 border-slate-50 outline-none font-black bg-slate-50 h-32 shadow-inner focus:ring-4 focus:ring-green-50 transition-all" placeholder="Describe the purpose of your request..." required></textarea>
+                                </div>
+                                <button type="submit" class="w-full py-5 bg-green-700 text-white font-black uppercase tracking-[0.3em] rounded-3xl shadow-2xl shadow-green-100 transition-all hover:bg-green-800 active:scale-95">Post Application</button>
+                            </form>
+                        </div>
+                    ` : `
+                        <div class="space-y-6">
+                            <div class="flex justify-end items-center gap-4 bg-white p-3 rounded-2xl border shadow-sm w-fit ml-auto">
+                                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Filter Matrix:</span>
+                                <input type="month" value="${state.selectedLeaveMonth}" onchange="updateLeaveMonth(this.value)" class="p-2 border-none rounded-xl font-black text-xs outline-none bg-slate-50">
+                            </div>
+                            <div class="grid gap-6 max-w-4xl mx-auto">
+                                ${filteredLeaves.map(l => `
+                                    <div class="bg-white p-8 rounded-[2rem] border-2 border-slate-50 shadow-sm flex justify-between items-center hover:border-green-300 transition-all hover:shadow-xl group">
+                                        <div class="space-y-2">
+                                            <h4 class="font-black text-slate-800 text-lg uppercase tracking-tight">${String(l.leave_type)}</h4>
+                                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                                <i data-lucide="calendar" size="14"></i> ${formatDate(l.start_date)} • ${String(l.days)} Days Requested
+                                            </p>
+                                            <div class="bg-slate-50 p-4 rounded-2xl border-l-4 border-slate-200 mt-4">
+                                                <p class="text-xs text-slate-600 font-bold italic">"${String(l.reason || 'No justification provided.')}"</p>
+                                            </div>
+                                        </div>
+                                        <Badge status="${String(l.status)}" />
+                                    </div>
+                                `).join('')}
+                                ${filteredLeaves.length === 0 ? '<div class="py-40 text-center text-slate-300 font-black uppercase text-xs tracking-[0.6em] bg-white rounded-[4rem] border-4 border-dashed">Historical Ledger Empty</div>' : ''}
+                            </div>
+                        </div>
+                    `}
+                </div>
+            `;
+            lucide.createIcons();
+            document.getElementById('leave-app-form')?.addEventListener('submit', handleLeaveSubmit);
+        }
+
+        /**
+         * SECTION 5: STAFF HUB / DIRECTORY
+         */
         function renderDirectory() {
             const container = document.getElementById('view-container');
             container.innerHTML = `
                 <div class="animate-fade-in space-y-8">
-                    <div class="flex justify-between items-center">
-                        <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Staff Directory</h2>
+                    <div class="flex justify-between items-center border-b pb-6 border-slate-100">
+                        <div>
+                            <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Staff Directory</h2>
+                            <p class="text-slate-400 font-bold uppercase tracking-widest text-xs mt-1">Identity & Allocation Manager</p>
+                        </div>
                         <div class="flex gap-3">
-                            <button onclick="downloadSampleDir()" class="bg-white border px-5 py-3 rounded-2xl font-black text-sm uppercase tracking-widest shadow-sm hover:bg-slate-50">Sample</button>
-                            <label class="bg-white border px-5 py-3 rounded-2xl font-black text-sm uppercase tracking-widest cursor-pointer shadow-sm hover:bg-slate-50">
+                            <button onclick="downloadSampleDir()" class="bg-white border-2 border-slate-100 px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest shadow-sm hover:bg-slate-50">Sample</button>
+                            <label class="bg-white border-2 border-slate-100 px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest cursor-pointer shadow-sm hover:bg-slate-50 transition-all">
                                 Import <input type="file" onchange="importDir(this)" class="hidden">
                             </label>
-                            <button onclick="openAddMember()" class="bg-green-700 text-white px-8 py-3 rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl hover:bg-green-800">Add Member</button>
+                            <button onclick="openAddMember()" class="bg-green-700 text-white px-10 py-3 rounded-2xl font-black text-xs uppercase tracking-widest shadow-2xl hover:bg-green-800 active:scale-95 transition-all">New Identity</button>
                         </div>
                     </div>
 
                     <div id="member-form-container" class="${state.memberFormVisible ? '' : 'hidden'} animate-slide-up">
-                        <div class="bg-white border-2 border-green-100 shadow-2xl p-10 rounded-[2.5rem] mb-10">
-                            <form id="member-form" class="space-y-6">
-                                <h3 class="font-black text-slate-800 text-lg uppercase tracking-widest border-b pb-4">${state.editingMemberId ? 'Update Staff Identity' : 'Generate New Account'}</h3>
-                                <div class="grid md:grid-cols-2 gap-6">
+                        <div class="bg-white border-4 border-slate-50 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.15)] p-12 rounded-[3rem] mb-12 relative overflow-hidden">
+                            <div class="absolute top-0 right-0 w-32 h-32 bg-green-50 rounded-full blur-3xl -mr-16 -mt-16"></div>
+                            <form id="member-form" class="space-y-8 relative z-10">
+                                <h3 class="font-black text-slate-800 text-xl uppercase tracking-tighter border-b pb-5 border-slate-100">${state.editingMemberId ? 'Update System Profile' : 'Generate New Identity'}</h3>
+                                <div class="grid md:grid-cols-2 gap-8">
                                     <div class="space-y-1">
-                                        <label class="block text-[10px] font-black uppercase text-slate-400 tracking-widest">Employee ID</label>
-                                        <input type="text" id="m-id" class="w-full p-4 rounded-2xl border-2 border-slate-50 bg-slate-50 outline-none focus:ring-4 focus:ring-green-50 font-bold" placeholder="EMP001" ${state.editingMemberId ? 'disabled' : ''}>
+                                        <label class="block text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] ml-2">Employee ID Key</label>
+                                        <input type="text" id="m-id" class="w-full p-4 rounded-2xl border-2 border-slate-50 bg-slate-50 outline-none focus:ring-4 focus:ring-green-50 font-black text-sm transition-all" placeholder="ID (e.g. EMP001)" ${state.editingMemberId ? 'disabled' : ''}>
                                     </div>
                                     <div class="space-y-1">
-                                        <label class="block text-[10px] font-black uppercase text-slate-400 tracking-widest">Access Email</label>
-                                        <input type="email" id="m-email" class="w-full p-4 rounded-2xl border-2 border-slate-50 bg-slate-50 outline-none focus:ring-4 focus:ring-green-50 font-bold" placeholder="staff@lsaf.edu.pk">
+                                        <label class="block text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] ml-2">Communication Email</label>
+                                        <input type="email" id="m-email" class="w-full p-4 rounded-2xl border-2 border-slate-50 bg-slate-50 outline-none focus:ring-4 focus:ring-green-50 font-black text-sm transition-all" placeholder="staff@lsaf.edu.pk">
                                     </div>
                                     <div class="space-y-1">
-                                        <label class="block text-[10px] font-black uppercase text-slate-400 tracking-widest">Full Name</label>
-                                        <input type="text" id="m-name" class="w-full p-4 rounded-2xl border-2 border-slate-50 bg-slate-50 outline-none focus:ring-4 focus:ring-green-50 font-bold" placeholder="Legal Name" required>
+                                        <label class="block text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] ml-2">Verified Full Name</label>
+                                        <input type="text" id="m-name" class="w-full p-4 rounded-2xl border-2 border-slate-50 bg-slate-50 outline-none focus:ring-4 focus:ring-green-50 font-black text-sm transition-all" placeholder="Legal Name" required>
                                     </div>
                                     <div class="space-y-1">
-                                        <label class="block text-[10px] font-black uppercase text-slate-400 tracking-widest">Portal Key</label>
-                                        <input type="password" id="m-pass" class="w-full p-4 rounded-2xl border-2 border-slate-50 bg-slate-50 outline-none focus:ring-4 focus:ring-green-50 font-bold" placeholder="Set Password">
-                                    </div>
-                                    <div class="space-y-1">
-                                        <label class="block text-[10px] font-black uppercase text-slate-400 tracking-widest">Administrative Permission</label>
-                                        <select id="m-role" class="w-full p-4 rounded-2xl border-2 border-slate-50 bg-white shadow-sm outline-none focus:ring-4 focus:ring-green-50 font-bold">
-                                            <option value="employee">Standard Staff</option>
-                                            <option value="admin">HR Administrator</option>
+                                        <label class="block text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] ml-2">Administrative Level</label>
+                                        <select id="m-role" class="w-full p-4 rounded-2xl border-2 border-slate-50 bg-white shadow-sm outline-none focus:ring-4 focus:ring-green-50 font-black text-sm transition-all">
+                                            <option value="employee">Standard Personnel</option>
+                                            <option value="admin">System Administrator</option>
                                         </select>
                                     </div>
                                 </div>
-                                <div class="grid grid-cols-2 gap-6 bg-slate-50 p-6 rounded-3xl border-2 border-white shadow-inner">
+                                <div class="grid grid-cols-2 gap-8 bg-slate-50 p-10 rounded-[2.5rem] border-2 border-white shadow-inner">
                                     <div class="col-span-2">
-                                        <h4 class="text-[10px] font-black text-green-700 uppercase tracking-widest mb-4">Leave Allocation Hub</h4>
+                                        <h4 class="text-[10px] font-black text-green-700 uppercase tracking-[0.4em] mb-4 flex items-center gap-2"><i data-lucide="settings-2" size="14"></i> Leave Allocation Matrix</h4>
                                     </div>
                                     <div class="space-y-1">
-                                        <label class="block text-[10px] font-black uppercase text-slate-400 tracking-widest">Annual Leave Allocation</label>
-                                        <input type="number" id="m-leave-annual" class="w-full p-4 rounded-2xl border-2 border-white bg-white shadow-sm outline-none focus:ring-4 focus:ring-green-50 font-bold" placeholder="e.g. 14">
+                                        <label class="block text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] ml-2">Annual Leave Payout</label>
+                                        <input type="number" id="m-leave-annual" class="w-full p-4 rounded-2xl border-2 border-white bg-white shadow-sm outline-none focus:ring-4 focus:ring-green-100 font-black text-sm transition-all" placeholder="Annual balance">
                                     </div>
                                     <div class="space-y-1">
-                                        <label class="block text-[10px] font-black uppercase text-slate-400 tracking-widest">WOP Leave Allocation</label>
-                                        <input type="number" id="m-leave-wop" class="w-full p-4 rounded-2xl border-2 border-white bg-white shadow-sm outline-none focus:ring-4 focus:ring-green-50 font-bold" placeholder="e.g. 10">
+                                        <label class="block text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] ml-2">WOP Leave Payout</label>
+                                        <input type="number" id="m-leave-wop" class="w-full p-4 rounded-2xl border-2 border-white bg-white shadow-sm outline-none focus:ring-4 focus:ring-green-100 font-black text-sm transition-all" placeholder="WOP balance">
                                     </div>
                                 </div>
-                                <div class="flex justify-end gap-3 pt-6 border-t border-slate-100">
-                                    <button type="button" onclick="state.memberFormVisible=false; state.editingMemberId=null; renderDirectory()" class="px-8 py-3 font-bold text-slate-400">Discard</button>
-                                    <button type="submit" class="bg-green-700 text-white px-12 py-3 rounded-2xl font-black uppercase tracking-widest shadow-xl">Confirm & Sync</button>
+                                <div class="flex justify-end gap-3 pt-8 border-t border-slate-100">
+                                    <button type="button" onclick="state.memberFormVisible=false; state.editingMemberId=null; renderDirectory()" class="px-10 py-4 font-black text-slate-400 uppercase tracking-widest text-xs hover:text-slate-600 transition-colors">Discard</button>
+                                    <button type="submit" class="bg-slate-900 text-white px-16 py-4 rounded-2xl font-black uppercase tracking-[0.2em] shadow-2xl hover:bg-black transition-all active:scale-95">Verify & Sync</button>
                                 </div>
                             </form>
                         </div>
@@ -510,23 +687,23 @@
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                         ${state.employees.map(emp => `
-                            <div class="bg-white p-8 rounded-[2rem] border shadow-sm flex items-center gap-6 group relative hover:border-green-300 transition-all">
-                                <div class="h-16 w-16 rounded-2xl bg-green-100 flex items-center justify-center font-black text-green-700 text-2xl border-4 border-white shadow-md uppercase">${emp.name.charAt(0)}</div>
+                            <div class="bg-white p-8 rounded-[2.5rem] border-2 border-slate-50 shadow-sm flex items-center gap-6 group relative hover:border-green-400 transition-all hover:shadow-xl">
+                                <div class="h-16 w-16 rounded-[1.5rem] bg-green-50 flex items-center justify-center font-black text-green-700 text-2xl border-4 border-white shadow-md shadow-green-100/50 uppercase">${getInitial(emp.name)}</div>
                                 <div class="flex-1 overflow-hidden">
-                                    <h4 class="font-black text-slate-800 text-lg truncate uppercase leading-tight">${emp.name}</h4>
-                                    <div class="flex flex-col gap-1 mt-1">
-                                        <span class="bg-green-50 text-green-700 text-[10px] font-black px-2 py-0.5 rounded-lg uppercase w-fit tracking-tighter">${emp.role}</span>
-                                        <p class="text-[10px] font-bold text-slate-400 truncate tracking-tighter">${emp.email || 'No Email Set'}</p>
-                                        <div class="flex gap-2 text-[8px] font-bold uppercase tracking-tighter text-slate-400 mt-1">
-                                            <span>AL: ${emp.leave_annual || 0}</span>
-                                            <span>WOP: ${emp.leave_casual || 0}</span>
+                                    <h4 class="font-black text-slate-800 text-base truncate uppercase tracking-tight leading-none">${String(emp.name)}</h4>
+                                    <div class="flex flex-col gap-1 mt-2">
+                                        <span class="bg-slate-900 text-white text-[8px] font-black px-2 py-0.5 rounded uppercase w-fit tracking-widest leading-none">${String(emp.role)}</span>
+                                        <p class="text-[9px] font-bold text-slate-400 truncate leading-none mt-1">${String(emp.email || 'Email Null')}</p>
+                                        <div class="flex gap-3 text-[8px] font-black uppercase tracking-tighter text-slate-300 mt-1 border-t pt-1 border-slate-50">
+                                            <span>AL: ${Number(emp.leave_annual || 0)}</span>
+                                            <span>WOP: ${Number(emp.leave_casual || 0)}</span>
                                         </div>
-                                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">ID: ${emp.id}</p>
+                                        <p class="text-[9px] font-black text-slate-300 uppercase tracking-widest leading-none mt-1">ID: ${String(emp.id)}</p>
                                     </div>
                                 </div>
                                 <div class="flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all absolute top-6 right-6">
-                                    <button onclick="editMember('${emp.id}')" class="p-2.5 bg-white border shadow-sm rounded-xl text-blue-500 hover:bg-blue-50 transition-transform hover:scale-110"><i data-lucide="pencil" size="18"></i></button>
-                                    <button onclick="deleteMember('${emp.id}')" class="p-2.5 bg-white border shadow-sm rounded-xl text-red-500 hover:bg-red-50 transition-transform hover:scale-110"><i data-lucide="trash-2" size="18"></i></button>
+                                    <button onclick="editMember('${String(emp.id)}')" class="p-2.5 bg-white border-2 border-slate-50 shadow-xl rounded-xl text-blue-500 hover:bg-blue-50 transition-transform hover:scale-110 active:scale-90"><i data-lucide="pencil" size="16"></i></button>
+                                    <button onclick="deleteMember('${String(emp.id)}')" class="p-2.5 bg-white border-2 border-slate-50 shadow-xl rounded-xl text-red-500 hover:bg-red-50 transition-transform hover:scale-110 active:scale-90"><i data-lucide="trash-2" size="16"></i></button>
                                 </div>
                             </div>
                         `).join('')}
@@ -537,134 +714,34 @@
             document.getElementById('member-form')?.addEventListener('submit', handleMemberSubmit);
         }
 
-        function renderAttendance() { 
-            const filteredAttendance = state.attendance.filter(log => log.date_str.startsWith(state.selectedAttendanceMonth));
-            const stats = getAttendanceStats(filteredAttendance);
-            
-            document.getElementById('view-container').innerHTML = `
-                <div class="animate-fade-in space-y-8">
-                    <div class="flex justify-between items-center">
-                        <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Attendance Tracker</h2>
-                        <input type="month" value="${state.selectedAttendanceMonth}" onchange="updateAttendanceMonth(this.value)" class="p-3 border-2 rounded-2xl font-black bg-white shadow-sm outline-none focus:ring-2 focus:ring-green-500">
-                    </div>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div class="bg-white border p-6 rounded-[2rem] shadow-sm flex items-center gap-6">
-                            <div class="h-12 w-12 rounded-xl bg-green-50 text-green-700 flex items-center justify-center shadow-inner"><i data-lucide="calendar-check"></i></div>
-                            <div>
-                                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Present Days</p>
-                                <p class="text-2xl font-black text-slate-800">${stats.daysPresent}</p>
-                            </div>
-                        </div>
-                        <div class="bg-white border p-6 rounded-[2rem] shadow-sm flex items-center gap-6">
-                            <div class="h-12 w-12 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center shadow-inner"><i data-lucide="clock"></i></div>
-                            <div>
-                                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Work Hours</p>
-                                <p class="text-2xl font-black text-slate-800">${stats.hours}h</p>
-                            </div>
-                        </div>
-                        <button onclick="logAttendance('Clock In')" class="bg-green-700 text-white rounded-[2rem] shadow-xl font-black uppercase text-xs tracking-widest flex flex-col items-center justify-center gap-1 hover:bg-green-800 transition-all active:scale-95">
-                            <i data-lucide="log-in" size="24"></i>
-                            Quick Clock-In
-                        </button>
-                    </div>
-
-                    <div class="grid md:grid-cols-2 gap-8">
-                        <div class="bg-white rounded-[2rem] py-16 flex flex-col items-center justify-center space-y-10 border shadow-sm">
-                            <h3 class="text-6xl font-black text-slate-800 font-mono tracking-tighter">${new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</h3>
-                            <div class="w-full max-w-sm space-y-4 px-10">
-                                <button onclick="logAttendance('Clock In')" class="w-full py-5 rounded-[2rem] bg-green-700 text-white font-black text-xl shadow-2xl active:scale-95 transition-all">Clock In</button>
-                                <button onclick="logAttendance('Clock Out')" class="w-full py-5 rounded-[2rem] bg-white border-2 border-slate-200 text-slate-700 font-black text-xl hover:bg-slate-50 active:scale-95 transition-all">Clock Out</button>
-                            </div>
-                        </div>
-                        <div class="bg-white rounded-[2rem] flex flex-col items-center justify-center text-center p-12 border-dashed border-4 border-slate-50 overflow-y-auto max-h-[400px] custom-scrollbar">
-                            <h4 class="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Historical Logs (${state.selectedAttendanceMonth})</h4>
-                            <div class="w-full space-y-3">
-                                ${filteredAttendance.map(log => `
-                                    <div class="flex justify-between p-4 border-b border-slate-50 text-xs font-bold text-slate-600">
-                                        <span>${log.type}</span>
-                                        <span class="font-mono text-slate-400">${log.date_str} • ${log.time_str}</span>
-                                    </div>
-                                `).join('')}
-                                ${filteredAttendance.length === 0 ? '<p class="text-slate-300 uppercase py-20">No logs found</p>' : ''}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            lucide.createIcons();
-        }
-
-        function renderLeaves() {
-            const filteredLeaves = state.leaves.filter(l => l.start_date.startsWith(state.selectedLeaveMonth));
-            
-            document.getElementById('view-container').innerHTML = `
-                <div class="animate-fade-in space-y-8">
-                    <div class="flex justify-between items-center">
-                        <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Leaves Management</h2>
-                        <div class="flex bg-slate-200/50 p-1 rounded-2xl shadow-inner">
-                            <button onclick="state.leaveTab='apply'; renderLeaves()" class="px-6 py-2 rounded-xl text-xs font-black transition-all ${state.leaveTab === 'apply' ? 'bg-white text-green-700 shadow-md' : 'text-slate-500'}">Apply</button>
-                            <button onclick="state.leaveTab='history'; renderLeaves()" class="px-6 py-2 rounded-xl text-xs font-black transition-all ${state.leaveTab === 'history' ? 'bg-white text-green-700 shadow-md' : 'text-slate-500'}">Archives</button>
-                        </div>
-                    </div>
-
-                    ${state.leaveTab === 'apply' ? `
-                        <div class="bg-white rounded-[2.5rem] border-2 border-slate-50 !p-12 shadow-sm max-w-xl mx-auto">
-                            <form id="leave-app-form" class="space-y-6">
-                                <div class="space-y-1">
-                                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Select Category</label>
-                                    <select id="leave-type" class="w-full p-4 rounded-2xl border-2 border-slate-100 outline-none font-bold text-lg bg-slate-50">
-                                        <option>Annual Leave</option>
-                                        <option>WOP Leave</option>
-                                    </select>
-                                </div>
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div class="space-y-1"><label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Date</label><input type="date" id="leave-date" class="w-full p-4 rounded-2xl border-2 border-slate-100 outline-none font-bold bg-slate-50" required></div>
-                                    <div class="space-y-1"><label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Days</label><input type="number" id="leave-days" class="w-full p-4 rounded-2xl border-2 border-slate-100 outline-none font-bold bg-slate-50" required></div>
-                                </div>
-                                <div class="space-y-1">
-                                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Reason / Description</label>
-                                    <textarea id="leave-reason" class="w-full p-4 rounded-2xl border-2 border-slate-100 outline-none font-bold bg-slate-50 h-32" placeholder="Describe the purpose of your leave request..." required></textarea>
-                                </div>
-                                <button type="submit" class="w-full py-5 bg-green-700 text-white font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-green-100 transition-all hover:bg-green-800">Verify & Submit Application</button>
-                            </form>
-                        </div>
-                    ` : `
-                        <div class="space-y-6">
-                            <div class="flex justify-end items-center gap-3">
-                                <span class="text-[10px] font-black text-slate-400 uppercase">View History:</span>
-                                <input type="month" value="${state.selectedLeaveMonth}" onchange="updateLeaveMonth(this.value)" class="p-2 border-2 rounded-xl font-bold bg-white text-xs outline-none">
-                            </div>
-                            <div class="grid gap-4">
-                                ${filteredLeaves.map(l => `
-                                    <div class="bg-white p-6 rounded-3xl border shadow-sm flex justify-between items-center">
-                                        <div>
-                                            <h4 class="font-black text-slate-800 uppercase">${l.leave_type}</h4>
-                                            <p class="text-[10px] font-bold text-slate-400 uppercase mt-1">${formatDate(l.start_date)} • ${l.days} Days Requested</p>
-                                            <p class="text-xs text-slate-500 font-medium mt-2 italic">"${l.reason || 'No description provided'}"</p>
-                                        </div>
-                                        <Badge status="${l.status}" />
-                                    </div>
-                                `).join('')}
-                                ${filteredLeaves.length === 0 ? '<div class="py-20 text-center text-slate-300 font-black uppercase text-xs">No records for this period</div>' : ''}
-                            </div>
-                        </div>
-                    `}
-                </div>
-            `;
-            lucide.createIcons();
-            document.getElementById('leave-app-form')?.addEventListener('submit', handleLeaveSubmit);
-        }
-
+        /**
+         * SECTION 6: SECURITY / SETTINGS
+         */
         function renderSettings() {
              document.getElementById('view-container').innerHTML = `
                 <div class="animate-fade-in space-y-8">
-                    <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Security</h2>
-                    <div class="bg-white border p-12 shadow-sm border-2 border-slate-50 rounded-[2.5rem] max-w-md mx-auto">
-                        <div class="space-y-6">
-                            <div class="space-y-1"><label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">New System Key</label><input type="password" id="s-p1" class="w-full p-4 rounded-2xl border-2 border-slate-50 bg-slate-50 font-black outline-none shadow-inner focus:ring-4 focus:ring-green-50 transition-all"></div>
-                            <div class="space-y-1"><label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Confirm Key</label><input type="password" id="s-p2" class="w-full p-4 rounded-2xl border-2 border-slate-50 bg-slate-50 font-black outline-none shadow-inner focus:ring-4 focus:ring-green-50 transition-all"></div>
-                            <button onclick="alert('Key Update Synced')" class="w-full py-5 bg-slate-900 text-white font-black uppercase tracking-widest rounded-2xl shadow-2xl hover:bg-black transition-all">Finalize Update</button>
+                    <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Portal Security</h2>
+                    <div class="bg-white border p-12 shadow-2xl border-4 border-slate-50 rounded-[3rem] max-w-xl mx-auto mt-20 relative overflow-hidden">
+                        <div class="absolute top-0 right-0 w-40 h-40 bg-red-50 rounded-full blur-3xl -mr-20 -mt-20"></div>
+                        <div class="space-y-8 relative z-10">
+                            <div class="text-center mb-8">
+                                <div class="h-20 w-20 bg-slate-900 rounded-3xl flex items-center justify-center text-white mx-auto shadow-2xl mb-4 shadow-slate-200">
+                                    <i data-lucide="shield-lock" size="40"></i>
+                                </div>
+                                <h3 class="font-black text-slate-800 text-xl uppercase tracking-tighter">Access Control</h3>
+                                <p class="text-slate-400 font-bold uppercase text-[10px] tracking-widest mt-1">Update System Access Keys</p>
+                            </div>
+                            <div class="space-y-4">
+                                <div class="space-y-1">
+                                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">New System Key</label>
+                                    <input type="password" id="s-p1" class="w-full p-4 rounded-2xl border-2 border-slate-50 bg-slate-50 font-black outline-none shadow-inner focus:ring-4 focus:ring-green-50 transition-all">
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Confirm Key Matrix</label>
+                                    <input type="password" id="s-p2" class="w-full p-4 rounded-2xl border-2 border-slate-50 bg-slate-50 font-black outline-none shadow-inner focus:ring-4 focus:ring-green-50 transition-all">
+                                </div>
+                            </div>
+                            <button onclick="handleSecurityUpdate()" class="w-full py-5 bg-slate-900 text-white font-black uppercase tracking-[0.3em] rounded-[2rem] shadow-2xl hover:bg-black transition-all active:scale-95 shadow-slate-200">Sync Security Key</button>
                         </div>
                     </div>
                 </div>
@@ -673,8 +750,10 @@
         }
 
         /**
-         * LOGIC HANDLERS
+         * SECTION 7: CORE BUSINESS LOGIC
          */
+        function getInitial(name) { return name ? String(name).charAt(0).toUpperCase() : '?'; }
+
         async function logAttendance(type) {
             showLoading();
             navigator.geolocation.getCurrentPosition(async (pos) => {
@@ -685,21 +764,21 @@
                         body: JSON.stringify({
                             employeeId: state.user.id,
                             type: type,
-                            date: new Date().toISOString().split('T')[0], // Standard ISO Date
+                            date: new Date().toISOString().split('T')[0],
                             time: new Date().toLocaleTimeString(),
                             lat: pos.coords.latitude,
                             lng: pos.coords.longitude
                         })
                     });
                     if (res.ok) {
-                        alert(`${type} successful! Email notification triggered.`);
+                        alert("System Success: " + type + " verified by GPS. Email notification triggered.");
                         await syncData();
                         renderAttendance();
                     }
-                } catch(e) { alert("Sync Error."); }
+                } catch(e) { alert("Matrix Sync Error."); }
                 finally { hideLoading(); }
             }, () => {
-                alert("GPS access denied. Location is mandatory for attendance.");
+                alert("Identity Denied: Location verification is mandatory for clocking.");
                 hideLoading();
             });
         }
@@ -721,7 +800,7 @@
                     body: JSON.stringify(payload)
                 });
                 if(res.ok) {
-                    alert("Application Sent to HR.");
+                    alert("Matrix Alert: Application posted for HR verification.");
                     await syncData();
                     state.leaveTab = 'history';
                     renderLeaves();
@@ -770,17 +849,18 @@
             state.memberFormVisible = true;
             renderDirectory();
             
-            document.getElementById('m-name').value = emp.name;
-            document.getElementById('m-role').value = emp.role;
-            document.getElementById('m-id').value = emp.id;
-            document.getElementById('m-email').value = emp.email || '';
-            document.getElementById('m-leave-annual').value = emp.leave_annual || 0;
-            document.getElementById('m-leave-wop').value = emp.leave_casual || 0;
+            document.getElementById('m-name').value = String(emp.name);
+            document.getElementById('m-role').value = String(emp.role);
+            document.getElementById('m-id').value = String(emp.id);
+            document.getElementById('m-email').value = String(emp.email || '');
+            document.getElementById('m-leave-annual').value = Number(emp.leave_annual || 0);
+            document.getElementById('m-leave-wop').value = Number(emp.leave_casual || 0);
         }
 
         async function handleMemberSubmit(e) {
             e.preventDefault();
             showLoading();
+            
             const payload = {
                 id: document.getElementById('m-id').value,
                 name: document.getElementById('m-name').value,
@@ -788,8 +868,7 @@
                 role: document.getElementById('m-role').value,
                 password: document.getElementById('m-pass').value || document.getElementById('m-id').value,
                 leave_annual: Number(document.getElementById('m-leave-annual').value) || 0,
-                leave_casual: Number(document.getElementById('m-leave-wop').value) || 0,
-                leave_sick: 0
+                leave_casual: Number(document.getElementById('m-leave-wop').value) || 0
             };
 
             const method = state.editingMemberId ? 'PUT' : 'POST';
@@ -802,23 +881,23 @@
                     body: JSON.stringify(payload)
                 });
                 if(res.ok) {
-                    alert("Staff identity synchronized.");
+                    alert("System Success: Profile updated and synchronized.");
                     state.memberFormVisible = false;
                     state.editingMemberId = null;
                     await syncData();
                     renderDirectory();
                 }
-            } catch(err) { alert("Matrix Error."); }
+            } catch(err) { alert("Matrix Error: Database unreachable."); }
             finally { hideLoading(); }
         }
 
         async function deleteMember(id) {
-            if(!confirm("CRITICAL: Permanently erase employee " + id + "?")) return;
+            if(!confirm("CRITICAL: Wipe account identity " + id + " from matrix?")) return;
             showLoading();
             try {
                 const res = await fetch(`${API_BASE}/employees/${id}`, { method: 'DELETE' });
                 if(res.ok) { await syncData(); renderDirectory(); }
-            } catch(e) { alert("Delete Failed."); }
+            } catch(e) { alert("Action Aborted."); }
             finally { hideLoading(); }
         }
 
@@ -827,9 +906,16 @@
         async function handlePayrollUpdate(e) {
             e.preventDefault();
             const emp = state.employees.find(e => e.id === state.editingPayrollId);
-            const fields = ['basic_salary', 'others_allowance', 'invigilation', 'increment', 'eidi', 'tax', 'loan_deduction', 'insurance'];
-            const updates = {};
-            fields.forEach(f => updates[f] = Number(document.getElementById('pay-'+f).value));
+            const updates = {
+                basic_salary: Number(document.getElementById('pay-basic_salary').value),
+                others_allowance: Number(document.getElementById('pay-others_allowance').value),
+                invigilation: Number(document.getElementById('pay-invigilation').value),
+                increment: Number(document.getElementById('pay-increment').value),
+                eidi: Number(document.getElementById('pay-eidi').value),
+                tax: Number(document.getElementById('pay-tax').value),
+                loan_deduction: Number(document.getElementById('pay-loan_deduction').value),
+                insurance: Number(document.getElementById('pay-insurance').value)
+            };
             showLoading();
             try {
                 const res = await fetch(`${API_BASE}/employees/${state.editingPayrollId}`, {
@@ -838,7 +924,7 @@
                     body: JSON.stringify({ ...emp, ...updates })
                 });
                 if(res.ok) { state.editingPayrollId = null; await syncData(); renderPayroll(); }
-            } catch(e) { alert("Update failed."); }
+            } catch(e) { alert("Fail."); }
             finally { hideLoading(); }
         }
 
@@ -857,10 +943,16 @@
                     await syncData();
                     showApp();
                 } else {
-                    alert("Invalid Credentials.");
+                    alert("Auth Denied: Invalid Credentials.");
                     hideLoading();
                 }
-            } catch (err) { alert("Server Connection Error."); hideLoading(); }
+            } catch (err) { alert("Matrix Error: Offline."); hideLoading(); }
+        }
+
+        function calculateNet(emp) {
+            const add = cleanNumber(emp.basic_salary) + cleanNumber(emp.others_allowance) + cleanNumber(emp.invigilation) + cleanNumber(emp.increment) + cleanNumber(emp.eidi);
+            const sub = cleanNumber(emp.tax) + cleanNumber(emp.loan_deduction) + cleanNumber(emp.insurance);
+            return add - sub;
         }
 
         function toggleBoardForm() { state.boardFormVisible = !state.boardFormVisible; renderDiscussion(); }
