@@ -116,8 +116,11 @@
             currentTab: 'dashboard',
             loading: true,
             selectedMonth: new Date().toISOString().slice(0, 7),
+            selectedAttendanceMonth: new Date().toISOString().slice(0, 7),
+            selectedLeaveMonth: new Date().toISOString().slice(0, 7),
             boardFormVisible: false,
             memberFormVisible: false,
+            leaveTab: 'apply',
             editingMemberId: null,
             editingPayrollId: null
         };
@@ -224,6 +227,13 @@
                 if (state.user) {
                     const freshMe = state.employees.find(e => String(e.id) === String(state.user.id));
                     if (freshMe) state.user = freshMe;
+                    
+                    const [atRes, lvRes] = await Promise.all([
+                        fetch(`${API_BASE}/attendance/${state.user.id}`),
+                        fetch(`${API_BASE}/leaves/${state.user.id}`)
+                    ]);
+                    state.attendance = await atRes.json() || [];
+                    state.leaves = await lvRes.json() || [];
                 }
             } catch (e) {
                 console.warn("Sync error: Working offline/cache.");
@@ -522,74 +532,297 @@
             document.getElementById('member-form')?.addEventListener('submit', handleMemberSubmit);
         }
 
-        function renderDiscussion() { 
-            const container = document.getElementById('view-container');
-            const isAdmin = state.user.role === 'admin';
+        function renderAttendance() { 
+            const filteredAttendance = state.attendance.filter(log => log.date_str.startsWith(state.selectedAttendanceMonth));
+            const stats = getAttendanceStats(filteredAttendance);
             
-            container.innerHTML = `
+            document.getElementById('view-container').innerHTML = `
                 <div class="animate-fade-in space-y-8">
-                    <div class="flex justify-between items-center border-b pb-6 border-slate-100">
-                        <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase tracking-widest leading-none">Board Hub</h2>
-                        ${isAdmin ? `<button onclick="toggleBoardForm()" class="bg-green-700 text-white px-10 py-3 rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl">New Post</button>` : ''}
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Attendance Tracker</h2>
+                        <input type="month" value="${state.selectedAttendanceMonth}" onchange="updateAttendanceMonth(this.value)" class="p-3 border-2 rounded-2xl font-black bg-white shadow-sm outline-none focus:ring-2 focus:ring-green-500">
                     </div>
-
-                    <div id="board-form-container" class="${state.boardFormVisible ? '' : 'hidden'} animate-slide-up">
-                        <div class="bg-green-50/20 border-green-100 shadow-xl border-2 p-8 rounded-[2rem] mb-10">
-                            <form id="notice-form" class="space-y-4">
-                                <div class="space-y-1">
-                                    <label class="block text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">Target Staff</label>
-                                    <select id="notice-recipient" class="w-full p-3 rounded-xl border bg-white shadow-inner text-sm font-bold outline-none focus:ring-4 focus:ring-green-50">
-                                        <option value="all">Global Broadcast</option>
-                                        ${state.employees.map(e => `<option value="${e.id}">${e.name} (${e.id})</option>`).join('')}
-                                    </select>
-                                </div>
-                                <input type="text" id="notice-title" class="w-full p-4 rounded-xl border text-base font-black shadow-inner outline-none focus:ring-4 focus:ring-green-50" placeholder="Header Title" required>
-                                <textarea id="notice-message" class="w-full p-4 rounded-xl border h-32 text-sm font-medium outline-none focus:ring-4 focus:ring-green-50 shadow-inner" placeholder="Announcement details..." required></textarea>
-                                <div class="flex justify-end gap-3 pt-2">
-                                    <button type="button" onclick="toggleBoardForm()" class="px-6 py-3 font-bold text-slate-400 hover:text-slate-600">Discard</button>
-                                    <button type="submit" class="bg-green-700 text-white px-10 py-3 rounded-xl font-black uppercase text-xs tracking-widest shadow-lg">Confirm Publish</button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-
-                    <div class="space-y-8 max-w-4xl mx-auto">
-                        ${state.discussions.map(p => `
-                            <div class="bg-white rounded-[2.5rem] border-l-[12px] border-l-green-600 shadow-xl group !p-10 relative">
-                                <div class="flex justify-between items-start mb-6">
-                                    <h4 class="font-black text-slate-800 text-2xl uppercase tracking-tight max-w-2xl">${p.title}</h4>
-                                    <div class="flex items-center gap-4">
-                                        <span class="text-[10px] font-black text-slate-300 uppercase tracking-widest">${formatDate(p.date)}</span>
-                                        ${isAdmin ? `<button onclick="deleteNotice(${p.id})" class="text-red-400 opacity-0 group-hover:opacity-100 transition-all hover:text-red-600"><i data-lucide="trash-2" size="18"></i></button>` : ''}
-                                    </div>
-                                </div>
-                                <p class="text-lg text-slate-600 font-medium leading-relaxed mb-8 border-b pb-8">${p.message}</p>
-                                <div class="flex items-center justify-between">
-                                    <span class="bg-green-50 text-green-700 font-black text-[10px] px-5 py-2 rounded-xl border border-green-100 uppercase tracking-widest shadow-sm">Verified: ${p.senderName}</span>
-                                    <button onclick="alert('Reply module initializing...')" class="text-blue-600 font-black text-xs uppercase tracking-widest border-2 border-blue-50 px-8 py-3 rounded-[1.25rem] hover:bg-blue-50 transition-all shadow-sm">Reply to Post</button>
-                                </div>
-                                
-                                ${p.replies && p.replies.length > 0 ? `
-                                    <div class="mt-8 pl-8 border-l-4 border-slate-100 space-y-4">
-                                        ${p.replies.map(r => `
-                                            <div class="bg-slate-50 p-5 rounded-2xl border border-white">
-                                                <p class="text-sm font-bold text-slate-600">${r.message}</p>
-                                                <p class="text-[9px] font-black text-slate-400 mt-2 uppercase tracking-widest">— ${r.senderName}</p>
-                                            </div>
-                                        `).join('')}
-                                    </div>
-                                ` : ''}
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="bg-white border p-6 rounded-[2rem] shadow-sm flex items-center gap-6">
+                            <div class="h-12 w-12 rounded-xl bg-green-50 text-green-700 flex items-center justify-center shadow-inner"><i data-lucide="calendar-check"></i></div>
+                            <div>
+                                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Present Days</p>
+                                <p class="text-2xl font-black text-slate-800">${stats.daysPresent}</p>
                             </div>
-                        `).join('')}
-                        ${state.discussions.length === 0 ? '<div class="py-40 text-center text-slate-300 font-black uppercase tracking-[0.5em] bg-white rounded-[4rem] border-4 border-dashed">Board Ledger Empty</div>' : ''}
+                        </div>
+                        <div class="bg-white border p-6 rounded-[2rem] shadow-sm flex items-center gap-6">
+                            <div class="h-12 w-12 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center shadow-inner"><i data-lucide="clock"></i></div>
+                            <div>
+                                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Work Hours</p>
+                                <p class="text-2xl font-black text-slate-800">${stats.hours}h</p>
+                            </div>
+                        </div>
+                        <button onclick="logAttendance('Clock In')" class="bg-green-700 text-white rounded-[2rem] shadow-xl font-black uppercase text-xs tracking-widest flex flex-col items-center justify-center gap-1 hover:bg-green-800 transition-all active:scale-95">
+                            <i data-lucide="log-in" size="24"></i>
+                            Quick Clock-In
+                        </button>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-8">
+                        <div class="bg-white rounded-[2rem] py-16 flex flex-col items-center justify-center space-y-10 border shadow-sm">
+                            <h3 class="text-6xl font-black text-slate-800 font-mono tracking-tighter">${new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</h3>
+                            <div class="w-full max-w-sm space-y-4 px-10">
+                                <button onclick="logAttendance('Clock In')" class="w-full py-5 rounded-[2rem] bg-green-700 text-white font-black text-xl shadow-2xl active:scale-95 transition-all">Clock In</button>
+                                <button onclick="logAttendance('Clock Out')" class="w-full py-5 rounded-[2rem] bg-white border-2 border-slate-200 text-slate-700 font-black text-xl hover:bg-slate-50 active:scale-95 transition-all">Clock Out</button>
+                            </div>
+                        </div>
+                        <div class="bg-white rounded-[2rem] flex flex-col items-center justify-center text-center p-12 border-dashed border-4 border-slate-50 overflow-y-auto max-h-[400px] custom-scrollbar">
+                            <h4 class="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Historical Logs (${state.selectedAttendanceMonth})</h4>
+                            <div class="w-full space-y-3">
+                                ${filteredAttendance.map(log => `
+                                    <div class="flex justify-between p-4 border-b border-slate-50 text-xs font-bold text-slate-600">
+                                        <span>${log.type}</span>
+                                        <span class="font-mono text-slate-400">${log.date_str} • ${log.time_str}</span>
+                                    </div>
+                                `).join('')}
+                                ${filteredAttendance.length === 0 ? '<p class="text-slate-300 uppercase py-20">No logs found</p>' : ''}
+                            </div>
+                        </div>
                     </div>
                 </div>
             `;
             lucide.createIcons();
+        }
+
+        function renderLeaves() {
+            const filteredLeaves = state.leaves.filter(l => l.start_date.startsWith(state.selectedLeaveMonth));
             
-            if(isAdmin) {
-                document.getElementById('notice-form')?.addEventListener('submit', handleBoardSubmit);
+            document.getElementById('view-container').innerHTML = `
+                <div class="animate-fade-in space-y-8">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Leaves Management</h2>
+                        <div class="flex bg-slate-200/50 p-1 rounded-2xl shadow-inner">
+                            <button onclick="state.leaveTab='apply'; renderLeaves()" class="px-6 py-2 rounded-xl text-xs font-black transition-all ${state.leaveTab === 'apply' ? 'bg-white text-green-700 shadow-md' : 'text-slate-500'}">Apply</button>
+                            <button onclick="state.leaveTab='history'; renderLeaves()" class="px-6 py-2 rounded-xl text-xs font-black transition-all ${state.leaveTab === 'history' ? 'bg-white text-green-700 shadow-md' : 'text-slate-500'}">Archives</button>
+                        </div>
+                    </div>
+
+                    ${state.leaveTab === 'apply' ? `
+                        <div class="bg-white rounded-[2.5rem] border-2 border-slate-50 !p-12 shadow-sm max-w-xl mx-auto">
+                            <form id="leave-app-form" class="space-y-6">
+                                <div class="space-y-1">
+                                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Select Category</label>
+                                    <select id="leave-type" class="w-full p-4 rounded-2xl border-2 border-slate-100 outline-none font-bold text-lg bg-slate-50">
+                                        <option>Annual Leave</option>
+                                        <option>WOP Leave</option>
+                                    </select>
+                                </div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div class="space-y-1"><label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Date</label><input type="date" id="leave-date" class="w-full p-4 rounded-2xl border-2 border-slate-100 outline-none font-bold bg-slate-50" required></div>
+                                    <div class="space-y-1"><label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Days</label><input type="number" id="leave-days" class="w-full p-4 rounded-2xl border-2 border-slate-100 outline-none font-bold bg-slate-50" required></div>
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Reason / Description</label>
+                                    <textarea id="leave-reason" class="w-full p-4 rounded-2xl border-2 border-slate-100 outline-none font-bold bg-slate-50 h-32" placeholder="Describe the purpose of your leave request..." required></textarea>
+                                </div>
+                                <button type="submit" class="w-full py-5 bg-green-700 text-white font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-green-100 transition-all hover:bg-green-800">Verify & Submit Application</button>
+                            </form>
+                        </div>
+                    ` : `
+                        <div class="space-y-6">
+                            <div class="flex justify-end items-center gap-3">
+                                <span class="text-[10px] font-black text-slate-400 uppercase">View History:</span>
+                                <input type="month" value="${state.selectedLeaveMonth}" onchange="updateLeaveMonth(this.value)" class="p-2 border-2 rounded-xl font-bold bg-white text-xs outline-none">
+                            </div>
+                            <div class="grid gap-4">
+                                ${filteredLeaves.map(l => `
+                                    <div class="bg-white p-6 rounded-3xl border shadow-sm flex justify-between items-center">
+                                        <div>
+                                            <h4 class="font-black text-slate-800 uppercase">${l.leave_type}</h4>
+                                            <p class="text-[10px] font-bold text-slate-400 uppercase mt-1">${formatDate(l.start_date)} • ${l.days} Days Requested</p>
+                                            <p class="text-xs text-slate-500 font-medium mt-2 italic">"${l.reason || 'No description provided'}"</p>
+                                        </div>
+                                        <Badge status="${l.status}" />
+                                    </div>
+                                `).join('')}
+                                ${filteredLeaves.length === 0 ? '<div class="py-20 text-center text-slate-300 font-black uppercase text-xs">No records for this period</div>' : ''}
+                            </div>
+                        </div>
+                    `}
+                </div>
+            `;
+            lucide.createIcons();
+            document.getElementById('leave-app-form')?.addEventListener('submit', handleLeaveSubmit);
+        }
+
+        function renderSettings() {
+             document.getElementById('view-container').innerHTML = `
+                <div class="animate-fade-in space-y-8">
+                    <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Security</h2>
+                    <div class="bg-white border p-12 shadow-sm border-2 border-slate-50 rounded-[2.5rem] max-w-md mx-auto">
+                        <div class="space-y-6">
+                            <div class="space-y-1"><label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">New System Key</label><input type="password" id="s-p1" class="w-full p-4 rounded-2xl border-2 border-slate-50 bg-slate-50 font-black outline-none shadow-inner focus:ring-4 focus:ring-green-50 transition-all"></div>
+                            <div class="space-y-1"><label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Confirm Key</label><input type="password" id="s-p2" class="w-full p-4 rounded-2xl border-2 border-slate-50 bg-slate-50 font-black outline-none shadow-inner focus:ring-4 focus:ring-green-50 transition-all"></div>
+                            <button onclick="alert('Key Update Synced')" class="w-full py-5 bg-slate-900 text-white font-black uppercase tracking-widest rounded-2xl shadow-2xl hover:bg-black transition-all">Finalize Update</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+        }
+
+        /**
+         * HANDLERS
+         */
+        async function logAttendance(type) {
+            showLoading();
+            navigator.geolocation.getCurrentPosition(async (pos) => {
+                try {
+                    const res = await fetch(`${API_BASE}/attendance`, {
+                        method: 'POST',
+                        headers: {'Content-Type':'application/json'},
+                        body: JSON.stringify({
+                            employeeId: state.user.id,
+                            type: type,
+                            date: new Date().toLocaleDateString(),
+                            time: new Date().toLocaleTimeString(),
+                            lat: pos.coords.latitude,
+                            lng: pos.coords.longitude
+                        })
+                    });
+                    if (res.ok) {
+                        alert(`${type} successful!`);
+                        await syncData();
+                        renderAttendance();
+                    }
+                } catch(e) { alert("Sync Error."); }
+                finally { hideLoading(); }
+            }, () => {
+                alert("GPS denied.");
+                hideLoading();
+            });
+        }
+
+        async function handleLeaveSubmit(e) {
+            e.preventDefault();
+            showLoading();
+            const payload = {
+                employeeId: state.user.id,
+                type: document.getElementById('leave-type').value,
+                startDate: document.getElementById('leave-date').value,
+                days: document.getElementById('leave-days').value,
+                reason: document.getElementById('leave-reason').value
+            };
+            try {
+                const res = await fetch(`${API_BASE}/leaves`, {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify(payload)
+                });
+                if(res.ok) {
+                    alert("Application Sent.");
+                    await syncData();
+                    state.leaveTab = 'history';
+                    renderLeaves();
+                }
+            } catch(e) { alert("Fail."); }
+            finally { hideLoading(); }
+        }
+
+        function getAttendanceStats(logs) {
+            const dailyData = {};
+            logs.forEach(log => {
+                const d = log.date_str;
+                if (!dailyData[d]) dailyData[d] = { in: null, out: null };
+                if (log.type === 'Clock In' && !dailyData[d].in) dailyData[d].in = log.time_str;
+                if (log.type === 'Clock Out') dailyData[d].out = log.time_str;
+            });
+
+            let totalMinutes = 0;
+            const dates = Object.keys(dailyData);
+            let daysPresent = dates.length;
+
+            dates.forEach(d => {
+                const day = dailyData[d];
+                if (day.in && day.out) {
+                    // Primitive time difference calculation
+                    const startArr = day.in.split(/[:\s]/);
+                    const endArr = day.out.split(/[:\s]/);
+                    const start = new Date(2000, 0, 1, 
+                        startArr[2] === 'PM' && startArr[0] != 12 ? Number(startArr[0])+12 : Number(startArr[0]), 
+                        Number(startArr[1]));
+                    const end = new Date(2000, 0, 1, 
+                        endArr[2] === 'PM' && endArr[0] != 12 ? Number(endArr[0])+12 : Number(endArr[0]), 
+                        Number(endArr[1]));
+                    if (end > start) totalMinutes += (end - start) / 60000;
+                }
+            });
+
+            return { daysPresent, hours: (totalMinutes / 60).toFixed(1) };
+        }
+
+        function updateAttendanceMonth(val) { state.selectedAttendanceMonth = val; renderAttendance(); }
+        function updateLeaveMonth(val) { state.selectedLeaveMonth = val; renderLeaves(); }
+
+        function toggleBoardForm() {
+            state.boardFormVisible = !state.boardFormVisible;
+            renderDiscussion();
+        }
+
+        async function handleBoardSubmit(e) {
+            e.preventDefault();
+            const btn = e.target.querySelector('button[type="submit"]');
+            btn.disabled = true;
+            btn.innerText = "Syncing...";
+
+            const payload = {
+                title: document.getElementById('notice-title').value,
+                message: document.getElementById('notice-message').value,
+                recipientId: document.getElementById('notice-recipient').value,
+                senderName: state.user.name,
+                senderId: state.user.id,
+                date: new Date().toISOString()
+            };
+
+            try {
+                const res = await fetch(`${API_BASE}/discussions`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    await fetch(`${API_BASE}/notify`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ 
+                            recipientId: payload.recipientId, 
+                            title: payload.title, 
+                            message: payload.message, 
+                            senderName: payload.senderName 
+                        })
+                    });
+                    
+                    alert("System Success: Broadcast Published.");
+                    state.boardFormVisible = false;
+                    await syncData();
+                    renderDiscussion();
+                } else {
+                    alert("Database Error: Failed to save post.");
+                }
+            } catch (err) {
+                alert("Matrix Error: Connectivity failure.");
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Confirm Publish";
             }
+        }
+
+        async function deleteNotice(id) {
+            if(!confirm("Archive Notice: Permanently remove from staff view?")) return;
+            try {
+                const res = await fetch(`${API_BASE}/discussions/${id}`, { method: 'DELETE' });
+                if(res.ok) {
+                    await syncData();
+                    renderDiscussion();
+                }
+            } catch(e) { alert("Fail."); }
         }
 
         /**
@@ -620,15 +853,14 @@
             e.preventDefault();
             showLoading();
             
-            // Map inputs to the DB schema
             const payload = {
                 id: document.getElementById('m-id').value,
                 name: document.getElementById('m-name').value,
                 role: document.getElementById('m-role').value,
                 password: document.getElementById('m-pass').value || document.getElementById('m-id').value,
                 leave_annual: Number(document.getElementById('m-leave-annual').value) || 0,
-                leave_casual: Number(document.getElementById('m-leave-wop').value) || 0, // Using leave_casual for WOP
-                leave_sick: 0 // Resetting sick since user requested only Annual or WOP
+                leave_casual: Number(document.getElementById('m-leave-wop').value) || 0,
+                leave_sick: 0
             };
 
             const method = state.editingMemberId ? 'PUT' : 'POST';
@@ -695,9 +927,6 @@
             reader.readAsText(file);
         }
 
-        /**
-         * PAYROLL LOGIC
-         */
         function openPayrollEditor(id) {
             state.editingPayrollId = id;
             renderPayroll();
@@ -707,10 +936,8 @@
             e.preventDefault();
             const emp = state.employees.find(e => e.id === state.editingPayrollId);
             const fields = ['basic_salary', 'others_allowance', 'invigilation', 'increment', 'eidi', 'tax', 'loan_deduction', 'insurance'];
-            
             const updates = {};
             fields.forEach(f => updates[f] = Number(document.getElementById('pay-'+f).value));
-            
             showLoading();
             try {
                 const res = await fetch(`${API_BASE}/employees/${state.editingPayrollId}`, {
@@ -727,9 +954,6 @@
             finally { hideLoading(); }
         }
 
-        /**
-         * HANDLERS & NAVIGATION
-         */
         function calculateNet(emp) {
             const basic = Number(emp.basic_salary) || 0;
             const allowance = Number(emp.others_allowance) || 0;
@@ -747,7 +971,6 @@
             const id = document.getElementById('login-id').value;
             const pass = document.getElementById('login-pass').value;
             showLoading();
-            
             try {
                 const res = await fetch(`${API_BASE}/employees`);
                 const list = await res.json();
@@ -826,154 +1049,6 @@
                 alert("Sync Finished.");
             };
             reader.readAsText(file);
-        }
-
-        function renderAttendance() { 
-            document.getElementById('view-container').innerHTML = `
-                <div class="animate-fade-in space-y-8">
-                    <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Attendance</h2>
-                    <div class="grid md:grid-cols-2 gap-8">
-                        <div class="bg-white rounded-[2rem] py-16 flex flex-col items-center justify-center space-y-10 border shadow-sm">
-                            <h3 class="text-6xl font-black text-slate-800 font-mono tracking-tighter">${new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</h3>
-                            <div class="w-full max-w-sm space-y-4 px-10">
-                                <button onclick="alert('GPS Logged!')" class="w-full py-5 rounded-[2rem] bg-green-700 text-white font-black text-xl shadow-2xl active:scale-95 transition-all">Clock In</button>
-                                <button onclick="alert('GPS Logged!')" class="w-full py-5 rounded-[2rem] bg-white border-2 border-slate-200 text-slate-700 font-black text-xl hover:bg-slate-50 active:scale-95 transition-all">Clock Out</button>
-                            </div>
-                        </div>
-                        <div class="bg-white rounded-[2rem] flex flex-col items-center justify-center text-center p-12 border-dashed border-4 border-slate-50">
-                            <i data-lucide="map-pin" class="text-green-600 mb-6 animate-pulse" size="64"></i>
-                            <p class="text-sm font-black text-slate-400 uppercase tracking-[0.3em] leading-relaxed">Identity Verified<br/>GPS Geofencing Active</p>
-                        </div>
-                    </div>
-                </div>
-            `;
-            lucide.createIcons();
-        }
-
-        function renderLoans() { 
-            const userLoans = state.loans.filter(l => String(l.employee_id) === String(state.user.id) || state.user.role === 'admin');
-            document.getElementById('view-container').innerHTML = `
-                <div class="animate-fade-in space-y-8">
-                    <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Loans Center</h2>
-                    <div class="grid gap-6">
-                        ${userLoans.map(l => `
-                            <div class="bg-white p-8 rounded-[2rem] border shadow-sm flex justify-between items-center hover:border-green-300 transition-all cursor-pointer group">
-                                <div><h4 class="text-xl font-black text-slate-800 uppercase tracking-tight">${l.employee_name}</h4><p class="text-xs font-bold text-slate-400 uppercase mt-1 tracking-widest">Total Grant: Rs. ${Number(l.total_amount).toLocaleString()}</p></div>
-                                <div class="text-right">
-                                    <p class="text-red-600 font-black text-2xl tracking-tighter">Rs. ${(Number(l.total_amount) - Number(l.paid_amount||0)).toLocaleString()}</p>
-                                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Outstanding</p>
-                                </div>
-                            </div>
-                        `).join('')}
-                        ${userLoans.length === 0 ? '<div class="py-40 text-center text-slate-300 font-black uppercase tracking-[0.5em] bg-white border border-dashed rounded-[4rem]">No records found</div>' : ''}
-                    </div>
-                </div>
-            `;
-            lucide.createIcons();
-        }
-
-        function renderLeaves() {
-            document.getElementById('view-container').innerHTML = `
-                <div class="animate-fade-in space-y-8">
-                    <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Leaves Panel</h2>
-                    <div class="bg-white rounded-[2.5rem] border-2 border-slate-50 !p-12 shadow-sm max-w-xl mx-auto">
-                        <div class="space-y-6">
-                            <div class="space-y-1"><label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Select Category</label>
-                            <select class="w-full p-4 rounded-2xl border-2 border-slate-100 outline-none font-bold text-lg bg-slate-50">
-                                <option>Annual Leave</option>
-                                <option>WOP Leave</option>
-                            </select></div>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div class="space-y-1"><label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Date</label><input type="date" class="w-full p-4 rounded-2xl border-2 border-slate-100 outline-none font-bold bg-slate-50"></div>
-                                <div class="space-y-1"><label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Days</label><input type="number" class="w-full p-4 rounded-2xl border-2 border-slate-100 outline-none font-bold bg-slate-50"></div>
-                            </div>
-                            <button onclick="alert('Verified Request Sent')" class="w-full py-5 bg-green-700 text-white font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-green-100 transition-all hover:bg-green-800">Submit Application</button>
-                        </div>
-                    </div>
-                </div>
-            `;
-            lucide.createIcons();
-        }
-
-        function renderSettings() {
-             document.getElementById('view-container').innerHTML = `
-                <div class="animate-fade-in space-y-8">
-                    <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Security</h2>
-                    <div class="bg-white border p-12 shadow-sm border-2 border-slate-50 rounded-[2.5rem] max-w-md mx-auto">
-                        <div class="space-y-6">
-                            <div class="space-y-1"><label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">New System Key</label><input type="password" id="s-p1" class="w-full p-4 rounded-2xl border-2 border-slate-50 bg-slate-50 font-black outline-none shadow-inner focus:ring-4 focus:ring-green-50 transition-all"></div>
-                            <div class="space-y-1"><label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Confirm Key</label><input type="password" id="s-p2" class="w-full p-4 rounded-2xl border-2 border-slate-50 bg-slate-50 font-black outline-none shadow-inner focus:ring-4 focus:ring-green-50 transition-all"></div>
-                            <button onclick="alert('Key Update Synced')" class="w-full py-5 bg-slate-900 text-white font-black uppercase tracking-widest rounded-2xl shadow-2xl hover:bg-black transition-all">Finalize Update</button>
-                        </div>
-                    </div>
-                </div>
-            `;
-            lucide.createIcons();
-        }
-
-        function toggleBoardForm() {
-            state.boardFormVisible = !state.boardFormVisible;
-            renderDiscussion();
-        }
-
-        async function handleBoardSubmit(e) {
-            e.preventDefault();
-            const btn = e.target.querySelector('button[type="submit"]');
-            btn.disabled = true;
-            btn.innerText = "Syncing...";
-
-            const payload = {
-                title: document.getElementById('notice-title').value,
-                message: document.getElementById('notice-message').value,
-                recipientId: document.getElementById('notice-recipient').value,
-                senderName: state.user.name,
-                senderId: state.user.id,
-                date: new Date().toISOString()
-            };
-
-            try {
-                const res = await fetch(`${API_BASE}/discussions`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(payload)
-                });
-
-                if (res.ok) {
-                    await fetch(`${API_BASE}/notify`, {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({ 
-                            recipientId: payload.recipientId, 
-                            title: payload.title, 
-                            message: payload.message, 
-                            senderName: payload.senderName 
-                        })
-                    });
-                    
-                    alert("System Success: Broadcast Published.");
-                    state.boardFormVisible = false;
-                    await syncData();
-                    renderDiscussion();
-                } else {
-                    alert("Database Error: Failed to save post.");
-                }
-            } catch (err) {
-                alert("Matrix Error: Connectivity failure.");
-            } finally {
-                btn.disabled = false;
-                btn.innerText = "Confirm Publish";
-            }
-        }
-
-        async function deleteNotice(id) {
-            if(!confirm("Archive Notice: Permanently remove from staff view?")) return;
-            try {
-                const res = await fetch(`${API_BASE}/discussions/${id}`, { method: 'DELETE' });
-                if(res.ok) {
-                    await syncData();
-                    renderDiscussion();
-                }
-            } catch(e) { alert("Fail."); }
         }
 
         /**
