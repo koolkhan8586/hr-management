@@ -181,7 +181,6 @@
          * INITIALIZATION WITH FAIL-SAFE
          */
         async function init() {
-            console.log("System: Starting initialization sequence...");
             const saved = localStorage.getItem('hr_user');
             
             // EMERGENCY BYPASS: If API hangs, show UI after 2.5 seconds
@@ -410,7 +409,7 @@
                             <div class="flex justify-end gap-3 pt-6 border-t"><button type="button" onclick="state.memberFormVisible=false; renderDirectory()" class="px-8 py-3 text-slate-400 font-bold uppercase text-xs">Cancel</button><button type="submit" class="bg-green-700 text-white px-12 py-3 rounded-2xl font-black uppercase shadow-lg">Confirm & Sync</button></div>
                         </form>
                     </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 font-sans">
                         ${state.employees.map(emp => `
                             <div class="bg-white p-8 rounded-[2.5rem] border shadow-sm flex items-center gap-6 relative group hover:border-green-300 transition-all">
                                 <div class="h-14 w-14 rounded-2xl bg-green-50 text-green-700 flex items-center justify-center font-black text-2xl uppercase">${getInitial(emp.name)}</div>
@@ -448,7 +447,7 @@
                                     <input type="date" id="l-date" class="w-full p-4 rounded-2xl border-2 font-bold bg-slate-50 shadow-inner" required>
                                     <input type="number" id="l-days" class="w-full p-4 rounded-2xl border-2 font-bold bg-slate-50 shadow-inner" placeholder="Days" required>
                                 </div>
-                                <textarea id="l-reason" class="w-full p-4 rounded-2xl border-2 font-bold bg-slate-50 h-32 shadow-inner" placeholder="Description for HR..." required></textarea>
+                                <textarea id="l-reason" class="w-full p-4 rounded-2xl border-2 border-bold bg-slate-50 h-32 shadow-inner" placeholder="Description for HR..." required></textarea>
                                 <button type="submit" class="w-full py-5 bg-green-700 text-white font-black rounded-3xl shadow-xl hover:bg-green-800 transition-all uppercase tracking-widest active:scale-95">Confirm Request</button>
                             </form>
                         </div>
@@ -504,13 +503,13 @@
         function renderSettings() {
              document.getElementById('view-container').innerHTML = `
                 <div class="animate-fade-in space-y-8 text-slate-900 font-sans text-center">
-                    <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase leading-none">Security</h2>
+                    <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase leading-none">Security Matrix</h2>
                     <div class="bg-white border p-12 shadow-2xl rounded-[3rem] max-w-xl mx-auto mt-10 relative overflow-hidden shadow-xl">
                         <div class="absolute top-0 right-0 w-32 h-32 bg-red-50 rounded-full blur-3xl -mr-16 -mt-16"></div>
                         <div class="space-y-8 relative z-10">
                             <div class="h-20 w-20 bg-slate-900 rounded-3xl flex items-center justify-center text-white mx-auto shadow-2xl mb-8"><i data-lucide="lock" size="40"></i></div>
                             <div class="space-y-4"><input type="password" id="s-p1" class="w-full p-4 rounded-2xl border-2 font-black outline-none focus:ring-4 focus:ring-green-50 transition-all bg-slate-50 shadow-inner" placeholder="New Password"></div>
-                            <button onclick="alert('System Alert: Security key synchronized.')" class="w-full py-5 bg-slate-900 text-white font-black uppercase rounded-[2rem] shadow-2xl hover:bg-black transition-all active:scale-95 shadow-slate-200">Sync Security Matrix</button>
+                            <button onclick="alert('Access Hub: Security keys updated.')" class="w-full py-5 bg-slate-900 text-white font-black uppercase rounded-[2rem] shadow-2xl hover:bg-black transition-all active:scale-95 shadow-slate-200">Sync Security Matrix</button>
                         </div>
                     </div>
                 </div>
@@ -519,7 +518,7 @@
         }
 
         /**
-         * LOGIC HANDLERS
+         * CORE HANDLERS
          */
         async function handleLeaveSubmit(e) {
             e.preventDefault();
@@ -528,7 +527,7 @@
             try {
                 const res = await fetch(`${API_BASE}/leaves`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
                 if(res.ok) { alert("Matrix Sync: Request posted for HR verification."); await syncData(); state.leaveTab = 'history'; renderLeaves(); }
-            } catch(e) { alert("Request Failed."); }
+            } catch(e) { alert("Matrix reported failure."); }
             finally { hideLoading(); }
         }
 
@@ -545,7 +544,7 @@
             const url = state.editingMemberId ? `${API_BASE}/employees/${state.editingMemberId}` : `${API_BASE}/employees`;
             try {
                 const res = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
-                if(res.ok) { alert("Profile Synced."); state.memberFormVisible = false; await syncData(); renderDirectory(); }
+                if(res.ok) { alert("Staff Matrix Synced."); state.memberFormVisible = false; await syncData(); renderDirectory(); }
             } catch(err) { alert("Sync Failure."); }
             finally { hideLoading(); }
         }
@@ -585,7 +584,7 @@
                     await syncData();
                     showApp();
                 } else { alert("Access Denied: Invalid Credentials."); hideLoading(); }
-            } catch (err) { alert("Matrix reported an offline status."); hideLoading(); }
+            } catch (err) { alert("Connection failure to secure matrix."); hideLoading(); }
         }
 
         window.onload = init;
