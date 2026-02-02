@@ -193,13 +193,13 @@
                     await syncData();
                     showApp();
                 } else {
+                    hideLoading();
                     showLogin();
                 }
             } catch (err) {
                 console.error("Critical: Initialization Failure.", err);
-                showLogin();
-            } finally {
                 hideLoading();
+                showLogin();
             }
         }
 
@@ -261,7 +261,7 @@
             nav.innerHTML = NAV_ITEMS.filter(item => !item.admin || isAdmin).map(item => `
                 <button onclick="switchTab('${item.id}')" 
                         class="nav-btn w-full flex items-center gap-4 px-5 py-4 rounded-2xl transition-all font-bold ${state.currentTab === item.id ? 'bg-green-700 text-white shadow-xl scale-105' : 'text-slate-500 hover:bg-slate-50'}">
-                    <i data-lucide="${item.icon}" size="18"></i>
+                    <i data-lucide="${item.icon}" size="20"></i>
                     <span class="text-xs uppercase tracking-wider">${item.label}</span>
                 </button>
             `).join('');
@@ -321,7 +321,7 @@
             const wop = Number(state.user.leave_casual || 0);
             
             container.innerHTML = `
-                <div class="animate-fade-in space-y-8">
+                <div class="animate-fade-in space-y-8 text-slate-900">
                     <div class="flex items-center justify-between">
                         <div><h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Portal Home</h2><p class="text-slate-400 font-bold uppercase tracking-widest text-xs mt-1">LSAF Administrative Matrix</p></div>
                         <div class="bg-white border p-3 rounded-2xl shadow-sm text-right px-6">
@@ -363,12 +363,11 @@
          * SECTION 2: ATTENDANCE HUB
          */
         function renderAttendance() { 
-            const isAdmin = state.user.role === 'admin';
             const filteredAttendance = state.attendance.filter(log => log.date_str.startsWith(state.selectedAttendanceMonth));
             const stats = getAttendanceStats(filteredAttendance);
             
             document.getElementById('view-container').innerHTML = `
-                <div class="animate-fade-in space-y-8">
+                <div class="animate-fade-in space-y-8 text-slate-900">
                     <div class="flex flex-col md:flex-row justify-between items-center gap-6">
                         <div>
                             <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Attendance Matrix</h2>
@@ -376,7 +375,7 @@
                         </div>
                         <div class="flex gap-3">
                              <input type="month" value="${state.selectedAttendanceMonth}" onchange="updateAttendanceMonth(this.value)" class="p-3 border-2 rounded-2xl font-black bg-white shadow-sm outline-none focus:ring-4 focus:ring-green-50 transition-all">
-                             <button onclick="handleAttendanceExport()" class="bg-white border-2 border-slate-100 px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest shadow-sm hover:bg-slate-50">Export Logs</button>
+                             <button onclick="handleAttendanceExport()" class="bg-white border-2 border-slate-100 px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest shadow-sm hover:bg-slate-50 transition-all active:scale-95">Export Logs</button>
                         </div>
                     </div>
                     
@@ -414,7 +413,7 @@
                         </div>
                         <div class="bg-white rounded-[2.5rem] flex flex-col p-10 border-dashed border-4 border-slate-50 overflow-hidden max-h-[500px]">
                             <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-6 flex justify-between">
-                                <span>Recent Logs Archive</span>
+                                <span>Monthly Log History</span>
                                 <span>${state.selectedAttendanceMonth}</span>
                             </h4>
                             <div class="w-full space-y-4 overflow-y-auto custom-scrollbar pr-4 flex-1">
@@ -430,7 +429,7 @@
                                         </div>
                                     </div>
                                 `).join('')}
-                                ${filteredAttendance.length === 0 ? '<div class="py-20 text-center text-slate-300 uppercase font-black text-xs tracking-widest">Log stream empty</div>' : ''}
+                                ${filteredAttendance.length === 0 ? '<div class="py-20 text-center text-slate-300 uppercase font-black text-xs tracking-widest">No activity recorded</div>' : ''}
                             </div>
                         </div>
                     </div>
@@ -458,14 +457,14 @@
             const list = isAdmin ? state.employees : [state.user];
 
             container.innerHTML = `
-                <div class="animate-fade-in space-y-8">
+                <div class="animate-fade-in space-y-8 text-slate-900">
                     <div class="flex flex-col md:flex-row justify-between items-center gap-6">
                         <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Finance Suite</h2>
                         <div class="flex flex-wrap items-center gap-3">
                             <input type="month" value="${state.selectedMonth}" onchange="updateMonth(this.value)" class="p-3 border-2 rounded-2xl font-black bg-white shadow-sm outline-none focus:ring-4 focus:ring-green-50 transition-all">
                             ${isAdmin ? `
                                 <button onclick="clearMonthData()" class="bg-red-50 text-red-600 p-3 rounded-2xl border border-red-100 hover:bg-red-100 transition-all shadow-sm"><i data-lucide="trash-2" size="20"></i></button>
-                                <label class="bg-white border-2 px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest cursor-pointer shadow-sm hover:bg-slate-50 transition-all">
+                                <label class="bg-white border-2 px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest cursor-pointer shadow-sm hover:bg-slate-50 transition-all active:scale-95">
                                     Import Sheet <input type="file" onchange="importPayroll(this)" class="hidden">
                                 </label>
                             ` : ''}
@@ -476,11 +475,11 @@
                         <div class="bg-blue-50/20 border-blue-100 border-2 p-10 rounded-[2.5rem] mb-10 shadow-2xl animate-slide-up">
                             <form id="payroll-edit-form" class="space-y-6">
                                 <h3 class="text-blue-700 font-black uppercase text-xs tracking-[0.3em] mb-4">Salary Adjustments: ${state.employees.find(e => e.id === state.editingPayrollId).name}</h3>
-                                <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-6 font-sans">
                                     ${['basic_salary', 'others_allowance', 'invigilation', 'increment', 'eidi', 'tax', 'loan_deduction', 'insurance'].map(field => `
                                         <div class="space-y-1">
                                             <label class="block text-[10px] font-black uppercase text-slate-400 tracking-widest">${field.replace('_', ' ')}</label>
-                                            <input type="number" id="pay-${field}" class="w-full p-4 rounded-2xl border-2 border-white bg-white shadow-inner outline-none focus:ring-4 focus:ring-blue-50 font-black text-sm" value="${state.employees.find(e => e.id === state.editingPayrollId)[field] || 0}">
+                                            <input type="number" id="pay-${field}" class="w-full p-4 rounded-2xl border-2 border-white bg-white shadow-inner outline-none focus:ring-4 focus:ring-blue-50 font-black text-sm transition-all" value="${state.employees.find(e => e.id === state.editingPayrollId)[field] || 0}">
                                         </div>
                                     `).join('')}
                                 </div>
@@ -547,7 +546,7 @@
             const filteredLeaves = list.filter(l => l.start_date.startsWith(state.selectedLeaveMonth));
             
             document.getElementById('view-container').innerHTML = `
-                <div class="animate-fade-in space-y-8">
+                <div class="animate-fade-in space-y-8 text-slate-900">
                     <div class="flex justify-between items-center border-b pb-6 border-slate-100">
                         <div>
                             <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Leaves Panel</h2>
@@ -555,7 +554,7 @@
                         </div>
                         <div class="flex bg-slate-200/50 p-1.5 rounded-2xl shadow-inner">
                             <button onclick="state.leaveTab='apply'; renderLeaves()" class="px-8 py-3 rounded-xl text-xs font-black transition-all ${state.leaveTab === 'apply' ? 'bg-white text-green-700 shadow-xl' : 'text-slate-500'} uppercase tracking-widest">Apply</button>
-                            <button onclick="state.leaveTab='history'; renderLeaves()" class="px-8 py-3 rounded-xl text-xs font-black transition-all ${state.leaveTab === 'history' ? 'bg-white text-green-700 shadow-xl' : 'text-slate-500'} uppercase tracking-widest">Archive</button>
+                            <button onclick="state.leaveTab='history'; renderLeaves()" class="px-8 py-3 rounded-xl text-xs font-black transition-all ${state.leaveTab === 'history' ? 'bg-white text-green-700 shadow-xl' : 'text-slate-500'} uppercase tracking-widest">Archives</button>
                         </div>
                     </div>
 
@@ -564,7 +563,7 @@
                             <form id="leave-app-form" class="space-y-6">
                                 <div class="space-y-1">
                                     <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] ml-2">Type Category</label>
-                                    <select id="leave-type" class="w-full p-4 rounded-2xl border-2 border-slate-50 outline-none font-black text-lg bg-slate-50 focus:ring-4 focus:ring-green-50 transition-all">
+                                    <select id="leave-type" class="w-full p-4 rounded-2xl border-2 border-slate-50 outline-none font-black text-lg bg-slate-50 focus:ring-4 focus:ring-green-50 transition-all shadow-sm">
                                         <option>Annual Leave</option>
                                         <option>WOP Leave</option>
                                     </select>
@@ -575,13 +574,13 @@
                                         <input type="date" id="leave-date" class="w-full p-4 rounded-2xl border-2 border-slate-50 outline-none font-black bg-slate-50 shadow-inner focus:ring-4 focus:ring-green-50 transition-all" required>
                                     </div>
                                     <div class="space-y-1">
-                                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] ml-2">Quantity (Days)</label>
+                                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] ml-2">Duration (Days)</label>
                                         <input type="number" id="leave-days" class="w-full p-4 rounded-2xl border-2 border-slate-50 outline-none font-black bg-slate-50 shadow-inner focus:ring-4 focus:ring-green-50 transition-all" required>
                                     </div>
                                 </div>
                                 <div class="space-y-1">
                                     <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] ml-2">Justification / Reason</label>
-                                    <textarea id="leave-reason" class="w-full p-4 rounded-2xl border-2 border-slate-50 outline-none font-black bg-slate-50 h-32 shadow-inner focus:ring-4 focus:ring-green-50 transition-all" placeholder="Describe the purpose of your request..." required></textarea>
+                                    <textarea id="leave-reason" class="w-full p-4 rounded-2xl border-2 border-slate-50 outline-none font-black bg-slate-50 h-32 shadow-inner focus:ring-4 focus:ring-green-50 transition-all" placeholder="Describe the purpose of your leave request..." required></textarea>
                                 </div>
                                 <button type="submit" class="w-full py-5 bg-green-700 text-white font-black uppercase tracking-[0.3em] rounded-3xl shadow-2xl shadow-green-100 transition-all hover:bg-green-800 active:scale-95">Post Application</button>
                             </form>
@@ -590,9 +589,9 @@
                         <div class="space-y-6">
                             <div class="flex justify-end items-center gap-4 bg-white p-3 rounded-2xl border shadow-sm w-fit ml-auto">
                                 <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Filter Matrix:</span>
-                                <input type="month" value="${state.selectedLeaveMonth}" onchange="updateLeaveMonth(this.value)" class="p-2 border-none rounded-xl font-black text-xs outline-none bg-slate-50">
+                                <input type="month" value="${state.selectedLeaveMonth}" onchange="updateLeaveMonth(this.value)" class="p-2 border-none rounded-xl font-black text-xs outline-none bg-slate-50 transition-all">
                             </div>
-                            <div class="grid gap-6 max-w-4xl mx-auto">
+                            <div class="grid gap-6 max-w-4xl mx-auto font-sans">
                                 ${filteredLeaves.map(l => `
                                     <div class="bg-white p-8 rounded-[2rem] border-2 border-slate-50 shadow-sm flex justify-between items-center hover:border-green-300 transition-all hover:shadow-xl group">
                                         <div class="space-y-2">
@@ -600,8 +599,8 @@
                                             <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
                                                 <i data-lucide="calendar" size="14"></i> ${formatDate(l.start_date)} • ${String(l.days)} Days Requested
                                             </p>
-                                            <div class="bg-slate-50 p-4 rounded-2xl border-l-4 border-slate-200 mt-4">
-                                                <p class="text-xs text-slate-600 font-bold italic">"${String(l.reason || 'No justification provided.')}"</p>
+                                            <div class="bg-slate-50 p-4 rounded-2xl border-l-4 border-slate-200 mt-4 shadow-inner">
+                                                <p class="text-xs text-slate-600 font-bold italic leading-relaxed">"${String(l.reason || 'No description provided.')}"</p>
                                             </div>
                                         </div>
                                         <Badge status="${String(l.status)}" />
@@ -623,14 +622,14 @@
         function renderDirectory() {
             const container = document.getElementById('view-container');
             container.innerHTML = `
-                <div class="animate-fade-in space-y-8">
+                <div class="animate-fade-in space-y-8 text-slate-900">
                     <div class="flex justify-between items-center border-b pb-6 border-slate-100">
                         <div>
                             <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Staff Directory</h2>
                             <p class="text-slate-400 font-bold uppercase tracking-widest text-xs mt-1">Identity & Allocation Manager</p>
                         </div>
                         <div class="flex gap-3">
-                            <button onclick="downloadSampleDir()" class="bg-white border-2 border-slate-100 px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest shadow-sm hover:bg-slate-50">Sample</button>
+                            <button onclick="downloadSampleDir()" class="bg-white border-2 border-slate-100 px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest shadow-sm hover:bg-slate-50 transition-all">Sample</button>
                             <label class="bg-white border-2 border-slate-100 px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest cursor-pointer shadow-sm hover:bg-slate-50 transition-all">
                                 Import <input type="file" onchange="importDir(this)" class="hidden">
                             </label>
@@ -643,7 +642,7 @@
                             <div class="absolute top-0 right-0 w-32 h-32 bg-green-50 rounded-full blur-3xl -mr-16 -mt-16"></div>
                             <form id="member-form" class="space-y-8 relative z-10">
                                 <h3 class="font-black text-slate-800 text-xl uppercase tracking-tighter border-b pb-5 border-slate-100">${state.editingMemberId ? 'Update System Profile' : 'Generate New Identity'}</h3>
-                                <div class="grid md:grid-cols-2 gap-8">
+                                <div class="grid md:grid-cols-2 gap-8 font-sans">
                                     <div class="space-y-1">
                                         <label class="block text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] ml-2">Employee ID Key</label>
                                         <input type="text" id="m-id" class="w-full p-4 rounded-2xl border-2 border-slate-50 bg-slate-50 outline-none focus:ring-4 focus:ring-green-50 font-black text-sm transition-all" placeholder="ID (e.g. EMP001)" ${state.editingMemberId ? 'disabled' : ''}>
@@ -685,7 +684,7 @@
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 font-sans">
                         ${state.employees.map(emp => `
                             <div class="bg-white p-8 rounded-[2.5rem] border-2 border-slate-50 shadow-sm flex items-center gap-6 group relative hover:border-green-400 transition-all hover:shadow-xl">
                                 <div class="h-16 w-16 rounded-[1.5rem] bg-green-50 flex items-center justify-center font-black text-green-700 text-2xl border-4 border-white shadow-md shadow-green-100/50 uppercase">${getInitial(emp.name)}</div>
@@ -693,12 +692,12 @@
                                     <h4 class="font-black text-slate-800 text-base truncate uppercase tracking-tight leading-none">${String(emp.name)}</h4>
                                     <div class="flex flex-col gap-1 mt-2">
                                         <span class="bg-slate-900 text-white text-[8px] font-black px-2 py-0.5 rounded uppercase w-fit tracking-widest leading-none">${String(emp.role)}</span>
-                                        <p class="text-[9px] font-bold text-slate-400 truncate leading-none mt-1">${String(emp.email || 'Email Null')}</p>
+                                        <p class="text-[9px] font-bold text-slate-400 truncate leading-none mt-1">${String(emp.email || 'No Email Set')}</p>
                                         <div class="flex gap-3 text-[8px] font-black uppercase tracking-tighter text-slate-300 mt-1 border-t pt-1 border-slate-50">
                                             <span>AL: ${Number(emp.leave_annual || 0)}</span>
                                             <span>WOP: ${Number(emp.leave_casual || 0)}</span>
                                         </div>
-                                        <p class="text-[9px] font-black text-slate-300 uppercase tracking-widest leading-none mt-1">ID: ${String(emp.id)}</p>
+                                        <p class="text-[9px] font-black text-slate-300 uppercase tracking-widest leading-none mt-1 font-mono">ID: ${String(emp.id)}</p>
                                     </div>
                                 </div>
                                 <div class="flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all absolute top-6 right-6">
@@ -715,33 +714,101 @@
         }
 
         /**
-         * SECTION 6: SECURITY / SETTINGS
+         * SECTION 6: DISCUSSION BOARD
+         */
+        function renderDiscussion() { 
+            const container = document.getElementById('view-container');
+            const isAdmin = state.user.role === 'admin';
+            
+            container.innerHTML = `
+                <div class="animate-fade-in space-y-8 text-slate-900">
+                    <div class="flex justify-between items-center border-b pb-6 border-slate-100">
+                        <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase tracking-widest leading-none">Board Hub</h2>
+                        ${isAdmin ? `<button onclick="toggleBoardForm()" class="bg-green-700 text-white px-10 py-3 rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl hover:bg-green-800 transition-all active:scale-95">New Post</button>` : ''}
+                    </div>
+
+                    <div id="board-form-container" class="${state.boardFormVisible ? '' : 'hidden'} animate-slide-up">
+                        <div class="bg-green-50/20 border-green-100 shadow-xl border-2 p-10 rounded-[2.5rem] mb-10">
+                            <form id="notice-form" class="space-y-4">
+                                <div class="space-y-1">
+                                    <label class="block text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">Target Personnel</label>
+                                    <select id="notice-recipient" class="w-full p-4 rounded-xl border bg-white shadow-inner text-sm font-black outline-none focus:ring-4 focus:ring-green-50 transition-all">
+                                        <option value="all">Global Broadcast</option>
+                                        ${state.employees.map(e => `<option value="${e.id}">${e.name} (${e.id})</option>`).join('')}
+                                    </select>
+                                </div>
+                                <input type="text" id="notice-title" class="w-full p-4 rounded-xl border text-base font-black shadow-inner outline-none focus:ring-4 focus:ring-green-50 transition-all" placeholder="Announcement Header" required>
+                                <textarea id="notice-message" class="w-full p-4 rounded-xl border h-32 text-sm font-medium outline-none focus:ring-4 focus:ring-green-50 shadow-inner" placeholder="Detailed content for staff..." required></textarea>
+                                <div class="flex justify-end gap-3 pt-2">
+                                    <button type="button" onclick="toggleBoardForm()" class="px-6 py-3 font-bold text-slate-400 hover:text-slate-600 transition-colors uppercase text-xs tracking-widest">Discard</button>
+                                    <button type="submit" class="bg-green-700 text-white px-10 py-3 rounded-xl font-black uppercase text-xs tracking-widest shadow-lg shadow-green-100 active:scale-95 transition-all">Confirm Publish</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div class="space-y-8 max-w-4xl mx-auto font-sans">
+                        ${state.discussions.map(p => `
+                            <div class="bg-white rounded-[2.5rem] border-l-[12px] border-l-green-600 shadow-xl group !p-10 relative hover:shadow-green-50 transition-all">
+                                <div class="flex justify-between items-start mb-6">
+                                    <h4 class="font-black text-slate-800 text-2xl uppercase tracking-tight leading-tight max-w-2xl">${p.title}</h4>
+                                    <div class="flex items-center gap-4">
+                                        <span class="text-[10px] font-black text-slate-300 uppercase tracking-widest">${formatDate(p.date)}</span>
+                                        ${isAdmin ? `<button onclick="deleteNotice(${p.id})" class="text-red-400 opacity-0 group-hover:opacity-100 transition-all hover:text-red-600"><i data-lucide="trash-2" size="18"></i></button>` : ''}
+                                    </div>
+                                </div>
+                                <p class="text-lg text-slate-600 font-medium leading-relaxed mb-8 border-b pb-8 border-slate-50">${p.message}</p>
+                                <div class="flex items-center justify-between">
+                                    <span class="bg-green-50 text-green-700 font-black text-[10px] px-5 py-2 rounded-xl border border-green-100 uppercase tracking-widest shadow-sm">Verified: ${p.senderName}</span>
+                                    <button onclick="alert('Module reply restricted.')" class="text-blue-600 font-black text-xs uppercase tracking-widest border-2 border-blue-50 px-8 py-3 rounded-[1.25rem] hover:bg-blue-50 transition-all shadow-sm">Post Response</button>
+                                </div>
+                                
+                                ${p.replies && p.replies.length > 0 ? `
+                                    <div class="mt-8 pl-8 border-l-4 border-slate-100 space-y-4">
+                                        ${p.replies.map(r => `
+                                            <div class="bg-slate-50/50 p-5 rounded-2xl border border-white shadow-inner">
+                                                <p class="text-sm font-bold text-slate-600 leading-relaxed">${r.message}</p>
+                                                <p class="text-[9px] font-black text-slate-400 mt-2 uppercase tracking-widest">— ${r.senderName}</p>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                ` : ''}
+                            </div>
+                        `).join('')}
+                        ${state.discussions.length === 0 ? '<div class="py-40 text-center text-slate-300 font-black uppercase tracking-[0.5em] bg-white rounded-[4rem] border-4 border-dashed">Board Matrix Null</div>' : ''}
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+            if(isAdmin) document.getElementById('notice-form')?.addEventListener('submit', handleBoardSubmit);
+        }
+
+        /**
+         * SECTION 7: SECURITY SETTINGS
          */
         function renderSettings() {
              document.getElementById('view-container').innerHTML = `
-                <div class="animate-fade-in space-y-8">
-                    <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Portal Security</h2>
-                    <div class="bg-white border p-12 shadow-2xl border-4 border-slate-50 rounded-[3rem] max-w-xl mx-auto mt-20 relative overflow-hidden">
-                        <div class="absolute top-0 right-0 w-40 h-40 bg-red-50 rounded-full blur-3xl -mr-20 -mt-20"></div>
+                <div class="animate-fade-in space-y-8 text-slate-900">
+                    <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Security Hub</h2>
+                    <div class="bg-white border p-12 shadow-2xl border-4 border-slate-50 rounded-[3rem] max-w-xl mx-auto mt-10 relative overflow-hidden font-sans">
+                        <div class="absolute top-0 right-0 w-32 h-32 bg-red-50 rounded-full blur-3xl -mr-16 -mt-16"></div>
                         <div class="space-y-8 relative z-10">
                             <div class="text-center mb-8">
-                                <div class="h-20 w-20 bg-slate-900 rounded-3xl flex items-center justify-center text-white mx-auto shadow-2xl mb-4 shadow-slate-200">
-                                    <i data-lucide="shield-lock" size="40"></i>
-                                </div>
-                                <h3 class="font-black text-slate-800 text-xl uppercase tracking-tighter">Access Control</h3>
-                                <p class="text-slate-400 font-bold uppercase text-[10px] tracking-widest mt-1">Update System Access Keys</p>
+                                <div class="h-16 w-16 bg-slate-900 rounded-2xl flex items-center justify-center text-white mx-auto shadow-xl mb-4"><i data-lucide="lock" size="32"></i></div>
+                                <h3 class="font-black text-slate-800 text-lg uppercase tracking-widest leading-none">Access Control</h3>
+                                <p class="text-slate-400 font-bold uppercase text-[10px] tracking-widest mt-1">Synchronize Account Keys</p>
                             </div>
                             <div class="space-y-4">
                                 <div class="space-y-1">
-                                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">New System Key</label>
+                                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">New Access Key</label>
                                     <input type="password" id="s-p1" class="w-full p-4 rounded-2xl border-2 border-slate-50 bg-slate-50 font-black outline-none shadow-inner focus:ring-4 focus:ring-green-50 transition-all">
                                 </div>
                                 <div class="space-y-1">
-                                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Confirm Key Matrix</label>
+                                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Confirm Identity Key</label>
                                     <input type="password" id="s-p2" class="w-full p-4 rounded-2xl border-2 border-slate-50 bg-slate-50 font-black outline-none shadow-inner focus:ring-4 focus:ring-green-50 transition-all">
                                 </div>
                             </div>
-                            <button onclick="handleSecurityUpdate()" class="w-full py-5 bg-slate-900 text-white font-black uppercase tracking-[0.3em] rounded-[2rem] shadow-2xl hover:bg-black transition-all active:scale-95 shadow-slate-200">Sync Security Key</button>
+                            <button onclick="handleSecurityUpdate()" class="w-full py-5 bg-slate-900 text-white font-black uppercase tracking-[0.3em] rounded-3xl shadow-2xl hover:bg-black transition-all active:scale-95">Update Security Key</button>
                         </div>
                     </div>
                 </div>
@@ -750,12 +817,12 @@
         }
 
         /**
-         * SECTION 7: CORE BUSINESS LOGIC
+         * SECTION 8: CORE LOGIC & HANDLERS
          */
-        function getInitial(name) { return name ? String(name).charAt(0).toUpperCase() : '?'; }
-
         async function logAttendance(type) {
             showLoading();
+            if (!navigator.geolocation) { alert("GPS Unavailable."); hideLoading(); return; }
+            
             navigator.geolocation.getCurrentPosition(async (pos) => {
                 try {
                     const res = await fetch(`${API_BASE}/attendance`, {
@@ -764,21 +831,21 @@
                         body: JSON.stringify({
                             employeeId: state.user.id,
                             type: type,
-                            date: new Date().toISOString().split('T')[0],
+                            date: new Date().toISOString().split('T')[0], // Standard ISO date
                             time: new Date().toLocaleTimeString(),
                             lat: pos.coords.latitude,
                             lng: pos.coords.longitude
                         })
                     });
                     if (res.ok) {
-                        alert("System Success: " + type + " verified by GPS. Email notification triggered.");
+                        alert("System Matrix Updated: " + type + " verified. Notification triggered.");
                         await syncData();
                         renderAttendance();
                     }
-                } catch(e) { alert("Matrix Sync Error."); }
+                } catch(e) { alert("Sync Error: Connectivity failure."); }
                 finally { hideLoading(); }
             }, () => {
-                alert("Identity Denied: Location verification is mandatory for clocking.");
+                alert("GPS Error: Location identity is required for attendance verification.");
                 hideLoading();
             });
         }
@@ -800,12 +867,12 @@
                     body: JSON.stringify(payload)
                 });
                 if(res.ok) {
-                    alert("Matrix Alert: Application posted for HR verification.");
+                    alert("Application Finalized: Forwarded to HR Matrix.");
                     await syncData();
                     state.leaveTab = 'history';
                     renderLeaves();
                 }
-            } catch(e) { alert("Fail."); }
+            } catch(e) { alert("Matrix Error."); }
             finally { hideLoading(); }
         }
 
@@ -828,39 +895,12 @@
                     if (end > start) totalMinutes += (end - start) / 60000;
                 }
             });
-
             return { daysPresent: dates.length, hours: (totalMinutes / 60).toFixed(1) };
-        }
-
-        function updateAttendanceMonth(val) { state.selectedAttendanceMonth = val; renderAttendance(); }
-        function updateLeaveMonth(val) { state.selectedLeaveMonth = val; renderLeaves(); }
-
-        function openAddMember() {
-            state.editingMemberId = null;
-            state.memberFormVisible = true;
-            renderDirectory();
-            document.getElementById('m-id').focus();
-        }
-
-        function editMember(id) {
-            const emp = state.employees.find(e => String(e.id) === String(id));
-            if(!emp) return;
-            state.editingMemberId = id;
-            state.memberFormVisible = true;
-            renderDirectory();
-            
-            document.getElementById('m-name').value = String(emp.name);
-            document.getElementById('m-role').value = String(emp.role);
-            document.getElementById('m-id').value = String(emp.id);
-            document.getElementById('m-email').value = String(emp.email || '');
-            document.getElementById('m-leave-annual').value = Number(emp.leave_annual || 0);
-            document.getElementById('m-leave-wop').value = Number(emp.leave_casual || 0);
         }
 
         async function handleMemberSubmit(e) {
             e.preventDefault();
             showLoading();
-            
             const payload = {
                 id: document.getElementById('m-id').value,
                 name: document.getElementById('m-name').value,
@@ -870,62 +910,40 @@
                 leave_annual: Number(document.getElementById('m-leave-annual').value) || 0,
                 leave_casual: Number(document.getElementById('m-leave-wop').value) || 0
             };
-
             const method = state.editingMemberId ? 'PUT' : 'POST';
             const url = state.editingMemberId ? `${API_BASE}/employees/${state.editingMemberId}` : `${API_BASE}/employees`;
-
             try {
-                const res = await fetch(url, {
-                    method: method,
-                    headers: {'Content-Type':'application/json'},
-                    body: JSON.stringify(payload)
-                });
+                const res = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
                 if(res.ok) {
-                    alert("System Success: Profile updated and synchronized.");
+                    alert("Profile Synchronized.");
                     state.memberFormVisible = false;
                     state.editingMemberId = null;
                     await syncData();
                     renderDirectory();
                 }
-            } catch(err) { alert("Matrix Error: Database unreachable."); }
+            } catch(err) { alert("Sync Failure."); }
             finally { hideLoading(); }
         }
 
-        async function deleteMember(id) {
-            if(!confirm("CRITICAL: Wipe account identity " + id + " from matrix?")) return;
-            showLoading();
-            try {
-                const res = await fetch(`${API_BASE}/employees/${id}`, { method: 'DELETE' });
-                if(res.ok) { await syncData(); renderDirectory(); }
-            } catch(e) { alert("Action Aborted."); }
-            finally { hideLoading(); }
-        }
-
+        function updateAttendanceMonth(val) { state.selectedAttendanceMonth = val; renderAttendance(); }
+        function updateLeaveMonth(val) { state.selectedLeaveMonth = val; renderLeaves(); }
+        function openAddMember() { state.editingMemberId = null; state.memberFormVisible = true; renderDirectory(); }
         function openPayrollEditor(id) { state.editingPayrollId = id; renderPayroll(); }
+        function toggleBoardForm() { state.boardFormVisible = !state.boardFormVisible; renderDiscussion(); }
+        function updateMonth(val) { state.selectedMonth = val; renderPayroll(); }
 
-        async function handlePayrollUpdate(e) {
-            e.preventDefault();
-            const emp = state.employees.find(e => e.id === state.editingPayrollId);
-            const updates = {
-                basic_salary: Number(document.getElementById('pay-basic_salary').value),
-                others_allowance: Number(document.getElementById('pay-others_allowance').value),
-                invigilation: Number(document.getElementById('pay-invigilation').value),
-                increment: Number(document.getElementById('pay-increment').value),
-                eidi: Number(document.getElementById('pay-eidi').value),
-                tax: Number(document.getElementById('pay-tax').value),
-                loan_deduction: Number(document.getElementById('pay-loan_deduction').value),
-                insurance: Number(document.getElementById('pay-insurance').value)
-            };
-            showLoading();
-            try {
-                const res = await fetch(`${API_BASE}/employees/${state.editingPayrollId}`, {
-                    method: 'PUT',
-                    headers: {'Content-Type':'application/json'},
-                    body: JSON.stringify({ ...emp, ...updates })
-                });
-                if(res.ok) { state.editingPayrollId = null; await syncData(); renderPayroll(); }
-            } catch(e) { alert("Fail."); }
-            finally { hideLoading(); }
+        function editMember(id) {
+            const emp = state.employees.find(e => String(e.id) === String(id));
+            if(!emp) return;
+            state.editingMemberId = id;
+            state.memberFormVisible = true;
+            renderDirectory();
+            document.getElementById('m-name').value = emp.name;
+            document.getElementById('m-role').value = emp.role;
+            document.getElementById('m-id').value = emp.id;
+            document.getElementById('m-email').value = emp.email || '';
+            document.getElementById('m-leave-annual').value = emp.leave_annual || 0;
+            document.getElementById('m-leave-wop').value = emp.leave_casual || 0;
         }
 
         async function login(e) {
@@ -943,10 +961,10 @@
                     await syncData();
                     showApp();
                 } else {
-                    alert("Auth Denied: Invalid Credentials.");
+                    alert("Identity Rejected: Invalid Credentials.");
                     hideLoading();
                 }
-            } catch (err) { alert("Matrix Error: Offline."); hideLoading(); }
+            } catch (err) { alert("Connectivity Error."); hideLoading(); }
         }
 
         function calculateNet(emp) {
@@ -955,8 +973,10 @@
             return add - sub;
         }
 
-        function toggleBoardForm() { state.boardFormVisible = !state.boardFormVisible; renderDiscussion(); }
-        function updateMonth(val) { state.selectedMonth = val; renderPayroll(); }
+        function downloadSampleDir() {
+            const sample = [{ id: 'EMP101', name: 'Sample Name', email: 'test@lsaf.edu.pk', role: 'employee', leave_annual: 14, leave_casual: 10 }];
+            exportToCSV(sample, "Directory_Sample.csv");
+        }
 
         document.getElementById('login-form').addEventListener('submit', login);
         window.onload = init;
