@@ -307,7 +307,8 @@
 
         function renderDashboard() {
             const container = document.getElementById('view-container');
-            const lTotal = Number(state.user.leave_annual || 0) + Number(state.user.leave_sick || 0);
+            const annual = Number(state.user.leave_annual || 0);
+            const wop = Number(state.user.leave_casual || 0);
             
             container.innerHTML = `
                 <div class="animate-fade-in space-y-8">
@@ -327,7 +328,10 @@
                         <div class="bg-gradient-to-br from-blue-600 to-blue-700 p-8 rounded-[2rem] text-white shadow-xl hover:scale-105 transition-all">
                             <i data-lucide="calendar" class="mb-3 opacity-50" size="32"></i>
                             <p class="text-[10px] font-black text-blue-100 uppercase tracking-widest">Leaves Credit</p>
-                            <p class="text-3xl font-black block mt-2">${lTotal} Days</p>
+                            <div class="flex items-end gap-2 mt-2">
+                                <p class="text-3xl font-black block">${annual}</p><span class="text-[8px] font-bold uppercase text-blue-100 mb-1">Annual</span>
+                                <p class="text-3xl font-black block ml-2">${wop}</p><span class="text-[8px] font-bold uppercase text-blue-100 mb-1">WOP</span>
+                            </div>
                         </div>
                         <div class="bg-white border p-8 rounded-[2rem] shadow-sm">
                             <i data-lucide="dollar-sign" class="mb-3 text-slate-200" size="32"></i>
@@ -469,6 +473,19 @@
                                         </select>
                                     </div>
                                 </div>
+                                <div class="grid grid-cols-2 gap-6 bg-slate-50 p-6 rounded-3xl border-2 border-white shadow-inner">
+                                    <div class="col-span-2">
+                                        <h4 class="text-[10px] font-black text-green-700 uppercase tracking-widest mb-4">Leave Allocation Hub</h4>
+                                    </div>
+                                    <div class="space-y-1">
+                                        <label class="block text-[10px] font-black uppercase text-slate-400 tracking-widest">Annual Leave Allocation</label>
+                                        <input type="number" id="m-leave-annual" class="w-full p-4 rounded-2xl border-2 border-white bg-white shadow-sm outline-none focus:ring-4 focus:ring-green-50 font-bold" placeholder="e.g. 14">
+                                    </div>
+                                    <div class="space-y-1">
+                                        <label class="block text-[10px] font-black uppercase text-slate-400 tracking-widest">WOP Leave Allocation</label>
+                                        <input type="number" id="m-leave-wop" class="w-full p-4 rounded-2xl border-2 border-white bg-white shadow-sm outline-none focus:ring-4 focus:ring-green-50 font-bold" placeholder="e.g. 10">
+                                    </div>
+                                </div>
                                 <div class="flex justify-end gap-3 pt-6 border-t border-slate-100">
                                     <button type="button" onclick="state.memberFormVisible=false; state.editingMemberId=null; renderDirectory()" class="px-8 py-3 font-bold text-slate-400">Discard</button>
                                     <button type="submit" class="bg-green-700 text-white px-12 py-3 rounded-2xl font-black uppercase tracking-widest shadow-xl">Confirm & Sync</button>
@@ -485,6 +502,10 @@
                                     <h4 class="font-black text-slate-800 text-lg truncate uppercase leading-tight">${emp.name}</h4>
                                     <div class="flex flex-col gap-1 mt-1">
                                         <span class="bg-green-50 text-green-700 text-[10px] font-black px-2 py-0.5 rounded-lg uppercase w-fit tracking-tighter">${emp.role}</span>
+                                        <div class="flex gap-2 text-[8px] font-bold uppercase tracking-tighter text-slate-400 mt-1">
+                                            <span>AL: ${emp.leave_annual || 0}</span>
+                                            <span>WOP: ${emp.leave_casual || 0}</span>
+                                        </div>
                                         <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">ID: ${emp.id}</p>
                                     </div>
                                 </div>
@@ -560,7 +581,7 @@
                                 ` : ''}
                             </div>
                         `).join('')}
-                        ${state.discussions.length === 0 ? '<div class="py-40 text-center text-slate-300 font-black uppercase tracking-[0.5em] bg-white border border-dashed rounded-[4rem]">Board Ledger Empty</div>' : ''}
+                        ${state.discussions.length === 0 ? '<div class="py-40 text-center text-slate-300 font-black uppercase tracking-[0.5em] bg-white rounded-[4rem] border-4 border-dashed">Board Ledger Empty</div>' : ''}
                     </div>
                 </div>
             `;
@@ -591,16 +612,23 @@
             document.getElementById('m-name').value = emp.name;
             document.getElementById('m-role').value = emp.role;
             document.getElementById('m-id').value = emp.id;
+            document.getElementById('m-leave-annual').value = emp.leave_annual || 0;
+            document.getElementById('m-leave-wop').value = emp.leave_casual || 0;
         }
 
         async function handleMemberSubmit(e) {
             e.preventDefault();
             showLoading();
+            
+            // Map inputs to the DB schema
             const payload = {
                 id: document.getElementById('m-id').value,
                 name: document.getElementById('m-name').value,
                 role: document.getElementById('m-role').value,
-                password: document.getElementById('m-pass').value || document.getElementById('m-id').value
+                password: document.getElementById('m-pass').value || document.getElementById('m-id').value,
+                leave_annual: Number(document.getElementById('m-leave-annual').value) || 0,
+                leave_casual: Number(document.getElementById('m-leave-wop').value) || 0, // Using leave_casual for WOP
+                leave_sick: 0 // Resetting sick since user requested only Annual or WOP
             };
 
             const method = state.editingMemberId ? 'PUT' : 'POST';
@@ -851,7 +879,10 @@
                     <div class="bg-white rounded-[2.5rem] border-2 border-slate-50 !p-12 shadow-sm max-w-xl mx-auto">
                         <div class="space-y-6">
                             <div class="space-y-1"><label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Select Category</label>
-                            <select class="w-full p-4 rounded-2xl border-2 border-slate-100 outline-none font-bold text-lg bg-slate-50"><option>Annual Leave</option><option>Sick Leave</option></select></div>
+                            <select class="w-full p-4 rounded-2xl border-2 border-slate-100 outline-none font-bold text-lg bg-slate-50">
+                                <option>Annual Leave</option>
+                                <option>WOP Leave</option>
+                            </select></div>
                             <div class="grid grid-cols-2 gap-4">
                                 <div class="space-y-1"><label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Date</label><input type="date" class="w-full p-4 rounded-2xl border-2 border-slate-100 outline-none font-bold bg-slate-50"></div>
                                 <div class="space-y-1"><label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Days</label><input type="number" class="w-full p-4 rounded-2xl border-2 border-slate-100 outline-none font-bold bg-slate-50"></div>
