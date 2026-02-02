@@ -28,15 +28,15 @@
         <h1 class="text-4xl font-black mb-4 uppercase">System Connection Lost</h1>
         <p class="text-xl mb-8">The application cannot communicate with the HR Backend Server.</p>
         <div id="error-details" class="bg-black/20 p-6 rounded-2xl font-mono text-sm max-w-2xl w-full text-left overflow-auto mb-8 shadow-inner">
-            Error: Backend Service Unavailable. Please ensure the Node.js server is running on port 5050 and check the browser console (F12).
+            Check: Is the server running on port 5050? Run 'pm2 logs hr-backend' in terminal.
         </div>
-        <button onclick="location.reload()" class="bg-white text-red-600 px-10 py-4 rounded-xl font-black uppercase shadow-2xl transition-all active:scale-95">Retry Connection</button>
+        <button onclick="location.reload()" class="bg-white text-red-600 px-10 py-4 rounded-xl font-black uppercase shadow-2xl transition-all active:scale-95">Retry Sync</button>
     </div>
 
     <!-- GLOBAL LOADING SCREEN -->
     <div id="loading-screen" class="fixed inset-0 bg-white z-[999] flex flex-col items-center justify-center">
         <div class="loader w-16 h-16 border-4 border-slate-100 border-t-green-700 rounded-full mb-4"></div>
-        <p class="text-slate-400 font-black uppercase tracking-[0.3em] text-sm animate-pulse">Synchronizing LSAF Matrix</p>
+        <p class="text-slate-400 font-black uppercase tracking-[0.3em] text-sm animate-pulse">Synchronizing LSAF HR Core</p>
     </div>
 
     <!-- LOGIN INTERFACE -->
@@ -49,29 +49,26 @@
             </div>
             <form id="login-form" class="space-y-5">
                 <div class="space-y-1">
-                    <label class="block text-[10px] font-black text-slate-500 uppercase ml-2 tracking-widest">System Identity ID</label>
-                    <input type="text" id="login-id" class="w-full p-4 rounded-2xl border-2 border-slate-50 bg-slate-50 outline-none focus:border-green-500 focus:bg-white transition-all font-bold" placeholder="e.g. EMP001" required>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase ml-2 tracking-widest">Identity ID</label>
+                    <input type="text" id="login-id" class="w-full p-4 rounded-2xl border-2 border-slate-50 bg-slate-50 outline-none focus:border-green-500 focus:bg-white transition-all font-bold" placeholder="EMP001" required>
                 </div>
                 <div class="space-y-1">
-                    <label class="block text-[10px] font-black text-slate-500 uppercase ml-2 tracking-widest">Security Password</label>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase ml-2 tracking-widest">Password</label>
                     <input type="password" id="login-pass" class="w-full p-4 rounded-2xl border-2 border-slate-50 bg-slate-50 outline-none focus:border-green-500 focus:bg-white transition-all font-bold" placeholder="••••••••" required>
                 </div>
-                <button type="submit" class="w-full bg-green-700 text-white py-4 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-green-100 hover:bg-green-800 transition-all mt-4 active:scale-95">Initialize Session</button>
+                <button type="submit" class="w-full bg-green-700 text-white py-4 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-green-100 hover:bg-green-800 transition-all mt-4 active:scale-95">Sign In</button>
             </form>
         </div>
     </div>
 
     <!-- MAIN APP SHELL -->
     <div id="app-shell" class="hidden min-h-screen flex">
-        
-        <!-- SIDEBAR NAVIGATION -->
         <aside class="w-64 bg-white border-r border-slate-100 fixed h-full hidden lg:flex flex-col z-50">
             <div class="p-8 border-b border-slate-50 text-center">
                 <img src="/cropped-UOL-Green-V1.png" class="h-10 mx-auto mb-2" alt="LSAF">
                 <span class="text-[9px] font-black text-green-700 uppercase tracking-widest">NexusHR Hub</span>
             </div>
-            <nav class="flex-1 p-4 space-y-1 overflow-y-auto custom-scrollbar shadow-inner bg-slate-50/10" id="sidebar-nav">
-            </nav>
+            <nav class="flex-1 p-4 space-y-1 overflow-y-auto custom-scrollbar shadow-inner bg-slate-50/10" id="sidebar-nav"></nav>
             <div class="p-4 border-t border-slate-50 bg-slate-50/30 flex items-center justify-between">
                 <div class="flex items-center gap-3 overflow-hidden">
                     <div id="user-avatar" class="h-9 w-9 min-w-[36px] rounded-xl bg-green-100 text-green-700 flex items-center justify-center font-black text-sm border-2 border-white shadow-sm uppercase">?</div>
@@ -84,13 +81,10 @@
             </div>
         </aside>
 
-        <!-- MAIN CONTENT AREA -->
         <main class="flex-1 lg:ml-64 p-4 md:p-10 pb-24 lg:pb-10 min-h-screen shadow-inner border-l border-slate-50">
-            <div id="view-container" class="max-w-6xl mx-auto">
-            </div>
+            <div id="view-container" class="max-w-6xl mx-auto"></div>
         </main>
 
-        <!-- MOBILE NAV -->
         <nav class="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 p-3 flex justify-around shadow-2xl z-50 rounded-t-[2rem]">
             <button onclick="switchTab('dashboard')" class="p-4 rounded-2xl mobile-nav-btn" id="mob-dashboard"><i data-lucide="home"></i></button>
             <button onclick="switchTab('attendance')" class="p-4 rounded-2xl mobile-nav-btn" id="mob-attendance"><i data-lucide="clock"></i></button>
@@ -100,7 +94,6 @@
         </nav>
     </div>
 
-    <!-- SCRIPTS SECTION -->
     <script>
         const API_BASE = '/api';
         let state = {
@@ -111,7 +104,6 @@
             loans: [],
             leaves: [],
             currentTab: 'dashboard',
-            loading: true,
             selectedMonth: new Date().toISOString().slice(0, 7),
             selectedAttendanceMonth: new Date().toISOString().slice(0, 7),
             selectedLeaveMonth: new Date().toISOString().slice(0, 7),
@@ -123,12 +115,12 @@
         };
 
         const NAV_ITEMS = [
-            { id: 'dashboard', label: 'Portal Home', icon: 'home', admin: false },
+            { id: 'dashboard', label: 'Home', icon: 'home', admin: false },
             { id: 'attendance', label: 'Attendance', icon: 'clock', admin: false },
             { id: 'payroll', label: 'Salary Hub', icon: 'dollar-sign', admin: false },
-            { id: 'directory', label: 'Staff Directory', icon: 'users', admin: true },
-            { id: 'loans', label: 'Loan Tracker', icon: 'wallet', admin: false },
-            { id: 'leaves', label: 'Leave Portal', icon: 'calendar', admin: false },
+            { id: 'directory', label: 'Staff Hub', icon: 'users', admin: true },
+            { id: 'loans', label: 'Loans', icon: 'wallet', admin: false },
+            { id: 'leaves', label: 'Leaves', icon: 'calendar', admin: false },
             { id: 'discussion', label: 'Board', icon: 'message-square', admin: false },
             { id: 'settings', label: 'Security', icon: 'shield-check', admin: false }
         ];
@@ -143,40 +135,8 @@
         }
 
         function cleanNumber(val) {
-            if (val === undefined || val === null || val === '-' || val === '') return 0;
-            const num = parseFloat(String(val).replace(/,/g, ''));
+            const num = parseFloat(String(val || 0).replace(/,/g, ''));
             return isNaN(num) ? 0 : num;
-        }
-
-        function parseCSVLine(text) {
-            const result = [];
-            let current = '';
-            let inQuotes = false;
-            for (let i = 0; i < text.length; i++) {
-                const char = text[i];
-                if (char === '"') inQuotes = !inQuotes;
-                else if (char === ',' && !inQuotes) { result.push(current.trim()); current = ''; }
-                else current += char;
-            }
-            result.push(current.trim());
-            return result;
-        }
-
-        function exportToCSV(data, filename) {
-            if (!data || !data.length) { alert("Data Matrix Error: No records found for export."); return; }
-            const headers = Object.keys(data[0]).join(',');
-            const rows = data.map(row => Object.values(row).map(val => {
-                const safeVal = String(val === null || val === undefined ? '' : val);
-                return '"' + safeVal.replace(/"/g, '""') + '"';
-            }).join(','));
-            const csvContent = "data:text/csv;charset=utf-8," + [headers, ...rows].join('\n');
-            const encodedUri = encodeURI(csvContent);
-            const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", filename);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
         }
 
         function getInitial(name) { return name ? String(name).charAt(0).toUpperCase() : '?'; }
@@ -212,39 +172,33 @@
 
         function Badge({ status }) {
             const styles = { Approved: 'bg-green-100 text-green-700', Active: 'bg-green-100 text-green-700', Pending: 'bg-amber-100 text-amber-700', Rejected: 'bg-red-100 text-red-700' };
-            return `<span class="text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider ${styles[status] || 'bg-slate-100 text-slate-600'}">${status}</span>`;
+            return `<span class="text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider ${styles[status] || 'bg-slate-100 text-slate-600'}">${status || 'Pending'}</span>`;
         }
 
         /**
-         * HIGH-RESILIENCE INITIALIZATION
+         * INITIALIZATION
          */
         async function init() {
-            console.log("System: Starting initialization sequence...");
             const saved = localStorage.getItem('hr_user');
             
-            // Fail-safe: Hide loading screen after 3 seconds no matter what
-            const timer = setTimeout(() => {
-                console.warn("System: Sync took too long. Forcing UI display.");
+            const failSafe = setTimeout(() => {
                 hideLoading();
-                if (saved) showApp(); else showLogin();
+                if (saved) { state.user = JSON.parse(saved); showApp(); } else showLogin();
             }, 3000);
 
             try {
                 if (saved) {
-                    console.log("System: Cached session found. Attempting server sync...");
                     state.user = JSON.parse(saved);
                     await syncData();
-                    console.log("System: Sync complete.");
-                    clearTimeout(timer);
+                    clearTimeout(failSafe);
                     showApp();
                 } else {
-                    console.log("System: No session found. Showing login.");
-                    clearTimeout(timer);
+                    clearTimeout(failSafe);
                     hideLoading();
                     showLogin();
                 }
             } catch (err) {
-                console.error("System Error: Initialization Failure.", err);
+                console.error("Init Error:", err);
                 hideLoading();
                 showLogin();
             }
@@ -252,29 +206,24 @@
 
         async function syncData() {
             try {
-                console.log("API: Fetching master data lists...");
                 const eRes = await fetch(`${API_BASE}/employees`).catch(() => null);
-                const dRes = await fetch(`${API_BASE}/discussions`).catch(() => null);
-                const lRes = await fetch(`${API_BASE}/loans`).catch(() => null);
-                
                 if (eRes && eRes.ok) state.employees = await eRes.json();
-                if (dRes && dRes.ok) state.discussions = await dRes.json();
-                if (lRes && lRes.ok) state.loans = await lRes.json();
                 
                 if (state.user) {
-                    console.log("API: Fetching user-specific records for ID: " + state.user.id);
                     const freshMe = state.employees.find(e => String(e.id) === String(state.user.id));
                     if (freshMe) state.user = freshMe;
                     
                     const atRes = await fetch(`${API_BASE}/attendance/${state.user.id}`).catch(() => null);
                     const lvRes = await fetch(`${API_BASE}/leaves/${state.user.id}`).catch(() => null);
-                    
+                    const dRes = await fetch(`${API_BASE}/discussions`).catch(() => null);
+                    const lRes = await fetch(`${API_BASE}/loans`).catch(() => null);
+
                     if (atRes && atRes.ok) state.attendance = await atRes.json();
                     if (lvRes && lvRes.ok) state.leaves = await lvRes.json();
+                    if (dRes && dRes.ok) state.discussions = await dRes.json();
+                    if (lRes && lRes.ok) state.loans = await lRes.json();
                 }
-            } catch (e) {
-                console.warn("API: One or more data streams failed. App will use local state.");
-            }
+            } catch (e) { console.warn("Sync incomplete."); }
         }
 
         function showLoading() { document.getElementById('loading-screen').classList.remove('hidden'); }
@@ -283,16 +232,20 @@
         function hideLogin() { document.getElementById('login-container').classList.add('hidden'); }
         
         function showApp() {
-            console.log("UI: Launching main application shell...");
-            hideLogin();
-            document.getElementById('app-shell').classList.remove('hidden');
-            if (state.user) {
-                document.getElementById('user-display-name').innerText = state.user.name;
-                document.getElementById('user-display-role').innerText = state.user.role;
-                document.getElementById('user-avatar').innerText = getInitial(state.user.name);
+            try {
+                hideLogin();
+                document.getElementById('app-shell').classList.remove('hidden');
+                if (state.user) {
+                    document.getElementById('user-display-name').innerText = state.user.name || 'Staff';
+                    document.getElementById('user-display-role').innerText = state.user.role || 'Personnel';
+                    document.getElementById('user-avatar').innerText = getInitial(state.user.name);
+                }
+                renderSidebar();
+                switchTab(state.currentTab);
+            } catch (e) {
+                console.error("App Crash:", e);
+                showLogin();
             }
-            renderSidebar();
-            switchTab(state.currentTab);
         }
 
         function logout() {
@@ -303,7 +256,6 @@
         function renderSidebar() {
             const nav = document.getElementById('sidebar-nav');
             const isAdmin = state.user?.role === 'admin';
-            
             nav.innerHTML = NAV_ITEMS.filter(item => !item.admin || isAdmin).map(item => `
                 <button onclick="switchTab('${item.id}')" 
                         class="nav-btn w-full flex items-center gap-4 px-5 py-4 rounded-2xl transition-all font-bold ${state.currentTab === item.id ? 'bg-green-700 text-white shadow-xl scale-105' : 'text-slate-500 hover:bg-slate-50'}">
@@ -316,83 +268,49 @@
 
         function switchTab(id) {
             state.currentTab = id;
-            state.boardFormVisible = false;
-            state.memberFormVisible = false;
-            state.editingMemberId = null;
             state.editingPayrollId = null;
-            
+            state.editingMemberId = null;
+            state.memberFormVisible = false;
+            state.boardFormVisible = false;
+
             document.querySelectorAll('.nav-btn').forEach(btn => {
                 const isActive = btn.outerHTML.includes(`switchTab('${id}')`);
                 btn.className = `nav-btn w-full flex items-center gap-4 px-5 py-4 rounded-2xl transition-all font-bold ${isActive ? 'bg-green-700 text-white shadow-xl scale-105' : 'text-slate-500 hover:bg-slate-50'}`;
             });
-
-            document.querySelectorAll('.mobile-nav-btn').forEach(btn => {
-                btn.className = `p-4 rounded-2xl mobile-nav-btn ${btn.id === 'mob-'+id ? 'bg-green-50 text-green-700 scale-110 shadow-inner' : 'text-slate-400'}`;
-            });
-
             renderView(id);
         }
 
-        /**
-         * MAIN VIEW ROUTER
-         */
         function renderView(id) {
             const container = document.getElementById('view-container');
-            if (!state.user) {
-                container.innerHTML = `<div class="p-20 text-center text-red-400">Session terminated. Please login again.</div>`;
-                return;
-            }
-            container.innerHTML = `<div class="p-40 text-center text-slate-300 font-black animate-pulse uppercase tracking-[0.6em]">Syncing Matrix...</div>`;
-
+            container.innerHTML = `<div class="p-20 text-center text-slate-300 font-black animate-pulse">SYNCHRONIZING...</div>`;
             try {
                 switch(id) {
                     case 'dashboard': return renderDashboard();
+                    case 'attendance': return renderAttendance();
                     case 'payroll': return renderPayroll();
                     case 'directory': return renderDirectory();
-                    case 'attendance': return renderAttendance();
-                    case 'discussion': return renderDiscussion();
-                    case 'loans': return renderLoans();
                     case 'leaves': return renderLeaves();
+                    case 'discussion': return renderDiscussion();
                     case 'settings': return renderSettings();
                     default: return renderDashboard();
                 }
-            } catch (err) {
-                container.innerHTML = `<div class="bg-red-50 p-10 rounded-3xl border border-red-200 shadow-xl">
-                    <h3 class="text-red-600 font-black mb-2 uppercase tracking-widest">Interface Crash</h3>
-                    <p class="text-sm text-slate-600 font-mono">${err.message}</p>
-                </div>`;
-            }
+            } catch (e) { console.error("Tab Error:", e); }
         }
 
         /**
-         * TAB RENDERING LOGIC
+         * PAGE RENDERS
          */
         function renderDashboard() {
             const container = document.getElementById('view-container');
             const annual = Number(state.user.leave_annual || 0);
             const wop = Number(state.user.leave_casual || 0);
-            
             container.innerHTML = `
                 <div class="animate-fade-in space-y-8 text-slate-900">
-                    <div class="flex items-center justify-between">
-                        <div><h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Dashboard</h2><p class="text-slate-400 font-bold uppercase tracking-widest text-xs mt-1">LSAF Administrative Matrix</p></div>
-                    </div>
+                    <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Home</h2>
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        <div class="bg-gradient-to-br from-green-600 to-green-700 p-8 rounded-[2rem] text-white shadow-xl hover:scale-105 transition-all">
-                            <i data-lucide="clock" class="mb-3 opacity-50" size="32"></i>
-                            <p class="text-[10px] font-black text-green-100 uppercase tracking-widest">Session Status</p>
-                            <p class="text-3xl font-black mt-2 uppercase">${(state.attendance && state.attendance[0]?.type === 'Clock In') ? 'Active' : 'Offline'}</p>
-                        </div>
-                        <div class="bg-gradient-to-br from-blue-600 to-blue-700 p-8 rounded-[2rem] text-white shadow-xl hover:scale-105 transition-all">
-                            <i data-lucide="calendar" class="mb-3 opacity-50" size="32"></i>
-                            <p class="text-[10px] font-black text-blue-100 uppercase tracking-widest">Leave Matrix</p>
-                            <div class="flex items-end gap-2 mt-2">
-                                <p class="text-3xl font-black">${annual}</p><span class="text-[8px] font-bold uppercase text-blue-100 mb-1">AL</span>
-                                <p class="text-3xl font-black ml-2">${wop}</p><span class="text-[8px] font-bold uppercase text-blue-100 mb-1">WOP</span>
-                            </div>
-                        </div>
-                        <div class="bg-white border p-8 rounded-[2rem] shadow-sm"><i data-lucide="dollar-sign" class="mb-3 text-slate-200" size="32"></i><p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Payroll</p><p class="text-2xl font-black text-slate-800 mt-2">Verified</p></div>
-                        <div class="bg-white border p-8 rounded-[2rem] shadow-sm"><i data-lucide="shield" class="mb-3 text-slate-200" size="32"></i><p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Permission</p><p class="text-2xl font-black text-slate-800 mt-2 capitalize">${state.user.role}</p></div>
+                        <div class="bg-gradient-to-br from-green-600 to-green-700 p-8 rounded-[2rem] text-white shadow-xl"><p class="text-[10px] font-black uppercase opacity-60">Status</p><p class="text-3xl font-black mt-2">Active</p></div>
+                        <div class="bg-gradient-to-br from-blue-600 to-blue-700 p-8 rounded-[2rem] text-white shadow-xl"><p class="text-[10px] font-black uppercase opacity-60">Leaves</p><p class="text-3xl font-black mt-2">${annual + wop} Days</p></div>
+                        <div class="bg-white p-8 rounded-[2rem] border"><p class="text-[10px] font-black uppercase text-slate-400">Payroll</p><p class="text-3xl font-black mt-2">Verified</p></div>
                     </div>
                 </div>
             `;
@@ -400,46 +318,35 @@
         }
 
         function renderAttendance() { 
-            const filteredAttendance = state.attendance.filter(log => log.date_str.startsWith(state.selectedAttendanceMonth));
-            const stats = getAttendanceStats(filteredAttendance);
-            
-            document.getElementById('view-container').innerHTML = `
+            const filtered = state.attendance.filter(log => log.date_str.startsWith(state.selectedAttendanceMonth));
+            const stats = getAttendanceStats(filtered);
+            const container = document.getElementById('view-container');
+            container.innerHTML = `
                 <div class="animate-fade-in space-y-8 text-slate-900">
-                    <div class="flex flex-col md:flex-row justify-between items-center gap-6">
-                        <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase text-slate-900">Attendance Hub</h2>
-                        <input type="month" value="${state.selectedAttendanceMonth}" onchange="updateAttendanceMonth(this.value)" class="p-3 border-2 rounded-2xl font-black bg-white shadow-sm outline-none focus:ring-4 focus:ring-green-50">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Attendance</h2>
+                        <input type="month" value="${state.selectedAttendanceMonth}" onchange="state.selectedAttendanceMonth=this.value; renderAttendance()" class="p-3 border-2 rounded-2xl font-bold">
                     </div>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 font-sans">
-                        <div class="bg-white border-2 border-slate-50 p-8 rounded-[2rem] shadow-sm flex items-center gap-6">
-                            <div class="h-14 w-14 rounded-2xl bg-green-50 text-green-700 flex items-center justify-center shadow-inner"><i data-lucide="calendar-check" size="28"></i></div>
-                            <div><p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Monthly Presence</p><p class="text-3xl font-black text-slate-800">${stats.daysPresent} Days</p></div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="bg-white border-2 p-8 rounded-[2rem] flex items-center gap-6">
+                            <div class="h-14 w-14 rounded-2xl bg-green-50 text-green-700 flex items-center justify-center shadow-inner"><i data-lucide="calendar"></i></div>
+                            <div><p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Monthly Days</p><p class="text-3xl font-black">${stats.daysPresent}</p></div>
                         </div>
-                        <div class="bg-white border-2 border-slate-50 p-8 rounded-[2rem] shadow-sm flex items-center gap-6">
-                            <div class="h-14 w-14 rounded-2xl bg-blue-50 text-blue-700 flex items-center justify-center shadow-inner"><i data-lucide="clock" size="28"></i></div>
-                            <div><p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Validated Hours</p><p class="text-3xl font-black text-slate-800">${stats.hours}h Total</p></div>
+                        <div class="bg-white border-2 p-8 rounded-[2rem] flex items-center gap-6">
+                            <div class="h-14 w-14 rounded-2xl bg-blue-50 text-blue-700 flex items-center justify-center shadow-inner"><i data-lucide="clock"></i></div>
+                            <div><p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Hours</p><p class="text-3xl font-black">${stats.hours}h</p></div>
                         </div>
-                        <button onclick="logAttendance('Clock In')" class="bg-slate-900 text-white rounded-[2rem] shadow-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2 hover:bg-black transition-all">Quick Clock In</button>
                     </div>
-                    <div class="grid md:grid-cols-2 gap-8">
-                        <div class="bg-white rounded-[2.5rem] py-16 flex flex-col items-center justify-center space-y-10 border shadow-2xl">
-                            <h3 class="text-6xl font-black text-slate-800 font-mono tracking-tighter">${new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</h3>
-                            <div class="w-full max-w-sm space-y-4 px-10">
-                                <button onclick="logAttendance('Clock In')" class="w-full py-5 rounded-2xl bg-green-700 text-white font-black text-xl shadow-xl shadow-green-100 hover:bg-green-800 active:scale-95 transition-all">Clock In</button>
-                                <button onclick="logAttendance('Clock Out')" class="w-full py-5 rounded-2xl bg-white border-2 border-slate-100 text-slate-700 font-black text-xl hover:bg-slate-50 transition-all">Clock Out</button>
-                            </div>
+                    <div class="bg-white rounded-[2.5rem] py-16 flex flex-col items-center border shadow-2xl">
+                        <h3 class="text-6xl font-black text-slate-800 font-mono mb-10">${new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</h3>
+                        <div class="flex gap-4">
+                            <button onclick="logAttendance('Clock In')" class="bg-green-700 text-white px-10 py-5 rounded-2xl font-black uppercase shadow-xl hover:bg-green-800 transition-all">Clock In</button>
+                            <button onclick="logAttendance('Clock Out')" class="bg-white border-2 border-slate-200 px-10 py-5 rounded-2xl font-black uppercase text-slate-700 hover:bg-slate-50 transition-all">Clock Out</button>
                         </div>
-                        <div class="bg-white rounded-[2.5rem] flex flex-col p-10 border-dashed border-4 border-slate-50 overflow-y-auto max-h-[500px] custom-scrollbar">
-                            <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-6">Activity Ledger (${state.selectedAttendanceMonth})</h4>
-                            <div class="space-y-4">
-                                ${filteredAttendance.map(log => `
-                                    <div class="flex justify-between items-center p-4 bg-slate-50/50 rounded-2xl border border-transparent hover:border-slate-100 transition-all">
-                                        <div><p class="text-sm font-black text-slate-800">${log.type}</p><p class="text-[10px] font-bold text-slate-400 uppercase">${formatDate(log.date_str)}</p></div>
-                                        <p class="font-mono text-sm font-black text-slate-700">${log.time_str}</p>
-                                    </div>
-                                `).join('')}
-                                ${filteredAttendance.length === 0 ? '<div class="py-20 text-center text-slate-300 uppercase font-black text-xs">No records found</div>' : ''}
-                            </div>
-                        </div>
+                    </div>
+                    <div class="bg-white rounded-[2.5rem] p-10 border border-slate-100 shadow-sm max-h-[400px] overflow-y-auto custom-scrollbar">
+                         <h4 class="text-xs font-black uppercase text-slate-400 mb-6">Recent Logs</h4>
+                         ${filtered.map(l => `<div class="flex justify-between py-4 border-b"><div><p class="font-black">${l.type}</p><p class="text-xs text-slate-400">${formatDate(l.date_str)}</p></div><p class="font-mono font-bold">${l.time_str}</p></div>`).join('')}
                     </div>
                 </div>
             `;
@@ -452,24 +359,15 @@
             const container = document.getElementById('view-container');
             container.innerHTML = `
                 <div class="animate-fade-in space-y-8 text-slate-900">
-                    <div class="flex justify-between items-center">
-                        <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Salary Hub</h2>
-                        <input type="month" value="${state.selectedMonth}" onchange="updateMonth(this.value)" class="p-3 border-2 rounded-2xl font-black bg-white shadow-sm">
-                    </div>
+                    <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Salary Hub</h2>
+                    ${state.editingPayrollId ? `<div class="bg-white p-8 rounded-[2rem] border shadow-2xl mb-8">Editing Salary details...</div>` : ''}
                     <div class="overflow-x-auto rounded-[2rem] border bg-white shadow-xl">
                         <table class="w-full text-left text-sm">
                             <thead class="bg-slate-50 border-b font-black text-slate-400 uppercase tracking-widest">
-                                <tr><th class="p-6">ID</th><th class="p-6">Staff Member</th><th class="p-6 text-right">Net Payout</th>${isAdmin ? `<th class="p-6 text-center">Action</th>` : ''}</tr>
+                                <tr><th class="p-6">ID</th><th class="p-6">Name</th><th class="p-6 text-right">Basic</th><th class="p-6 text-right">Net Pay</th>${isAdmin ? `<th class="p-6">Action</th>` : ''}</tr>
                             </thead>
                             <tbody class="divide-y divide-slate-50 font-bold">
-                                ${list.map(emp => `
-                                    <tr class="hover:bg-slate-50/50 transition-colors">
-                                        <td class="p-6 font-black text-slate-900">${emp.id}</td>
-                                        <td class="p-6 uppercase text-xs text-slate-500 truncate max-w-[180px]">${emp.name}</td>
-                                        <td class="p-6 text-right font-black text-slate-900 text-xs uppercase tracking-tighter">Rs. ${calculateNet(emp).toLocaleString()}</td>
-                                        ${isAdmin ? `<td class="p-6 text-center"><button onclick="openPayrollEditor('${emp.id}')" class="text-blue-500 p-2.5 bg-blue-50/30 rounded-xl hover:bg-blue-50 transition-all"><i data-lucide="pencil" size="18"></i></button></td>` : ''}
-                                    </tr>
-                                `).join('')}
+                                ${list.map(emp => `<tr><td class="p-6">${emp.id}</td><td class="p-6 uppercase">${emp.name}</td><td class="p-6 text-right font-mono">${(Number(emp.basic_salary)||0).toLocaleString()}</td><td class="p-6 text-right font-black">Rs. ${calculateNet(emp).toLocaleString()}</td>${isAdmin ? `<td class="p-6 text-center"><button onclick="openPayrollEditor('${emp.id}')" class="text-blue-500"><i data-lucide="pencil" size="18"></i></button></td>` : ''}</tr>`).join('')}
                             </tbody>
                         </table>
                     </div>
@@ -482,40 +380,20 @@
             const container = document.getElementById('view-container');
             container.innerHTML = `
                 <div class="animate-fade-in space-y-8 text-slate-900">
-                    <div class="flex justify-between items-center">
-                        <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Staff Hub</h2>
-                        <button onclick="openAddMember()" class="bg-green-700 text-white px-10 py-3 rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl hover:bg-green-800 transition-all">New Member</button>
-                    </div>
-                    <div id="member-form-container" class="${state.memberFormVisible ? '' : 'hidden'} animate-slide-up">
-                        <div class="bg-white border-4 border-slate-50 shadow-2xl p-10 rounded-[3rem] mb-12">
-                            <form id="member-form" class="space-y-6">
-                                <h3 class="font-black text-slate-800 text-xl uppercase tracking-tighter">${state.editingMemberId ? 'Update Profile' : 'New Identity'}</h3>
-                                <div class="grid md:grid-cols-2 gap-8">
-                                    <input type="text" id="m-id" class="w-full p-4 rounded-2xl border-2 border-slate-50 bg-slate-50 font-black text-sm outline-none focus:ring-4 focus:ring-green-50" placeholder="Employee ID" ${state.editingMemberId ? 'disabled' : ''}>
-                                    <input type="email" id="m-email" class="w-full p-4 rounded-2xl border-2 border-slate-50 bg-slate-50 font-black text-sm outline-none focus:ring-4 focus:ring-green-50" placeholder="Email Address">
-                                    <input type="text" id="m-name" class="w-full p-4 rounded-2xl border-2 border-slate-50 bg-slate-50 font-black text-sm outline-none focus:ring-4 focus:ring-green-50" placeholder="Full Name" required>
-                                    <select id="m-role" class="w-full p-4 rounded-2xl border-2 border-slate-50 font-black text-sm outline-none focus:ring-4 focus:ring-green-50"><option value="employee">Staff</option><option value="admin">HR Admin</option></select>
-                                    <div class="space-y-1"><label class="text-[10px] font-black text-slate-400 uppercase ml-2">Annual Leave Allocation</label><input type="number" id="m-leave-annual" class="p-4 w-full rounded-2xl border-2 border-slate-50 font-bold" placeholder="e.g. 14"></div>
-                                    <div class="space-y-1"><label class="text-[10px] font-black text-slate-400 uppercase ml-2">WOP Leave Allocation</label><input type="number" id="m-leave-wop" class="p-4 w-full rounded-2xl border-2 border-slate-50 font-bold" placeholder="e.g. 10"></div>
-                                </div>
-                                <div class="flex justify-end gap-3 pt-6 border-t"><button type="button" onclick="state.memberFormVisible=false; renderDirectory()" class="px-6 py-3 font-bold text-slate-400 uppercase text-xs">Discard</button><button type="submit" class="bg-green-700 text-white px-12 py-3 rounded-2xl font-black uppercase tracking-widest shadow-lg">Confirm & Sync</button></div>
-                            </form>
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 font-sans">
-                        ${state.employees.map(emp => `
-                            <div class="bg-white p-8 rounded-[2.5rem] border-2 border-slate-50 shadow-sm flex items-center gap-6 group relative hover:border-green-300 transition-all">
-                                <div class="h-14 w-14 rounded-2xl bg-green-50 text-green-700 flex items-center justify-center font-black text-2xl uppercase">${getInitial(emp.name)}</div>
-                                <div class="flex-1 overflow-hidden">
-                                    <h4 class="font-black text-slate-800 text-base uppercase truncate leading-tight">${emp.name}</h4>
-                                    <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">ID: ${emp.id}</p>
-                                </div>
-                                <div class="flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all absolute top-6 right-6">
-                                    <button onclick="editMember('${emp.id}')" class="p-2.5 bg-white border-2 border-slate-50 shadow-xl rounded-xl text-blue-500 hover:bg-blue-50"><i data-lucide="pencil" size="16"></i></button>
-                                    <button onclick="deleteMember('${emp.id}')" class="p-2.5 bg-white border-2 border-slate-50 shadow-xl rounded-xl text-red-500 hover:bg-red-50"><i data-lucide="trash-2" size="16"></i></button>
-                                </div>
+                    <div class="flex justify-between items-center"><h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Staff Hub</h2><button onclick="openAddMember()" class="bg-green-700 text-white px-10 py-3 rounded-2xl font-black uppercase text-xs shadow-xl">Add Member</button></div>
+                    <div id="member-form-container" class="${state.memberFormVisible ? '' : 'hidden'} bg-white p-10 rounded-[3rem] border-4 shadow-2xl mb-12">
+                        <form id="member-form" class="space-y-6">
+                            <div class="grid md:grid-cols-2 gap-8">
+                                <input type="text" id="m-id" class="p-4 rounded-2xl border-2 font-bold" placeholder="ID" ${state.editingMemberId ? 'disabled' : ''}>
+                                <input type="email" id="m-email" class="p-4 rounded-2xl border-2 font-bold" placeholder="Email">
+                                <input type="text" id="m-name" class="p-4 rounded-2xl border-2 font-bold" placeholder="Name" required>
+                                <select id="m-role" class="p-4 rounded-2xl border-2 font-bold"><option value="employee">Staff</option><option value="admin">Admin</option></select>
                             </div>
-                        `).join('')}
+                            <div class="flex justify-end gap-3"><button type="button" onclick="state.memberFormVisible=false; renderDirectory()" class="px-6 py-3 text-slate-400">Cancel</button><button type="submit" class="bg-green-700 text-white px-12 py-3 rounded-2xl font-black uppercase">Save</button></div>
+                        </form>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        ${state.employees.map(emp => `<div class="bg-white p-8 rounded-[2.5rem] border flex items-center gap-6 relative group"><div class="h-14 w-14 rounded-2xl bg-green-50 text-green-700 flex items-center justify-center font-black text-2xl uppercase">${getInitial(emp.name)}</div><div class="flex-1"> <h4 class="font-black uppercase">${emp.name}</h4><p class="text-[9px] font-bold text-slate-400 uppercase">ID: ${emp.id}</p></div><div class="opacity-0 group-hover:opacity-100 flex gap-2 absolute right-6"><button onclick="editMember('${emp.id}')" class="p-2 bg-blue-50 text-blue-500 rounded-xl"><i data-lucide="pencil" size="14"></i></button><button onclick="deleteMember('${emp.id}')" class="p-2 bg-red-50 text-red-500 rounded-xl"><i data-lucide="trash-2" size="14"></i></button></div></div>`).join('')}
                     </div>
                 </div>
             `;
@@ -524,113 +402,60 @@
         }
 
         function renderLeaves() {
-            const filteredLeaves = (state.leaves || []).filter(l => l.start_date.startsWith(state.selectedLeaveMonth));
+            const list = state.leaves.filter(l => l.start_date.startsWith(state.selectedLeaveMonth));
             const container = document.getElementById('view-container');
             container.innerHTML = `
                 <div class="animate-fade-in space-y-8 text-slate-900">
-                    <div class="flex justify-between items-center border-b pb-6 border-slate-100">
-                        <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Leaves Panel</h2>
-                        <div class="flex bg-slate-200/50 p-1.5 rounded-2xl shadow-inner">
-                            <button onclick="state.leaveTab='apply'; renderLeaves()" class="px-8 py-3 rounded-xl text-xs font-black transition-all ${state.leaveTab === 'apply' ? 'bg-white text-green-700 shadow-xl' : 'text-slate-500'}">Apply</button>
-                            <button onclick="state.leaveTab='history'; renderLeaves()" class="px-8 py-3 rounded-xl text-xs font-black transition-all ${state.leaveTab === 'history' ? 'bg-white text-green-700 shadow-xl' : 'text-slate-500'}">Archive</button>
-                        </div>
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Leaves</h2>
+                        <div class="flex bg-slate-200 p-1 rounded-2xl"><button onclick="state.leaveTab='apply'; renderLeaves()" class="px-6 py-2 rounded-xl font-bold ${state.leaveTab==='apply'?'bg-white shadow-sm':'text-slate-500'}">Apply</button><button onclick="state.leaveTab='history'; renderLeaves()" class="px-6 py-2 rounded-xl font-bold ${state.leaveTab==='history'?'bg-white shadow-sm':'text-slate-500'}">Archive</button></div>
                     </div>
                     ${state.leaveTab === 'apply' ? `
-                        <div class="bg-white rounded-[3rem] border-2 border-slate-50 p-12 shadow-2xl max-w-xl mx-auto animate-slide-up">
-                            <form id="leave-app-form" class="space-y-6">
-                                <select id="leave-type" class="w-full p-4 rounded-2xl border-2 border-slate-50 font-black text-lg bg-slate-50 outline-none focus:ring-4 focus:ring-green-50 transition-all shadow-sm">
-                                    <option>Annual Leave</option>
-                                    <option>WOP Leave</option>
-                                </select>
-                                <div class="grid grid-cols-2 gap-8">
-                                    <div class="space-y-1"><label class="text-[10px] font-black text-slate-400 uppercase ml-2">Date</label><input type="date" id="leave-date" class="w-full p-4 rounded-2xl border-2 border-slate-50 font-black bg-slate-50 shadow-inner" required></div>
-                                    <div class="space-y-1"><label class="text-[10px] font-black text-slate-400 uppercase ml-2">Days</label><input type="number" id="leave-days" class="w-full p-4 rounded-2xl border-2 border-slate-50 font-black bg-slate-50 shadow-inner" placeholder="1" required></div>
+                        <div class="bg-white p-12 rounded-[2.5rem] shadow-2xl max-w-xl mx-auto">
+                            <form id="leave-form" class="space-y-6">
+                                <select id="l-type" class="w-full p-4 rounded-2xl border-2 font-bold bg-slate-50 outline-none focus:ring-4 focus:ring-green-50"><option>Annual Leave</option><option>WOP Leave</option></select>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <input type="date" id="l-date" class="w-full p-4 rounded-2xl border-2 font-bold bg-slate-50" required>
+                                    <input type="number" id="l-days" class="w-full p-4 rounded-2xl border-2 font-bold bg-slate-50" placeholder="Days" required>
                                 </div>
-                                <div class="space-y-1"><label class="text-[10px] font-black text-slate-400 uppercase ml-2">Justification</label><textarea id="leave-reason" class="w-full p-4 rounded-2xl border-2 border-slate-50 font-black bg-slate-50 h-32 shadow-inner" placeholder="Detailed purpose..." required></textarea></div>
-                                <button type="submit" class="w-full py-5 bg-green-700 text-white font-black uppercase tracking-[0.3em] rounded-3xl shadow-xl transition-all hover:bg-green-800 active:scale-95">Post Application</button>
+                                <textarea id="l-reason" class="w-full p-4 rounded-2xl border-2 font-bold bg-slate-50 h-32" placeholder="Description..." required></textarea>
+                                <button type="submit" class="w-full py-5 bg-green-700 text-white font-black rounded-3xl shadow-xl hover:bg-green-800 transition-all">Submit Request</button>
                             </form>
                         </div>
                     ` : `
-                        <div class="space-y-6">
-                            <div class="flex justify-end items-center gap-4 bg-white p-3 rounded-2xl shadow-sm w-fit ml-auto border border-slate-50">
-                                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Filter:</span>
-                                <input type="month" value="${state.selectedLeaveMonth}" onchange="updateLeaveMonth(this.value)" class="p-2 border-none rounded-xl font-black text-xs outline-none bg-slate-50">
-                            </div>
-                            <div class="grid gap-6 max-w-4xl mx-auto">
-                                ${filteredLeaves.map(l => `
-                                    <div class="bg-white p-8 rounded-[2rem] border-2 border-slate-50 shadow-sm flex justify-between items-center hover:shadow-lg transition-all">
-                                        <div>
-                                            <h4 class="font-black text-slate-800 text-lg uppercase tracking-tight">${l.leave_type}</h4>
-                                            <p class="text-[10px] font-bold text-slate-400 uppercase mt-1 tracking-widest">${formatDate(l.start_date)} • ${l.days} Days</p>
-                                            <p class="text-xs text-slate-500 mt-3 italic font-medium">"${l.reason || 'No description'}"</p>
-                                        </div>
-                                        <Badge status="${l.status}" />
-                                    </div>
-                                `).join('')}
-                                ${filteredLeaves.length === 0 ? '<div class="py-20 text-center text-slate-300 uppercase font-black text-xs tracking-[0.5em]">No data for this month</div>' : ''}
-                            </div>
+                        <div class="space-y-4">
+                            ${list.map(l => `<div class="bg-white p-8 rounded-[2rem] border shadow-sm flex justify-between items-center"><div><h4 class="font-black uppercase">${l.leave_type}</h4><p class="text-xs text-slate-400 mt-1">${formatDate(l.start_date)} • ${l.days} Days</p><p class="text-xs text-slate-500 mt-2 font-medium">"${l.reason}"</p></div>${Badge({ status: l.status })}</div>`).join('')}
+                            ${list.length === 0 ? '<p class="text-center py-20 text-slate-300 font-black uppercase text-xs">No records</p>' : ''}
                         </div>
                     `}
                 </div>
             `;
             lucide.createIcons();
-            document.getElementById('leave-app-form')?.addEventListener('submit', handleLeaveSubmit);
+            document.getElementById('leave-form')?.addEventListener('submit', handleLeaveSubmit);
         }
 
-        function renderDiscussion() { 
-            const isAdmin = state.user.role === 'admin';
+        function renderDiscussion() {
             const container = document.getElementById('view-container');
             container.innerHTML = `
                 <div class="animate-fade-in space-y-8 text-slate-900">
-                    <div class="flex justify-between items-center border-b pb-6 border-slate-100">
-                        <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase leading-none">Board Hub</h2>
-                        ${isAdmin ? `<button onclick="toggleBoardForm()" class="bg-green-700 text-white px-10 py-3 rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl hover:bg-green-800 transition-all active:scale-95">New Post</button>` : ''}
-                    </div>
-                    <div id="board-form-container" class="${state.boardFormVisible ? '' : 'hidden'} animate-slide-up">
-                        <div class="bg-green-50/20 border-green-100 shadow-xl border-2 p-10 rounded-[2.5rem] mb-10">
-                            <form id="notice-form" class="space-y-4">
-                                <select id="notice-recipient" class="w-full p-4 rounded-xl border bg-white font-black shadow-inner outline-none focus:ring-4 focus:ring-green-50 transition-all"><option value="all">Global Broadcast</option>${state.employees.map(e => `<option value="${e.id}">${e.name}</option>`).join('')}</select>
-                                <input type="text" id="notice-title" class="w-full p-4 rounded-xl border text-base font-black shadow-inner outline-none focus:ring-4 focus:ring-green-50" placeholder="Announcement Header" required>
-                                <textarea id="notice-message" class="w-full p-4 rounded-xl border h-32 text-sm font-medium shadow-inner outline-none focus:ring-4 focus:ring-green-50" placeholder="Provide details..." required></textarea>
-                                <div class="flex justify-end gap-3 pt-2"><button type="button" onclick="toggleBoardForm()" class="px-6 py-3 font-bold text-slate-400 uppercase text-xs">Discard</button><button type="submit" class="bg-green-700 text-white px-10 py-3 rounded-xl font-black uppercase text-xs shadow-lg shadow-green-100 active:scale-95 transition-all">Confirm Publish</button></div>
-                            </form>
-                        </div>
-                    </div>
-                    <div class="space-y-8 max-w-4xl mx-auto font-sans">
-                        ${state.discussions.map(p => `
-                            <div class="bg-white rounded-[2.5rem] border-l-[12px] border-l-green-600 shadow-xl !p-10 relative group hover:border-green-300 transition-all">
-                                <div class="flex justify-between items-start mb-4">
-                                    <h4 class="font-black text-slate-800 text-2xl uppercase leading-tight max-w-2xl">${p.title}</h4>
-                                    <span class="text-[10px] font-black text-slate-300 uppercase tracking-widest">${formatDate(p.date)}</span>
-                                </div>
-                                <p class="text-lg text-slate-600 font-medium leading-relaxed mb-8 border-b pb-8">${p.message}</p>
-                                <div class="flex justify-between items-center">
-                                    <span class="bg-green-50 text-green-700 font-black text-[10px] px-5 py-2 rounded-xl border border-green-100 uppercase tracking-widest shadow-sm">Verified: ${p.senderName}</span>
-                                    <button class="text-blue-600 font-black text-xs uppercase tracking-widest border-2 border-blue-50 px-8 py-3 rounded-[1.25rem] hover:bg-blue-50 transition-all shadow-sm">Reply to Post</button>
-                                </div>
-                            </div>
-                        `).join('')}
-                        ${state.discussions.length === 0 ? '<div class="py-40 text-center text-slate-300 font-black uppercase text-sm tracking-[0.5em] bg-white rounded-[3rem] border-4 border-dashed">Board Ledger Empty</div>' : ''}
+                    <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Board</h2>
+                    <div class="space-y-8 max-w-4xl mx-auto">
+                        ${state.discussions.map(p => `<div class="bg-white rounded-[2.5rem] border-l-[12px] border-l-green-600 shadow-xl !p-10 relative"><h4 class="font-black text-slate-800 text-2xl uppercase leading-tight">${p.title}</h4><p class="text-lg text-slate-600 font-medium leading-relaxed mt-4 border-b pb-8">${p.message}</p><div class="flex justify-between items-center mt-6"><span class="bg-green-50 text-green-700 font-black text-[10px] px-5 py-2 rounded-xl uppercase">By: ${p.senderName}</span><button class="text-blue-600 font-black text-xs uppercase tracking-widest border-2 border-blue-50 px-8 py-3 rounded-[1.25rem] hover:bg-blue-50">Reply</button></div></div>`).join('')}
                     </div>
                 </div>
             `;
             lucide.createIcons();
-            if(isAdmin) document.getElementById('notice-form')?.addEventListener('submit', handleBoardSubmit);
         }
 
         function renderSettings() {
              document.getElementById('view-container').innerHTML = `
                 <div class="animate-fade-in space-y-8 text-slate-900">
-                    <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase leading-none">Security Hub</h2>
-                    <div class="bg-white border p-12 shadow-2xl border-4 border-slate-50 rounded-[3rem] max-w-xl mx-auto mt-10 relative overflow-hidden font-sans">
-                        <div class="absolute top-0 right-0 w-32 h-32 bg-red-50 rounded-full blur-3xl -mr-16 -mt-16"></div>
-                        <div class="space-y-8 relative z-10 text-center">
-                            <div class="h-20 w-20 bg-slate-900 rounded-3xl flex items-center justify-center text-white mx-auto shadow-2xl mb-8"><i data-lucide="lock" size="40"></i></div>
-                            <div class="space-y-4">
-                                <input type="password" id="s-p1" class="w-full p-4 rounded-2xl border-2 border-slate-50 bg-slate-50 font-black outline-none shadow-inner focus:ring-4 focus:ring-green-50 transition-all" placeholder="New System Password">
-                                <input type="password" id="s-p2" class="w-full p-4 rounded-2xl border-2 border-slate-50 bg-slate-50 font-black outline-none shadow-inner focus:ring-4 focus:ring-green-50 transition-all" placeholder="Confirm Identity Key">
-                            </div>
-                            <button onclick="alert('Access key synchronized')" class="w-full py-5 bg-slate-900 text-white font-black uppercase tracking-[0.3em] rounded-3xl shadow-2xl hover:bg-black transition-all active:scale-95 shadow-slate-200">Update Security Matrix</button>
+                    <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Security</h2>
+                    <div class="bg-white border p-12 shadow-2xl rounded-[3rem] max-w-xl mx-auto mt-10">
+                        <div class="space-y-6 text-center">
+                            <div class="h-20 w-20 bg-slate-900 rounded-3xl flex items-center justify-center text-white mx-auto mb-8"><i data-lucide="lock" size="40"></i></div>
+                            <input type="password" class="w-full p-4 rounded-2xl border-2 font-black outline-none focus:ring-4 focus:ring-green-50 transition-all" placeholder="New Password">
+                            <button onclick="alert('Key Updated')" class="w-full py-5 bg-slate-900 text-white font-black uppercase rounded-3xl shadow-2xl">Update Key</button>
                         </div>
                     </div>
                 </div>
@@ -639,161 +464,71 @@
         }
 
         /**
-         * HANDLERS & LOGIC
+         * LOGIC HANDLERS
          */
         async function logAttendance(type) {
-            console.log("UI: Attendance event triggered: " + type);
             showLoading();
-            if (!navigator.geolocation) { alert("GPS Capability Null."); hideLoading(); return; }
-            
             navigator.geolocation.getCurrentPosition(async (pos) => {
                 try {
                     const res = await fetch(`${API_BASE}/attendance`, {
                         method: 'POST',
                         headers: {'Content-Type':'application/json'},
-                        body: JSON.stringify({
-                            employeeId: state.user.id,
-                            type: type,
-                            date: new Date().toISOString().split('T')[0],
-                            time: new Date().toLocaleTimeString(),
-                            lat: pos.coords.latitude,
-                            lng: pos.coords.longitude
-                        })
+                        body: JSON.stringify({ employeeId: state.user.id, type, date: new Date().toISOString().split('T')[0], time: new Date().toLocaleTimeString(), lat: pos.coords.latitude, lng: pos.coords.longitude })
                     });
-                    if (res.ok) {
-                        console.log("API: Attendance session recorded.");
-                        alert(`${type} successful! System notification dispatched.`);
-                        await syncData();
-                        renderAttendance();
-                    }
-                } catch(e) { alert("Matrix Sync Error."); }
+                    if (res.ok) { alert(`${type} Successful!`); await syncData(); renderAttendance(); }
+                } catch(e) { alert("Sync failed."); }
                 finally { hideLoading(); }
-            }, () => {
-                alert("GPS identity required for clock-in.");
-                hideLoading();
-            });
+            }, () => { alert("Location required."); hideLoading(); });
         }
 
         async function handleLeaveSubmit(e) {
             e.preventDefault();
             showLoading();
-            const payload = {
-                employeeId: state.user.id,
-                type: document.getElementById('leave-type').value,
-                startDate: document.getElementById('leave-date').value,
-                days: document.getElementById('leave-days').value,
-                reason: document.getElementById('leave-reason').value
-            };
+            const payload = { employeeId: state.user.id, type: document.getElementById('l-type').value, startDate: document.getElementById('l-date').value, days: document.getElementById('l-days').value, reason: document.getElementById('l-reason').value };
             try {
-                const res = await fetch(`${API_BASE}/leaves`, {
-                    method: 'POST',
-                    headers: {'Content-Type':'application/json'},
-                    body: JSON.stringify(payload)
-                });
-                if(res.ok) {
-                    alert("Application Finalized: Transmitted to HR Matrix.");
-                    await syncData();
-                    state.leaveTab = 'history';
-                    renderLeaves();
-                }
-            } catch(e) { alert("Matrix Error."); }
+                await fetch(`${API_BASE}/leaves`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+                alert("Request posted.");
+                await syncData(); state.leaveTab = 'history'; renderLeaves();
+            } catch(e) {}
             finally { hideLoading(); }
-        }
-
-        async function handleBoardSubmit(e) {
-            e.preventDefault();
-            const payload = {
-                title: document.getElementById('notice-title').value,
-                message: document.getElementById('notice-message').value,
-                recipientId: document.getElementById('notice-recipient').value,
-                senderName: state.user.name,
-                senderId: state.user.id,
-                date: new Date().toISOString()
-            };
-            try {
-                const res = await fetch(`${API_BASE}/discussions`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
-                if (res.ok) {
-                    await fetch(`${API_BASE}/notify`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ recipientId: payload.recipientId, title: payload.title, message: payload.message, senderName: payload.senderName }) });
-                    alert("System Success: Broadcast Live.");
-                    state.boardFormVisible = false;
-                    await syncData();
-                    renderDiscussion();
-                }
-            } catch (err) { alert("Matrix Sync Failure."); }
         }
 
         async function handleMemberSubmit(e) {
             e.preventDefault();
             showLoading();
-            const payload = {
-                id: document.getElementById('m-id').value,
-                name: document.getElementById('m-name').value,
-                email: document.getElementById('m-email').value,
-                role: document.getElementById('m-role').value,
-                password: document.getElementById('m-id').value,
-                leave_annual: Number(document.getElementById('m-leave-annual').value) || 0,
-                leave_casual: Number(document.getElementById('m-leave-wop').value) || 0
-            };
+            const payload = { id: document.getElementById('m-id').value, name: document.getElementById('m-name').value, email: document.getElementById('m-email').value, role: document.getElementById('m-role').value, password: document.getElementById('m-id').value };
             const method = state.editingMemberId ? 'PUT' : 'POST';
             const url = state.editingMemberId ? `${API_BASE}/employees/${state.editingMemberId}` : `${API_BASE}/employees`;
             try {
-                const res = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
-                if(res.ok) {
-                    alert("Profile Synchronized.");
-                    state.memberFormVisible = false;
-                    await syncData();
-                    renderDirectory();
-                }
-            } catch(err) { alert("Sync Error."); }
+                await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+                alert("Synced.");
+                state.memberFormVisible = false; await syncData(); renderDirectory();
+            } catch(err) {}
             finally { hideLoading(); }
         }
 
-        async function deleteMember(id) {
-            if(!confirm(`CRITICAL: Wipe account identity ${id} from system matrix?`)) return;
-            showLoading();
-            try { const res = await fetch(`${API_BASE}/employees/${id}`, { method: 'DELETE' }); if(res.ok) { await syncData(); renderDirectory(); } }
-            catch(e) { alert("Action Aborted."); } finally { hideLoading(); }
-        }
-
-        function editMember(id) {
-            const emp = state.employees.find(e => String(e.id) === String(id));
-            if(!emp) return;
-            state.editingMemberId = id; state.memberFormVisible = true; renderDirectory();
-            document.getElementById('m-name').value = emp.name; document.getElementById('m-role').value = emp.role;
-            document.getElementById('m-id').value = emp.id; document.getElementById('m-email').value = emp.email || '';
-            document.getElementById('m-leave-annual').value = emp.leave_annual || 0; document.getElementById('m-leave-wop').value = emp.leave_casual || 0;
-        }
+        function openAddMember() { state.editingMemberId = null; state.memberFormVisible = true; renderDirectory(); }
+        function editMember(id) { const emp = state.employees.find(e => String(e.id) === String(id)); if(!emp) return; state.editingMemberId = id; state.memberFormVisible = true; renderDirectory(); document.getElementById('m-name').value = emp.name; document.getElementById('m-id').value = emp.id; }
+        async function deleteMember(id) { if(confirm("Wipe identity?")) { await fetch(`${API_BASE}/employees/${id}`, { method: 'DELETE' }); await syncData(); renderDirectory(); } }
+        function openPayrollEditor(id) { state.editingPayrollId = id; renderPayroll(); }
+        function toggleBoardForm() { state.boardFormVisible = !state.boardFormVisible; renderDiscussion(); }
+        function updateMonth(val) { state.selectedMonth = val; renderPayroll(); }
+        function updateLeaveMonth(val) { state.selectedLeaveMonth = val; renderLeaves(); }
+        function updateAttendanceMonth(val) { state.selectedAttendanceMonth = val; renderAttendance(); }
 
         async function login(e) {
             e.preventDefault();
             const id = document.getElementById('login-id').value;
             const pass = document.getElementById('login-pass').value;
-            console.log("Auth: Attempting verification for " + id);
             showLoading();
             try {
                 const res = await fetch(`${API_BASE}/employees`);
                 const list = await res.json();
                 const user = list.find(e => String(e.id) === String(id) && String(e.password) === String(pass));
-                if (user) {
-                    console.log("Auth: Identity Verified.");
-                    state.user = user;
-                    localStorage.setItem('hr_user', JSON.stringify(user));
-                    await syncData();
-                    showApp();
-                } else {
-                    console.warn("Auth: Invalid Credentials.");
-                    alert("Auth Denied: Invalid ID or Security Key.");
-                    hideLoading();
-                }
-            } catch (err) { alert("Connectivity Error: Backend Unreachable."); hideLoading(); }
+                if (user) { state.user = user; localStorage.setItem('hr_user', JSON.stringify(user)); await syncData(); showApp(); }
+                else { alert("Invalid Credentials."); hideLoading(); }
+            } catch (err) { alert("Server Error."); hideLoading(); }
         }
-
-        function updateAttendanceMonth(val) { state.selectedAttendanceMonth = val; renderAttendance(); }
-        function updateLeaveMonth(val) { state.selectedLeaveMonth = val; renderLeaves(); }
-        function updateMonth(val) { state.selectedMonth = val; renderPayroll(); }
-        function openAddMember() { state.editingMemberId = null; state.memberFormVisible = true; renderDirectory(); }
-        function openPayrollEditor(id) { state.editingPayrollId = id; renderPayroll(); }
-        function toggleBoardForm() { state.boardFormVisible = !state.boardFormVisible; renderDiscussion(); }
 
         window.onload = init;
         document.getElementById('login-form').addEventListener('submit', login);
