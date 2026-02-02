@@ -37,7 +37,7 @@
     <div id="loading-screen" class="fixed inset-0 bg-white z-[999] flex flex-col items-center justify-center">
         <div class="loader w-16 h-16 border-4 border-slate-100 border-t-green-700 rounded-full mb-4"></div>
         <p class="text-slate-400 font-black uppercase tracking-[0.3em] text-sm animate-pulse">Syncing LSAF HR Core</p>
-        <button id="skip-sync-btn" onclick="showLogin()" class="hidden mt-8 text-[10px] font-black uppercase text-slate-300 border-b border-slate-200 tracking-widest">Bypass Connection Sync</button>
+        <button id="skip-sync-btn" onclick="bypassSync()" class="hidden mt-8 text-[10px] font-black uppercase text-slate-300 border-b border-slate-200 tracking-widest hover:text-slate-500 transition-colors">Bypass Connection Sync</button>
     </div>
 
     <!-- LOGIN INTERFACE -->
@@ -46,7 +46,7 @@
             <div class="text-center mb-10">
                 <img src="/cropped-UOL-Green-V1.png" alt="Logo" class="h-20 mx-auto mb-4 object-contain" id="login-logo" onerror="this.src='https://via.placeholder.com/150?text=LSAF'">
                 <h1 class="text-2xl font-black text-slate-800 leading-tight uppercase tracking-tighter">Lahore School of Accountancy</h1>
-                <p class="text-slate-400 text-xs font-bold mt-2 uppercase tracking-widest">Administrative Hub v4.3.7</p>
+                <p class="text-slate-400 text-xs font-bold mt-2 uppercase tracking-widest">Administrative Hub v4.3.8</p>
             </div>
             <form id="login-form" class="space-y-5">
                 <div class="space-y-1">
@@ -96,7 +96,7 @@
     </div>
 
     <script>
-        // Clean relative path because Nginx is proxying /api to localhost:5050
+        // Use relative path for Nginx proxying
         const API_BASE = '/api';
         
         let state = {
@@ -141,7 +141,9 @@
             return isNaN(num) ? 0 : num;
         }
 
-        function getInitial(name) { return name ? String(name).charAt(0).toUpperCase() : '?'; }
+        function getInitial(name) { 
+            return name ? String(name).charAt(0).toUpperCase() : '?'; 
+        }
 
         function calculateNet(emp) {
             const add = cleanNumber(emp.basic_salary) + cleanNumber(emp.others_allowance) + cleanNumber(emp.invigilation) + cleanNumber(emp.increment) + cleanNumber(emp.eidi);
@@ -181,27 +183,42 @@
          * INITIALIZATION WITH FAIL-SAFE
          */
         async function init() {
+            console.log("System: Starting initialization sequence...");
             const saved = localStorage.getItem('hr_user');
             
+            // EMERGENCY BYPASS: If API hangs, show UI after 3 seconds
             const failSafe = setTimeout(() => {
-                hideLoading();
-                if (saved) { state.user = JSON.parse(saved); showApp(); } else showLogin();
-            }, 2500);
+                console.warn("System: Connection timeout reached. Forcing UI display.");
+                bypassSync();
+            }, 3000);
 
             try {
                 if (saved) {
                     state.user = JSON.parse(saved);
+                    console.log("System: Cached session detected. Syncing...");
                     await syncData();
                     clearTimeout(failSafe);
                     showApp();
                 } else {
+                    console.log("System: No session. Showing login.");
                     clearTimeout(failSafe);
                     hideLoading();
                     showLogin();
                 }
             } catch (err) {
-                console.error("Init Error:", err);
+                console.error("System Error: Initialization Failure.", err);
                 hideLoading();
+                showLogin();
+            }
+        }
+
+        function bypassSync() {
+            hideLoading();
+            const saved = localStorage.getItem('hr_user');
+            if (saved) {
+                state.user = JSON.parse(saved);
+                showApp();
+            } else {
                 showLogin();
             }
         }
@@ -215,12 +232,10 @@
                     const freshMe = state.employees.find(e => String(e.id) === String(state.user.id));
                     if (freshMe) state.user = freshMe;
                     
-                    const [atRes, lvRes, dRes, lRes] = await Promise.all([
-                        fetch(`${API_BASE}/attendance/${state.user.id}`).catch(() => null),
-                        fetch(`${API_BASE}/leaves/${state.user.id}`).catch(() => null),
-                        fetch(`${API_BASE}/discussions`).catch(() => null),
-                        fetch(`${API_BASE}/loans`).catch(() => null)
-                    ]);
+                    const atRes = await fetch(`${API_BASE}/attendance/${state.user.id}`).catch(() => null);
+                    const lvRes = await fetch(`${API_BASE}/leaves/${state.user.id}`).catch(() => null);
+                    const dRes = await fetch(`${API_BASE}/discussions`).catch(() => null);
+                    const lRes = await fetch(`${API_BASE}/loans`).catch(() => null);
 
                     if (atRes && atRes.ok) state.attendance = await atRes.json();
                     if (lvRes && lvRes.ok) state.leaves = await lvRes.json();
@@ -237,11 +252,12 @@
         
         function showApp() {
             try {
+                hideLoading(); // CRITICAL: Ensure loader is gone
                 hideLogin();
                 document.getElementById('app-shell').classList.remove('hidden');
                 if (state.user) {
-                    document.getElementById('user-display-name').innerText = state.user.name || 'Staff';
-                    document.getElementById('user-display-role').innerText = state.user.role || 'Personnel';
+                    document.getElementById('user-display-name').innerText = state.user.name || 'User';
+                    document.getElementById('user-display-role').innerText = state.user.role || 'Staff';
                     document.getElementById('user-avatar').innerText = getInitial(state.user.name);
                 }
                 renderSidebar();
@@ -286,7 +302,7 @@
 
         function renderView(id) {
             const container = document.getElementById('view-container');
-            container.innerHTML = `<div class="p-20 text-center text-slate-300 font-black animate-pulse uppercase tracking-widest">Matrix Sync...</div>`;
+            container.innerHTML = `<div class="p-20 text-center text-slate-300 font-black animate-pulse">SYNCHRONIZING...</div>`;
             try {
                 switch(id) {
                     case 'dashboard': return renderDashboard();
@@ -310,9 +326,9 @@
             const wop = Number(state.user.leave_casual || 0);
             container.innerHTML = `
                 <div class="animate-fade-in space-y-8 text-slate-900">
-                    <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase font-sans">Dashboard</h2>
+                    <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase font-sans">Home</h2>
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 font-sans">
-                        <div class="bg-gradient-to-br from-green-600 to-green-700 p-8 rounded-[2rem] text-white shadow-xl"><p class="text-[10px] font-black uppercase opacity-60">Status</p><p class="text-3xl font-black mt-2 uppercase">${(state.attendance && state.attendance[0]?.type === 'Clock In') ? 'Active' : 'Offline'}</p></div>
+                        <div class="bg-gradient-to-br from-green-600 to-green-700 p-8 rounded-[2rem] text-white shadow-xl"><p class="text-[10px] font-black uppercase opacity-60">Status</p><p class="text-3xl font-black mt-2">Active</p></div>
                         <div class="bg-gradient-to-br from-blue-600 to-blue-700 p-8 rounded-[2rem] text-white shadow-xl"><p class="text-[10px] font-black uppercase opacity-60">Leaves Bal</p><p class="text-3xl font-black mt-2">${annual + wop} Days</p></div>
                         <div class="bg-white p-8 rounded-[2rem] border shadow-sm"><p class="text-[10px] font-black uppercase text-slate-400">Payroll Status</p><p class="text-2xl font-black text-slate-800 mt-2">Verified</p></div>
                     </div>
@@ -348,6 +364,11 @@
                             <button onclick="logAttendance('Clock Out')" class="bg-white border-2 border-slate-200 px-10 py-5 rounded-2xl font-black uppercase text-slate-700 hover:bg-slate-50 transition-all active:scale-95">Clock Out</button>
                         </div>
                     </div>
+                    <div class="bg-white rounded-[2.5rem] p-10 border border-slate-100 shadow-sm max-h-[400px] overflow-y-auto custom-scrollbar">
+                         <h4 class="text-xs font-black uppercase text-slate-400 mb-6">Recent Activity Logs</h4>
+                         ${filtered.map(l => `<div class="flex justify-between py-4 border-b"><div><p class="font-black text-slate-700">${l.type}</p><p class="text-xs text-slate-400">${formatDate(l.date_str)}</p></div><p class="font-mono font-bold text-slate-500">${l.time_str}</p></div>`).join('')}
+                         ${filtered.length === 0 ? '<p class="py-10 text-center text-slate-300 font-bold uppercase">No records found</p>' : ''}
+                    </div>
                 </div>
             `;
             lucide.createIcons();
@@ -378,10 +399,18 @@
                     <div class="overflow-x-auto rounded-[2rem] border bg-white shadow-xl">
                         <table class="w-full text-left text-sm">
                             <thead class="bg-slate-50 border-b font-black text-slate-400 uppercase tracking-widest">
-                                <tr><th class="p-6">ID</th><th class="p-6">Member</th><th class="p-6 text-right">Net Payout</th>${isAdmin ? `<th class="p-6 text-center">Action</th>` : ''}</tr>
+                                <tr><th class="p-6">ID</th><th class="p-6">Member</th><th class="p-6 text-right">Basic</th><th class="p-6 text-right">Net Pay</th>${isAdmin ? `<th class="p-6 text-center">Action</th>` : ''}</tr>
                             </thead>
                             <tbody class="divide-y divide-slate-50 font-bold">
-                                ${list.map(emp => `<tr><td class="p-6 font-black">${emp.id}</td><td class="p-6 uppercase">${emp.name}</td><td class="p-6 text-right font-black">Rs. ${calculateNet(emp).toLocaleString()}</td>${isAdmin ? `<td class="p-6 text-center"><button onclick="switchTab('directory')" class="text-blue-500 hover:scale-110 transition-transform"><i data-lucide="eye" size="18"></i></button></td>` : ''}</tr>`).join('')}
+                                ${list.map(emp => `
+                                    <tr class="hover:bg-slate-50/50 transition-colors">
+                                        <td class="p-6 font-black">${emp.id}</td>
+                                        <td class="p-6 uppercase text-xs text-slate-500 truncate max-w-[180px]">${emp.name}</td>
+                                        <td class="p-6 text-right font-mono">${(Number(emp.basic_salary)||0).toLocaleString()}</td>
+                                        <td class="p-6 text-right font-black">Rs. ${calculateNet(emp).toLocaleString()}</td>
+                                        ${isAdmin ? `<td class="p-6 text-center"><button onclick="switchTab('directory')" class="text-blue-500 hover:scale-110 transition-transform"><i data-lucide="eye" size="18"></i></button></td>` : ''}
+                                    </tr>
+                                `).join('')}
                             </tbody>
                         </table>
                     </div>
@@ -402,8 +431,8 @@
                                 <input type="email" id="m-email" class="p-4 rounded-2xl border-2 font-bold bg-slate-50 outline-none" placeholder="Email Address">
                                 <input type="text" id="m-name" class="p-4 rounded-2xl border-2 font-bold bg-slate-50 outline-none" placeholder="Full Name" required>
                                 <select id="m-role" class="p-4 rounded-2xl border-2 border-slate-50 font-black text-sm bg-slate-50 outline-none"><option value="employee">Staff Member</option><option value="admin">System Admin</option></select>
-                                <div class="space-y-1"><label class="text-[10px] font-black text-slate-400 ml-2">AL ALLOCATION</label><input type="number" id="m-leave-annual" class="p-4 w-full rounded-2xl border-2 font-bold" placeholder="Annual Bal"></div>
-                                <div class="space-y-1"><label class="text-[10px] font-black text-slate-400 ml-2">WOP ALLOCATION</label><input type="number" id="m-leave-wop" class="p-4 w-full rounded-2xl border-2 font-bold" placeholder="WOP Bal"></div>
+                                <div class="space-y-1"><label class="text-[10px] font-black uppercase text-slate-400 ml-2">AL ALLOCATION</label><input type="number" id="m-leave-annual" class="p-4 w-full rounded-2xl border-2 font-bold" placeholder="Annual Bal"></div>
+                                <div class="space-y-1"><label class="text-[10px] font-black uppercase text-slate-400 ml-2">WOP ALLOCATION</label><input type="number" id="m-leave-wop" class="p-4 w-full rounded-2xl border-2 font-bold" placeholder="WOP Bal"></div>
                             </div>
                             <div class="flex justify-end gap-3 pt-6 border-t"><button type="button" onclick="state.memberFormVisible=false; renderDirectory()" class="px-8 py-3 text-slate-400 font-bold uppercase text-xs">Cancel</button><button type="submit" class="bg-green-700 text-white px-12 py-3 rounded-2xl font-black uppercase shadow-lg">Confirm & Sync</button></div>
                         </form>
@@ -415,6 +444,7 @@
                                 <div class="flex-1 overflow-hidden"> 
                                     <h4 class="font-black uppercase truncate leading-none text-slate-800">${emp.name}</h4>
                                     <p class="text-[9px] font-bold text-slate-400 uppercase mt-2">ID: ${emp.id}</p>
+                                    <p class="text-[8px] font-black text-slate-300 uppercase tracking-tighter mt-1">AL: ${emp.leave_annual || 0} | WOP: ${emp.leave_casual || 0}</p>
                                 </div>
                                 <div class="opacity-0 group-hover:opacity-100 flex gap-2 absolute right-6">
                                     <button onclick="editMember('${emp.id}')" class="p-2.5 bg-white border shadow-xl rounded-xl text-blue-500 hover:scale-110 transition-all"><i data-lucide="pencil" size="14"></i></button>
@@ -446,7 +476,7 @@
                                     <input type="date" id="l-date" class="w-full p-4 rounded-2xl border-2 font-bold bg-slate-50 shadow-inner" required>
                                     <input type="number" id="l-days" class="w-full p-4 rounded-2xl border-2 font-bold bg-slate-50 shadow-inner" placeholder="Days" required>
                                 </div>
-                                <textarea id="l-reason" class="w-full p-4 rounded-2xl border-2 border-bold bg-slate-50 h-32 shadow-inner" placeholder="Description for HR..." required></textarea>
+                                <textarea id="l-reason" class="w-full p-4 rounded-2xl border-2 border-bold bg-slate-50 h-32 shadow-inner" placeholder="Provide description for HR..." required></textarea>
                                 <button type="submit" class="w-full py-5 bg-green-700 text-white font-black rounded-3xl shadow-xl hover:bg-green-800 transition-all uppercase tracking-widest active:scale-95">Confirm Request</button>
                             </form>
                         </div>
@@ -455,6 +485,7 @@
                              <div class="flex justify-end items-center gap-3"><p class="text-[10px] font-black uppercase text-slate-400">Month:</p><input type="month" value="${state.selectedLeaveMonth}" onchange="state.selectedLeaveMonth=this.value; renderLeaves()" class="p-2 border rounded-xl font-bold bg-white text-xs shadow-sm"></div>
                              <div class="space-y-4">
                                 ${list.map(l => `<div class="bg-white p-8 rounded-[2rem] border shadow-sm flex justify-between items-center group hover:border-green-300 transition-all"><div><h4 class="font-black uppercase text-lg text-slate-800">${l.leave_type}</h4><p class="text-[10px] text-slate-400 mt-1 uppercase tracking-widest">${formatDate(l.start_date)} • ${l.days} Days</p><p class="text-xs text-slate-500 mt-3 italic font-medium leading-relaxed">"${l.reason}"</p></div>${Badge({ status: l.status })}</div>`).join('')}
+                                ${list.length === 0 ? '<p class="text-center py-20 text-slate-300 font-black uppercase text-xs tracking-widest">Log Ledger Empty</p>' : ''}
                              </div>
                         </div>
                     `}
@@ -502,13 +533,13 @@
         function renderSettings() {
              document.getElementById('view-container').innerHTML = `
                 <div class="animate-fade-in space-y-8 text-slate-900 font-sans text-center">
-                    <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase leading-none">Security Matrix</h2>
+                    <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase leading-none">Security</h2>
                     <div class="bg-white border p-12 shadow-2xl rounded-[3rem] max-w-xl mx-auto mt-10 relative overflow-hidden shadow-xl">
                         <div class="absolute top-0 right-0 w-32 h-32 bg-red-50 rounded-full blur-3xl -mr-16 -mt-16"></div>
                         <div class="space-y-8 relative z-10">
                             <div class="h-20 w-20 bg-slate-900 rounded-3xl flex items-center justify-center text-white mx-auto shadow-2xl mb-8"><i data-lucide="lock" size="40"></i></div>
                             <div class="space-y-4"><input type="password" id="s-p1" class="w-full p-4 rounded-2xl border-2 font-black outline-none focus:ring-4 focus:ring-green-50 transition-all bg-slate-50 shadow-inner" placeholder="New Password"></div>
-                            <button onclick="alert('Access Hub: Security keys updated.')" class="w-full py-5 bg-slate-900 text-white font-black uppercase rounded-[2rem] shadow-2xl hover:bg-black transition-all active:scale-95 shadow-slate-200">Sync Security Matrix</button>
+                            <button onclick="alert('System Alert: Security key synchronized.')" class="w-full py-5 bg-slate-900 text-white font-black uppercase rounded-[2rem] shadow-2xl hover:bg-black transition-all active:scale-95 shadow-slate-200">Sync Security Matrix</button>
                         </div>
                     </div>
                 </div>
@@ -562,9 +593,11 @@
         
         async function deleteMember(id) { 
             if(confirm("CRITICAL: Wipe account identity " + id + " from system matrix?")) { 
-                await fetch(`${API_BASE}/employees/${id}`, { method: 'DELETE' }); 
-                await syncData(); 
-                renderDirectory(); 
+                try {
+                    await fetch(`${API_BASE}/employees/${id}`, { method: 'DELETE' }); 
+                    await syncData(); 
+                    renderDirectory(); 
+                } catch(e) { alert("Purge failed."); }
             } 
         }
 
