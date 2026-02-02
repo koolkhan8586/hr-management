@@ -26,9 +26,9 @@
     <!-- CONNECTION ERROR OVERLAY -->
     <div id="critical-error-banner" class="hidden fixed inset-0 z-[9999] bg-red-600 text-white p-10 flex flex-col items-center justify-center text-center">
         <h1 class="text-4xl font-black mb-4 uppercase">Backend Sync Failure</h1>
-        <p class="text-xl mb-8">The application cannot communicate with the server on port 5050.</p>
+        <p class="text-xl mb-8">The application cannot communicate with the server API.</p>
         <div id="error-details" class="bg-black/20 p-6 rounded-2xl font-mono text-sm max-w-2xl w-full text-left overflow-auto mb-8 shadow-inner">
-            Check: Is port 5050 open in your firewall? Run 'ufw allow 5050' if needed.
+            Check: Is port 5050 open and is Nginx proxying /api correctly?
         </div>
         <button onclick="location.reload()" class="bg-white text-red-600 px-10 py-4 rounded-xl font-black uppercase shadow-2xl transition-all active:scale-95">Retry Sync</button>
     </div>
@@ -82,7 +82,7 @@
             </div>
         </aside>
 
-        <main class="flex-1 lg:ml-64 p-4 md:p-10 pb-24 lg:pb-10 min-h-screen shadow-inner border-l border-slate-50">
+        <main class="flex-1 lg:ml-64 p-4 md:p-10 pb-24 lg:pb-10 min-h-screen shadow-inner border-l border-slate-100">
             <div id="view-container" class="max-w-6xl mx-auto"></div>
         </main>
 
@@ -96,8 +96,8 @@
     </div>
 
     <script>
-        // Automatic API Base detection
-        const API_BASE = window.location.port === '5050' ? '/api' : `http://${window.location.hostname}:5050/api`;
+        // Clean relative path because Nginx is proxying /api to localhost:5050
+        const API_BASE = '/api';
         
         let state = {
             user: null,
@@ -181,7 +181,6 @@
          * INITIALIZATION WITH FAIL-SAFE
          */
         async function init() {
-            console.log("System: Starting initialization sequence...");
             const saved = localStorage.getItem('hr_user');
             
             const failSafe = setTimeout(() => {
@@ -403,8 +402,8 @@
                                 <input type="email" id="m-email" class="p-4 rounded-2xl border-2 font-bold bg-slate-50 outline-none" placeholder="Email Address">
                                 <input type="text" id="m-name" class="p-4 rounded-2xl border-2 font-bold bg-slate-50 outline-none" placeholder="Full Name" required>
                                 <select id="m-role" class="p-4 rounded-2xl border-2 border-slate-50 font-black text-sm bg-slate-50 outline-none"><option value="employee">Staff Member</option><option value="admin">System Admin</option></select>
-                                <input type="number" id="m-leave-annual" class="p-4 rounded-2xl border-2 font-bold shadow-inner" placeholder="Annual Bal">
-                                <input type="number" id="m-leave-wop" class="p-4 rounded-2xl border-2 font-bold shadow-inner" placeholder="WOP Bal">
+                                <div class="space-y-1"><label class="text-[10px] font-black text-slate-400 ml-2">AL ALLOCATION</label><input type="number" id="m-leave-annual" class="p-4 w-full rounded-2xl border-2 font-bold" placeholder="Annual Bal"></div>
+                                <div class="space-y-1"><label class="text-[10px] font-black text-slate-400 ml-2">WOP ALLOCATION</label><input type="number" id="m-leave-wop" class="p-4 w-full rounded-2xl border-2 font-bold" placeholder="WOP Bal"></div>
                             </div>
                             <div class="flex justify-end gap-3 pt-6 border-t"><button type="button" onclick="state.memberFormVisible=false; renderDirectory()" class="px-8 py-3 text-slate-400 font-bold uppercase text-xs">Cancel</button><button type="submit" class="bg-green-700 text-white px-12 py-3 rounded-2xl font-black uppercase shadow-lg">Confirm & Sync</button></div>
                         </form>
@@ -503,7 +502,7 @@
         function renderSettings() {
              document.getElementById('view-container').innerHTML = `
                 <div class="animate-fade-in space-y-8 text-slate-900 font-sans text-center">
-                    <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase leading-none">Security</h2>
+                    <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase leading-none">Security Matrix</h2>
                     <div class="bg-white border p-12 shadow-2xl rounded-[3rem] max-w-xl mx-auto mt-10 relative overflow-hidden shadow-xl">
                         <div class="absolute top-0 right-0 w-32 h-32 bg-red-50 rounded-full blur-3xl -mr-16 -mt-16"></div>
                         <div class="space-y-8 relative z-10">
