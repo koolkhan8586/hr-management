@@ -468,12 +468,16 @@
                                         <input type="text" id="m-id" class="w-full p-4 rounded-2xl border-2 border-slate-50 bg-slate-50 outline-none focus:ring-4 focus:ring-green-50 font-bold" placeholder="EMP001" ${state.editingMemberId ? 'disabled' : ''}>
                                     </div>
                                     <div class="space-y-1">
-                                        <label class="block text-[10px] font-black uppercase text-slate-400 tracking-widest">System Access Key</label>
-                                        <input type="password" id="m-pass" class="w-full p-4 rounded-2xl border-2 border-slate-50 bg-slate-50 outline-none focus:ring-4 focus:ring-green-50 font-bold" placeholder="Set Password">
+                                        <label class="block text-[10px] font-black uppercase text-slate-400 tracking-widest">Access Email</label>
+                                        <input type="email" id="m-email" class="w-full p-4 rounded-2xl border-2 border-slate-50 bg-slate-50 outline-none focus:ring-4 focus:ring-green-50 font-bold" placeholder="staff@lsaf.edu.pk">
                                     </div>
                                     <div class="space-y-1">
                                         <label class="block text-[10px] font-black uppercase text-slate-400 tracking-widest">Full Name</label>
                                         <input type="text" id="m-name" class="w-full p-4 rounded-2xl border-2 border-slate-50 bg-slate-50 outline-none focus:ring-4 focus:ring-green-50 font-bold" placeholder="Legal Name" required>
+                                    </div>
+                                    <div class="space-y-1">
+                                        <label class="block text-[10px] font-black uppercase text-slate-400 tracking-widest">Portal Key</label>
+                                        <input type="password" id="m-pass" class="w-full p-4 rounded-2xl border-2 border-slate-50 bg-slate-50 outline-none focus:ring-4 focus:ring-green-50 font-bold" placeholder="Set Password">
                                     </div>
                                     <div class="space-y-1">
                                         <label class="block text-[10px] font-black uppercase text-slate-400 tracking-widest">Administrative Permission</label>
@@ -512,6 +516,7 @@
                                     <h4 class="font-black text-slate-800 text-lg truncate uppercase leading-tight">${emp.name}</h4>
                                     <div class="flex flex-col gap-1 mt-1">
                                         <span class="bg-green-50 text-green-700 text-[10px] font-black px-2 py-0.5 rounded-lg uppercase w-fit tracking-tighter">${emp.role}</span>
+                                        <p class="text-[10px] font-bold text-slate-400 truncate tracking-tighter">${emp.email || 'No Email Set'}</p>
                                         <div class="flex gap-2 text-[8px] font-bold uppercase tracking-tighter text-slate-400 mt-1">
                                             <span>AL: ${emp.leave_annual || 0}</span>
                                             <span>WOP: ${emp.leave_casual || 0}</span>
@@ -668,7 +673,7 @@
         }
 
         /**
-         * HANDLERS
+         * LOGIC HANDLERS
          */
         async function logAttendance(type) {
             showLoading();
@@ -680,21 +685,21 @@
                         body: JSON.stringify({
                             employeeId: state.user.id,
                             type: type,
-                            date: new Date().toLocaleDateString(),
+                            date: new Date().toISOString().split('T')[0], // Standard ISO Date
                             time: new Date().toLocaleTimeString(),
                             lat: pos.coords.latitude,
                             lng: pos.coords.longitude
                         })
                     });
                     if (res.ok) {
-                        alert(`${type} successful!`);
+                        alert(`${type} successful! Email notification triggered.`);
                         await syncData();
                         renderAttendance();
                     }
                 } catch(e) { alert("Sync Error."); }
                 finally { hideLoading(); }
             }, () => {
-                alert("GPS denied.");
+                alert("GPS access denied. Location is mandatory for attendance.");
                 hideLoading();
             });
         }
@@ -716,7 +721,7 @@
                     body: JSON.stringify(payload)
                 });
                 if(res.ok) {
-                    alert("Application Sent.");
+                    alert("Application Sent to HR.");
                     await syncData();
                     state.leaveTab = 'history';
                     renderLeaves();
@@ -736,98 +741,21 @@
 
             let totalMinutes = 0;
             const dates = Object.keys(dailyData);
-            let daysPresent = dates.length;
-
             dates.forEach(d => {
                 const day = dailyData[d];
                 if (day.in && day.out) {
-                    // Primitive time difference calculation
-                    const startArr = day.in.split(/[:\s]/);
-                    const endArr = day.out.split(/[:\s]/);
-                    const start = new Date(2000, 0, 1, 
-                        startArr[2] === 'PM' && startArr[0] != 12 ? Number(startArr[0])+12 : Number(startArr[0]), 
-                        Number(startArr[1]));
-                    const end = new Date(2000, 0, 1, 
-                        endArr[2] === 'PM' && endArr[0] != 12 ? Number(endArr[0])+12 : Number(endArr[0]), 
-                        Number(endArr[1]));
+                    const start = new Date(`2000-01-01 ${day.in}`);
+                    const end = new Date(`2000-01-01 ${day.out}`);
                     if (end > start) totalMinutes += (end - start) / 60000;
                 }
             });
 
-            return { daysPresent, hours: (totalMinutes / 60).toFixed(1) };
+            return { daysPresent: dates.length, hours: (totalMinutes / 60).toFixed(1) };
         }
 
         function updateAttendanceMonth(val) { state.selectedAttendanceMonth = val; renderAttendance(); }
         function updateLeaveMonth(val) { state.selectedLeaveMonth = val; renderLeaves(); }
 
-        function toggleBoardForm() {
-            state.boardFormVisible = !state.boardFormVisible;
-            renderDiscussion();
-        }
-
-        async function handleBoardSubmit(e) {
-            e.preventDefault();
-            const btn = e.target.querySelector('button[type="submit"]');
-            btn.disabled = true;
-            btn.innerText = "Syncing...";
-
-            const payload = {
-                title: document.getElementById('notice-title').value,
-                message: document.getElementById('notice-message').value,
-                recipientId: document.getElementById('notice-recipient').value,
-                senderName: state.user.name,
-                senderId: state.user.id,
-                date: new Date().toISOString()
-            };
-
-            try {
-                const res = await fetch(`${API_BASE}/discussions`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(payload)
-                });
-
-                if (res.ok) {
-                    await fetch(`${API_BASE}/notify`, {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({ 
-                            recipientId: payload.recipientId, 
-                            title: payload.title, 
-                            message: payload.message, 
-                            senderName: payload.senderName 
-                        })
-                    });
-                    
-                    alert("System Success: Broadcast Published.");
-                    state.boardFormVisible = false;
-                    await syncData();
-                    renderDiscussion();
-                } else {
-                    alert("Database Error: Failed to save post.");
-                }
-            } catch (err) {
-                alert("Matrix Error: Connectivity failure.");
-            } finally {
-                btn.disabled = false;
-                btn.innerText = "Confirm Publish";
-            }
-        }
-
-        async function deleteNotice(id) {
-            if(!confirm("Archive Notice: Permanently remove from staff view?")) return;
-            try {
-                const res = await fetch(`${API_BASE}/discussions/${id}`, { method: 'DELETE' });
-                if(res.ok) {
-                    await syncData();
-                    renderDiscussion();
-                }
-            } catch(e) { alert("Fail."); }
-        }
-
-        /**
-         * DIRECTORY LOGIC
-         */
         function openAddMember() {
             state.editingMemberId = null;
             state.memberFormVisible = true;
@@ -845,6 +773,7 @@
             document.getElementById('m-name').value = emp.name;
             document.getElementById('m-role').value = emp.role;
             document.getElementById('m-id').value = emp.id;
+            document.getElementById('m-email').value = emp.email || '';
             document.getElementById('m-leave-annual').value = emp.leave_annual || 0;
             document.getElementById('m-leave-wop').value = emp.leave_casual || 0;
         }
@@ -852,10 +781,10 @@
         async function handleMemberSubmit(e) {
             e.preventDefault();
             showLoading();
-            
             const payload = {
                 id: document.getElementById('m-id').value,
                 name: document.getElementById('m-name').value,
+                email: document.getElementById('m-email').value,
                 role: document.getElementById('m-role').value,
                 password: document.getElementById('m-pass').value || document.getElementById('m-id').value,
                 leave_annual: Number(document.getElementById('m-leave-annual').value) || 0,
@@ -873,64 +802,27 @@
                     body: JSON.stringify(payload)
                 });
                 if(res.ok) {
-                    alert("System Success: Staff identity synchronized.");
+                    alert("Staff identity synchronized.");
                     state.memberFormVisible = false;
                     state.editingMemberId = null;
                     await syncData();
                     renderDirectory();
                 }
-            } catch(err) { alert("Matrix Error: Connectivity failure."); }
+            } catch(err) { alert("Matrix Error."); }
             finally { hideLoading(); }
         }
 
         async function deleteMember(id) {
-            if(!confirm("CRITICAL: Permanently erase employee " + id + " from system database?")) return;
+            if(!confirm("CRITICAL: Permanently erase employee " + id + "?")) return;
             showLoading();
             try {
                 const res = await fetch(`${API_BASE}/employees/${id}`, { method: 'DELETE' });
-                if(res.ok) {
-                    await syncData();
-                    renderDirectory();
-                }
+                if(res.ok) { await syncData(); renderDirectory(); }
             } catch(e) { alert("Delete Failed."); }
             finally { hideLoading(); }
         }
 
-        function downloadSampleDir() {
-            const sample = [{ id: 'EMP101', name: 'Standard Name', designation: 'Lecturer', department: 'Academic', basic_salary: 80000, email: 'user@lsaf.edu.pk', doj: '2025-01-01', pan: 'ABC12345' }];
-            exportToCSV(sample, "Directory_Template.csv");
-        }
-
-        function importDir(input) {
-            const file = input.files[0];
-            if(!file) return;
-            const reader = new FileReader();
-            reader.onload = async (e) => {
-                const lines = e.target.result.split(/\r?\n/);
-                showLoading();
-                for (let i = 1; i < lines.length; i++) {
-                    const line = lines[i].trim();
-                    if(!line) continue;
-                    const cols = parseCSVLine(line);
-                    if(cols.length < 5) continue;
-                    await fetch(`${API_BASE}/employees`, {
-                        method: 'POST',
-                        headers: {'Content-Type':'application/json'},
-                        body: JSON.stringify({ id: cols[0], name: cols[1], designation: cols[2], department: cols[3], basic_salary: cleanNumber(cols[4]), email: cols[5], doj: cols[6], pan: cols[7], role: 'employee' })
-                    });
-                }
-                await syncData();
-                renderDirectory();
-                hideLoading();
-                alert("Bulk Import Finished.");
-            };
-            reader.readAsText(file);
-        }
-
-        function openPayrollEditor(id) {
-            state.editingPayrollId = id;
-            renderPayroll();
-        }
+        function openPayrollEditor(id) { state.editingPayrollId = id; renderPayroll(); }
 
         async function handlePayrollUpdate(e) {
             e.preventDefault();
@@ -945,25 +837,9 @@
                     headers: {'Content-Type':'application/json'},
                     body: JSON.stringify({ ...emp, ...updates })
                 });
-                if(res.ok) {
-                    state.editingPayrollId = null;
-                    await syncData();
-                    renderPayroll();
-                }
+                if(res.ok) { state.editingPayrollId = null; await syncData(); renderPayroll(); }
             } catch(e) { alert("Update failed."); }
             finally { hideLoading(); }
-        }
-
-        function calculateNet(emp) {
-            const basic = Number(emp.basic_salary) || 0;
-            const allowance = Number(emp.others_allowance) || 0;
-            const invig = Number(emp.invigilation) || 0;
-            const incr = Number(emp.increment) || 0;
-            const eidi = Number(emp.eidi) || 0;
-            const tax = Number(emp.tax) || 0;
-            const loan = Number(emp.loan_deduction) || 0;
-            const ins = Number(emp.insurance) || 0;
-            return (basic + allowance + invig + incr + eidi) - (tax + loan + ins);
         }
 
         async function login(e) {
@@ -981,79 +857,15 @@
                     await syncData();
                     showApp();
                 } else {
-                    alert("Verification Failure: ID or Key is invalid.");
+                    alert("Invalid Credentials.");
                     hideLoading();
                 }
-            } catch (err) {
-                alert("Server Connection Error.");
-                hideLoading();
-            }
+            } catch (err) { alert("Server Connection Error."); hideLoading(); }
         }
 
-        function updateMonth(val) {
-            state.selectedMonth = val;
-            renderPayroll();
-        }
+        function toggleBoardForm() { state.boardFormVisible = !state.boardFormVisible; renderDiscussion(); }
+        function updateMonth(val) { state.selectedMonth = val; renderPayroll(); }
 
-        async function clearMonthData() {
-            if(!confirm("CRITICAL: Wipe all salary fields for the selected month?")) return;
-            showLoading();
-            for (const emp of state.employees) {
-                await fetch(`${API_BASE}/employees/${emp.id}`, {
-                    method: 'PUT',
-                    headers: {'Content-Type':'application/json'},
-                    body: JSON.stringify({ ...emp, basic_salary: 0, others_allowance: 0, invigilation: 0, increment: 0, tax: 0, loan_deduction: 0, insurance: 0, eidi: 0 })
-                });
-            }
-            await syncData();
-            renderPayroll();
-            hideLoading();
-            alert("Month Cleared.");
-        }
-
-        function importPayroll(input) {
-            const file = input.files[0];
-            if(!file) return;
-            showLoading();
-            const reader = new FileReader();
-            reader.onload = async (e) => {
-                const lines = e.target.result.split(/\r?\n/);
-                for (let i = 1; i < lines.length; i++) {
-                    const line = lines[i].trim();
-                    if(!line) continue;
-                    const cols = parseCSVLine(line);
-                    if(cols.length < 5) continue;
-                    const id = cols[1];
-                    const exists = state.employees.find(e => String(e.id) === String(id));
-                    if (exists) {
-                        await fetch(`${API_BASE}/employees/${id}`, {
-                            method: 'PUT',
-                            headers: {'Content-Type':'application/json'},
-                            body: JSON.stringify({ 
-                                ...exists, 
-                                basic_salary: cleanNumber(cols[4]),
-                                others_allowance: cleanNumber(cols[5]),
-                                invigilation: cleanNumber(cols[6]),
-                                increment: cleanNumber(cols[7]),
-                                tax: cleanNumber(cols[10]),
-                                loan_deduction: cleanNumber(cols[11]),
-                                insurance: cleanNumber(cols[12]),
-                                eidi: cleanNumber(cols[13])
-                            })
-                        });
-                    }
-                }
-                await syncData();
-                renderPayroll();
-                hideLoading();
-                alert("Sync Finished.");
-            };
-            reader.readAsText(file);
-        }
-
-        /**
-         * EVENT LISTENERS
-         */
         document.getElementById('login-form').addEventListener('submit', login);
         window.onload = init;
     </script>
