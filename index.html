@@ -96,7 +96,7 @@
     </div>
 
     <script>
-        // Automatic API Base detection
+        // Automatic API Base detection for your specific environment
         const API_BASE = window.location.port === '5050' ? '/api' : `http://${window.location.hostname}:5050/api`;
         
         let state = {
@@ -128,7 +128,7 @@
         ];
 
         /**
-         * UI HELPERS
+         * GLOBAL UI HELPERS
          */
         function formatDate(dateString) {
             if (!dateString) return 'N/A';
@@ -184,6 +184,7 @@
             console.log("System: Starting initialization sequence...");
             const saved = localStorage.getItem('hr_user');
             
+            // EMERGENCY BYPASS: If API hangs, show UI after 2.5 seconds
             const failSafe = setTimeout(() => {
                 hideLoading();
                 if (saved) { state.user = JSON.parse(saved); showApp(); } else showLogin();
@@ -287,7 +288,7 @@
 
         function renderView(id) {
             const container = document.getElementById('view-container');
-            container.innerHTML = `<div class="p-20 text-center text-slate-300 font-black animate-pulse">UPDATING MATRIX...</div>`;
+            container.innerHTML = `<div class="p-20 text-center text-slate-300 font-black animate-pulse uppercase tracking-widest">Matrix Sync...</div>`;
             try {
                 switch(id) {
                     case 'dashboard': return renderDashboard();
@@ -335,7 +336,7 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 font-sans">
                         <div class="bg-white border-2 p-8 rounded-[2rem] flex items-center gap-6 shadow-sm">
                             <div class="h-14 w-14 rounded-2xl bg-green-50 text-green-700 flex items-center justify-center shadow-inner"><i data-lucide="calendar"></i></div>
-                            <div><p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Monthly Days</p><p class="text-3xl font-black">${stats.daysPresent}</p></div>
+                            <div><p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Monthly Days</p><p class="text-3xl font-black">${stats.daysPresent} Days</p></div>
                         </div>
                         <div class="bg-white border-2 p-8 rounded-[2rem] flex items-center gap-6 shadow-sm">
                             <div class="h-14 w-14 rounded-2xl bg-blue-50 text-blue-700 flex items-center justify-center shadow-inner"><i data-lucide="clock"></i></div>
@@ -399,12 +400,12 @@
                     <div id="member-form-container" class="${state.memberFormVisible ? '' : 'hidden'} bg-white p-10 rounded-[3rem] border-4 shadow-2xl mb-12 animate-slide-up">
                         <form id="member-form" class="space-y-6">
                             <div class="grid md:grid-cols-2 gap-8">
-                                <input type="text" id="m-id" class="p-4 rounded-2xl border-2 font-bold bg-slate-50" placeholder="ID" ${state.editingMemberId ? 'disabled' : ''}>
-                                <input type="email" id="m-email" class="p-4 rounded-2xl border-2 font-bold bg-slate-50" placeholder="Email Address">
-                                <input type="text" id="m-name" class="p-4 rounded-2xl border-2 font-bold bg-slate-50" placeholder="Full Name" required>
+                                <input type="text" id="m-id" class="p-4 rounded-2xl border-2 font-bold bg-slate-50 outline-none" placeholder="ID" ${state.editingMemberId ? 'disabled' : ''}>
+                                <input type="email" id="m-email" class="p-4 rounded-2xl border-2 font-bold bg-slate-50 outline-none" placeholder="Email Address">
+                                <input type="text" id="m-name" class="p-4 rounded-2xl border-2 font-bold bg-slate-50 outline-none" placeholder="Full Name" required>
                                 <select id="m-role" class="p-4 rounded-2xl border-2 border-slate-50 font-black text-sm bg-slate-50 outline-none"><option value="employee">Staff Member</option><option value="admin">System Admin</option></select>
-                                <input type="number" id="m-leave-annual" class="p-4 rounded-2xl border-2 font-bold" placeholder="Annual Bal">
-                                <input type="number" id="m-leave-wop" class="p-4 rounded-2xl border-2 font-bold" placeholder="WOP Bal">
+                                <div class="space-y-1"><label class="text-[10px] font-black text-slate-400 ml-2">AL ALLOCATION</label><input type="number" id="m-leave-annual" class="p-4 w-full rounded-2xl border-2 font-bold" placeholder="Annual Bal"></div>
+                                <div class="space-y-1"><label class="text-[10px] font-black text-slate-400 ml-2">WOP ALLOCATION</label><input type="number" id="m-leave-wop" class="p-4 w-full rounded-2xl border-2 font-bold" placeholder="WOP Bal"></div>
                             </div>
                             <div class="flex justify-end gap-3 pt-6 border-t"><button type="button" onclick="state.memberFormVisible=false; renderDirectory()" class="px-8 py-3 text-slate-400 font-bold uppercase text-xs">Cancel</button><button type="submit" class="bg-green-700 text-white px-12 py-3 rounded-2xl font-black uppercase shadow-lg">Confirm & Sync</button></div>
                         </form>
@@ -435,7 +436,7 @@
             const container = document.getElementById('view-container');
             container.innerHTML = `
                 <div class="animate-fade-in space-y-8 text-slate-900 font-sans">
-                    <div class="flex justify-between items-center">
+                    <div class="flex justify-between items-center border-b pb-6 border-slate-100">
                         <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Leaves</h2>
                         <div class="flex bg-slate-200 p-1.5 rounded-2xl shadow-inner"><button onclick="state.leaveTab='apply'; renderLeaves()" class="px-8 py-2 rounded-xl font-black text-xs uppercase tracking-widest ${state.leaveTab==='apply'?'bg-white text-green-700 shadow-md':'text-slate-500'}">Apply</button><button onclick="state.leaveTab='history'; renderLeaves()" class="px-8 py-2 rounded-xl font-black text-xs uppercase tracking-widest ${state.leaveTab==='history'?'bg-white text-green-700 shadow-md':'text-slate-500'}">Archive</button></div>
                     </div>
@@ -447,15 +448,15 @@
                                     <input type="date" id="l-date" class="w-full p-4 rounded-2xl border-2 font-bold bg-slate-50 shadow-inner" required>
                                     <input type="number" id="l-days" class="w-full p-4 rounded-2xl border-2 font-bold bg-slate-50 shadow-inner" placeholder="Days" required>
                                 </div>
-                                <textarea id="l-reason" class="w-full p-4 rounded-2xl border-2 border-bold bg-slate-50 h-32 shadow-inner" placeholder="Provide description for HR..." required></textarea>
+                                <textarea id="l-reason" class="w-full p-4 rounded-2xl border-2 font-bold bg-slate-50 h-32 shadow-inner" placeholder="Description for HR..." required></textarea>
                                 <button type="submit" class="w-full py-5 bg-green-700 text-white font-black rounded-3xl shadow-xl hover:bg-green-800 transition-all uppercase tracking-widest active:scale-95">Confirm Request</button>
                             </form>
                         </div>
                     ` : `
                         <div class="space-y-6">
-                             <div class="flex justify-end items-center gap-3"><p class="text-[10px] font-black uppercase text-slate-400">View Month:</p><input type="month" value="${state.selectedLeaveMonth}" onchange="state.selectedLeaveMonth=this.value; renderLeaves()" class="p-2 border rounded-xl font-bold bg-white text-xs shadow-sm"></div>
+                             <div class="flex justify-end items-center gap-3"><p class="text-[10px] font-black uppercase text-slate-400">Month:</p><input type="month" value="${state.selectedLeaveMonth}" onchange="state.selectedLeaveMonth=this.value; renderLeaves()" class="p-2 border rounded-xl font-bold bg-white text-xs shadow-sm"></div>
                              <div class="space-y-4">
-                                ${list.map(l => `<div class="bg-white p-8 rounded-[2rem] border shadow-sm flex justify-between items-center group hover:border-green-300 transition-all"><div><h4 class="font-black uppercase text-lg text-slate-800">${l.leave_type}</h4><p class="text-[10px] text-slate-400 mt-1 uppercase tracking-widest">${formatDate(l.start_date)} • ${l.days} Days Requested</p><p class="text-xs text-slate-500 mt-3 italic font-medium leading-relaxed">"${l.reason}"</p></div>${Badge({ status: l.status })}</div>`).join('')}
+                                ${list.map(l => `<div class="bg-white p-8 rounded-[2rem] border shadow-sm flex justify-between items-center group hover:border-green-300 transition-all"><div><h4 class="font-black uppercase text-lg text-slate-800">${l.leave_type}</h4><p class="text-[10px] text-slate-400 mt-1 uppercase tracking-widest">${formatDate(l.start_date)} • ${l.days} Days</p><p class="text-xs text-slate-500 mt-3 italic font-medium leading-relaxed">"${l.reason}"</p></div>${Badge({ status: l.status })}</div>`).join('')}
                              </div>
                         </div>
                     `}
@@ -485,7 +486,7 @@
                                     <span class="text-[10px] font-black text-slate-300 uppercase tracking-widest">${formatDate(p.date)}</span>
                                 </div>
                                 <p class="text-lg text-slate-600 font-medium leading-relaxed mb-8 border-b pb-8">${p.message}</p>
-                                <div class="flex justify-between items-center"><span class="bg-green-50 text-green-700 font-black text-[10px] px-5 py-2 rounded-xl border border-green-100 uppercase tracking-widest shadow-sm">Verified: ${p.senderName}</span><button class="text-blue-600 font-black text-xs uppercase tracking-widest border-2 border-blue-50 px-8 py-3 rounded-[1.25rem] hover:bg-blue-50 transition-all active:scale-95 shadow-sm">Post Reply</button></div>
+                                <div class="flex justify-between items-center"><span class="bg-green-50 text-green-700 font-black text-[10px] px-5 py-2 rounded-xl border border-green-100 uppercase tracking-widest shadow-sm">Verified: ${p.senderName}</span><button class="text-blue-600 font-black text-xs uppercase tracking-widest border-2 border-blue-50 px-8 py-3 rounded-[1.25rem] hover:bg-blue-50 transition-all active:scale-95 shadow-sm">Post Response</button></div>
                             </div>
                         `).join('')}
                     </div>
@@ -503,13 +504,13 @@
         function renderSettings() {
              document.getElementById('view-container').innerHTML = `
                 <div class="animate-fade-in space-y-8 text-slate-900 font-sans text-center">
-                    <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase leading-none">Security Matrix</h2>
+                    <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase leading-none">Security</h2>
                     <div class="bg-white border p-12 shadow-2xl rounded-[3rem] max-w-xl mx-auto mt-10 relative overflow-hidden shadow-xl">
                         <div class="absolute top-0 right-0 w-32 h-32 bg-red-50 rounded-full blur-3xl -mr-16 -mt-16"></div>
                         <div class="space-y-8 relative z-10">
                             <div class="h-20 w-20 bg-slate-900 rounded-3xl flex items-center justify-center text-white mx-auto shadow-2xl mb-8"><i data-lucide="lock" size="40"></i></div>
                             <div class="space-y-4"><input type="password" id="s-p1" class="w-full p-4 rounded-2xl border-2 font-black outline-none focus:ring-4 focus:ring-green-50 transition-all bg-slate-50 shadow-inner" placeholder="New Password"></div>
-                            <button onclick="alert('Access Hub: Security keys updated.')" class="w-full py-5 bg-slate-900 text-white font-black uppercase rounded-[2rem] shadow-2xl hover:bg-black transition-all active:scale-95 shadow-slate-200">Sync Security Matrix</button>
+                            <button onclick="alert('System Alert: Security key synchronized.')" class="w-full py-5 bg-slate-900 text-white font-black uppercase rounded-[2rem] shadow-2xl hover:bg-black transition-all active:scale-95 shadow-slate-200">Sync Security Matrix</button>
                         </div>
                     </div>
                 </div>
@@ -518,7 +519,7 @@
         }
 
         /**
-         * CORE HANDLERS
+         * LOGIC HANDLERS
          */
         async function handleLeaveSubmit(e) {
             e.preventDefault();
@@ -527,19 +528,24 @@
             try {
                 const res = await fetch(`${API_BASE}/leaves`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
                 if(res.ok) { alert("Matrix Sync: Request posted for HR verification."); await syncData(); state.leaveTab = 'history'; renderLeaves(); }
-            } catch(e) { alert("Matrix reported failure."); }
+            } catch(e) { alert("Request Failed."); }
             finally { hideLoading(); }
         }
 
         async function handleMemberSubmit(e) {
             e.preventDefault();
             showLoading();
-            const payload = { id: document.getElementById('m-id').value, name: document.getElementById('m-name').value, email: document.getElementById('m-email').value, role: document.getElementById('m-role').value, password: document.getElementById('m-id').value, leave_annual: Number(document.getElementById('m-leave-annual').value || 0), leave_casual: Number(document.getElementById('m-leave-wop').value || 0) };
+            const payload = { 
+                id: document.getElementById('m-id').value, name: document.getElementById('m-name').value, email: document.getElementById('m-email').value, 
+                role: document.getElementById('m-role').value, password: document.getElementById('m-id').value,
+                leave_annual: Number(document.getElementById('m-leave-annual').value || 0),
+                leave_casual: Number(document.getElementById('m-leave-wop').value || 0)
+            };
             const method = state.editingMemberId ? 'PUT' : 'POST';
             const url = state.editingMemberId ? `${API_BASE}/employees/${state.editingMemberId}` : `${API_BASE}/employees`;
             try {
                 const res = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
-                if(res.ok) { alert("Staff Matrix Synced."); state.memberFormVisible = false; await syncData(); renderDirectory(); }
+                if(res.ok) { alert("Profile Synced."); state.memberFormVisible = false; await syncData(); renderDirectory(); }
             } catch(err) { alert("Sync Failure."); }
             finally { hideLoading(); }
         }
@@ -549,12 +555,20 @@
             const emp = state.employees.find(e => String(e.id) === String(id)); 
             if(!emp) return; 
             state.editingMemberId = id; state.memberFormVisible = true; renderDirectory(); 
-            document.getElementById('m-name').value = emp.name; document.getElementById('m-id').value = emp.id; 
+            document.getElementById('m-name').value = emp.name; 
+            document.getElementById('m-id').value = emp.id; 
             document.getElementById('m-email').value = emp.email || ''; 
             document.getElementById('m-leave-annual').value = emp.leave_annual || 0; 
             document.getElementById('m-leave-wop').value = emp.leave_casual || 0; 
         }
-        async function deleteMember(id) { if(confirm("Wipe account identity?")) { await fetch(`${API_BASE}/employees/${id}`, { method: 'DELETE' }); await syncData(); renderDirectory(); } }
+        
+        async function deleteMember(id) { 
+            if(confirm("CRITICAL: Wipe account identity " + id + " from system matrix?")) { 
+                await fetch(`${API_BASE}/employees/${id}`, { method: 'DELETE' }); 
+                await syncData(); 
+                renderDirectory(); 
+            } 
+        }
 
         async function login(e) {
             e.preventDefault();
@@ -570,8 +584,8 @@
                     localStorage.setItem('hr_user', JSON.stringify(user));
                     await syncData();
                     showApp();
-                } else { alert("Verification Denied: Invalid Credentials."); hideLoading(); }
-            } catch (err) { alert("Connection failure to secure matrix."); hideLoading(); }
+                } else { alert("Access Denied: Invalid Credentials."); hideLoading(); }
+            } catch (err) { alert("Matrix reported an offline status."); hideLoading(); }
         }
 
         window.onload = init;
