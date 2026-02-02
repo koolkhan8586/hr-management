@@ -44,7 +44,7 @@
     <div id="login-container" class="hidden min-h-screen flex items-center justify-center p-4">
         <div class="bg-white w-full max-w-md p-10 rounded-[2.5rem] shadow-2xl border border-slate-100 animate-slide-up">
             <div class="text-center mb-10">
-                <img src="/cropped-UOL-Green-V1.png" alt="Logo" class="h-20 mx-auto mb-4 object-contain" id="login-logo" onerror="this.src='https://via.placeholder.com/150?text=LSAF'">
+                <img src="/cropped-UOL-Green-V1.png" alt="Logo" class="h-20 mx-auto mb-4 object-contain" id="login-logo" onerror="this.src='https://placehold.co/150x150?text=LSAF'">
                 <h1 class="text-2xl font-black text-slate-800 leading-tight uppercase tracking-tighter">Lahore School of Accountancy</h1>
                 <p class="text-slate-400 text-xs font-bold mt-2 uppercase tracking-widest">Administrative Hub v4.3.8</p>
             </div>
@@ -66,7 +66,7 @@
     <div id="app-shell" class="hidden min-h-screen flex">
         <aside class="w-64 bg-white border-r border-slate-100 fixed h-full hidden lg:flex flex-col z-50">
             <div class="p-8 border-b border-slate-50 text-center">
-                <img src="/cropped-UOL-Green-V1.png" class="h-10 mx-auto mb-2" alt="LSAF">
+                <img src="/cropped-UOL-Green-V1.png" class="h-10 mx-auto mb-2" alt="LSAF" onerror="this.src='https://placehold.co/100x40?text=LSAF'">
                 <span class="text-[9px] font-black text-green-700 uppercase tracking-widest">NexusHR Hub</span>
             </div>
             <nav class="flex-1 p-4 space-y-1 overflow-y-auto custom-scrollbar shadow-inner bg-slate-50/10" id="sidebar-nav"></nav>
@@ -232,10 +232,12 @@
                     const freshMe = state.employees.find(e => String(e.id) === String(state.user.id));
                     if (freshMe) state.user = freshMe;
                     
-                    const atRes = await fetch(`${API_BASE}/attendance/${state.user.id}`).catch(() => null);
-                    const lvRes = await fetch(`${API_BASE}/leaves/${state.user.id}`).catch(() => null);
-                    const dRes = await fetch(`${API_BASE}/discussions`).catch(() => null);
-                    const lRes = await fetch(`${API_BASE}/loans`).catch(() => null);
+                    const [atRes, lvRes, dRes, lRes] = await Promise.all([
+                        fetch(`${API_BASE}/attendance/${state.user.id}`).catch(() => null),
+                        fetch(`${API_BASE}/leaves/${state.user.id}`).catch(() => null),
+                        fetch(`${API_BASE}/discussions`).catch(() => null),
+                        fetch(`${API_BASE}/loans`).catch(() => null)
+                    ]);
 
                     if (atRes && atRes.ok) state.attendance = await atRes.json();
                     if (lvRes && lvRes.ok) state.leaves = await lvRes.json();
@@ -326,9 +328,9 @@
             const wop = Number(state.user.leave_casual || 0);
             container.innerHTML = `
                 <div class="animate-fade-in space-y-8 text-slate-900">
-                    <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase font-sans">Home</h2>
+                    <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase font-sans">Dashboard</h2>
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 font-sans">
-                        <div class="bg-gradient-to-br from-green-600 to-green-700 p-8 rounded-[2rem] text-white shadow-xl"><p class="text-[10px] font-black uppercase opacity-60">Status</p><p class="text-3xl font-black mt-2">Active</p></div>
+                        <div class="bg-gradient-to-br from-green-600 to-green-700 p-8 rounded-[2rem] text-white shadow-xl"><p class="text-[10px] font-black uppercase opacity-60">Status</p><p class="text-3xl font-black mt-2 uppercase">${(state.attendance && state.attendance[0]?.type === 'Clock In') ? 'Active' : 'Offline'}</p></div>
                         <div class="bg-gradient-to-br from-blue-600 to-blue-700 p-8 rounded-[2rem] text-white shadow-xl"><p class="text-[10px] font-black uppercase opacity-60">Leaves Bal</p><p class="text-3xl font-black mt-2">${annual + wop} Days</p></div>
                         <div class="bg-white p-8 rounded-[2rem] border shadow-sm"><p class="text-[10px] font-black uppercase text-slate-400">Payroll Status</p><p class="text-2xl font-black text-slate-800 mt-2">Verified</p></div>
                     </div>
@@ -364,11 +366,6 @@
                             <button onclick="logAttendance('Clock Out')" class="bg-white border-2 border-slate-200 px-10 py-5 rounded-2xl font-black uppercase text-slate-700 hover:bg-slate-50 transition-all active:scale-95">Clock Out</button>
                         </div>
                     </div>
-                    <div class="bg-white rounded-[2.5rem] p-10 border border-slate-100 shadow-sm max-h-[400px] overflow-y-auto custom-scrollbar">
-                         <h4 class="text-xs font-black uppercase text-slate-400 mb-6">Recent Activity Logs</h4>
-                         ${filtered.map(l => `<div class="flex justify-between py-4 border-b"><div><p class="font-black text-slate-700">${l.type}</p><p class="text-xs text-slate-400">${formatDate(l.date_str)}</p></div><p class="font-mono font-bold text-slate-500">${l.time_str}</p></div>`).join('')}
-                         ${filtered.length === 0 ? '<p class="py-10 text-center text-slate-300 font-bold uppercase">No records found</p>' : ''}
-                    </div>
                 </div>
             `;
             lucide.createIcons();
@@ -402,15 +399,7 @@
                                 <tr><th class="p-6">ID</th><th class="p-6">Member</th><th class="p-6 text-right">Basic</th><th class="p-6 text-right">Net Pay</th>${isAdmin ? `<th class="p-6 text-center">Action</th>` : ''}</tr>
                             </thead>
                             <tbody class="divide-y divide-slate-50 font-bold">
-                                ${list.map(emp => `
-                                    <tr class="hover:bg-slate-50/50 transition-colors">
-                                        <td class="p-6 font-black">${emp.id}</td>
-                                        <td class="p-6 uppercase text-xs text-slate-500 truncate max-w-[180px]">${emp.name}</td>
-                                        <td class="p-6 text-right font-mono">${(Number(emp.basic_salary)||0).toLocaleString()}</td>
-                                        <td class="p-6 text-right font-black">Rs. ${calculateNet(emp).toLocaleString()}</td>
-                                        ${isAdmin ? `<td class="p-6 text-center"><button onclick="switchTab('directory')" class="text-blue-500 hover:scale-110 transition-transform"><i data-lucide="eye" size="18"></i></button></td>` : ''}
-                                    </tr>
-                                `).join('')}
+                                ${list.map(emp => `<tr><td class="p-6 font-black">${emp.id}</td><td class="p-6 uppercase">${emp.name}</td><td class="p-6 text-right font-black">Rs. ${calculateNet(emp).toLocaleString()}</td>${isAdmin ? `<td class="p-6 text-center"><button onclick="switchTab('directory')" class="text-blue-500 hover:scale-110 transition-transform"><i data-lucide="eye" size="18"></i></button></td>` : ''}</tr>`).join('')}
                             </tbody>
                         </table>
                     </div>
@@ -444,7 +433,6 @@
                                 <div class="flex-1 overflow-hidden"> 
                                     <h4 class="font-black uppercase truncate leading-none text-slate-800">${emp.name}</h4>
                                     <p class="text-[9px] font-bold text-slate-400 uppercase mt-2">ID: ${emp.id}</p>
-                                    <p class="text-[8px] font-black text-slate-300 uppercase tracking-tighter mt-1">AL: ${emp.leave_annual || 0} | WOP: ${emp.leave_casual || 0}</p>
                                 </div>
                                 <div class="opacity-0 group-hover:opacity-100 flex gap-2 absolute right-6">
                                     <button onclick="editMember('${emp.id}')" class="p-2.5 bg-white border shadow-xl rounded-xl text-blue-500 hover:scale-110 transition-all"><i data-lucide="pencil" size="14"></i></button>
@@ -485,7 +473,6 @@
                              <div class="flex justify-end items-center gap-3"><p class="text-[10px] font-black uppercase text-slate-400">Month:</p><input type="month" value="${state.selectedLeaveMonth}" onchange="state.selectedLeaveMonth=this.value; renderLeaves()" class="p-2 border rounded-xl font-bold bg-white text-xs shadow-sm"></div>
                              <div class="space-y-4">
                                 ${list.map(l => `<div class="bg-white p-8 rounded-[2rem] border shadow-sm flex justify-between items-center group hover:border-green-300 transition-all"><div><h4 class="font-black uppercase text-lg text-slate-800">${l.leave_type}</h4><p class="text-[10px] text-slate-400 mt-1 uppercase tracking-widest">${formatDate(l.start_date)} • ${l.days} Days</p><p class="text-xs text-slate-500 mt-3 italic font-medium leading-relaxed">"${l.reason}"</p></div>${Badge({ status: l.status })}</div>`).join('')}
-                                ${list.length === 0 ? '<p class="text-center py-20 text-slate-300 font-black uppercase text-xs tracking-widest">Log Ledger Empty</p>' : ''}
                              </div>
                         </div>
                     `}
