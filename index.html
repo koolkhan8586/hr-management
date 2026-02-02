@@ -113,7 +113,7 @@
             memberFormVisible: false,
             editingMemberId: null,
             boardFormVisible: false,
-            editingAttendanceId: null // Tracking manual adjustment
+            editingAttendanceId: null 
         };
 
         const NAV_ITEMS = [
@@ -128,8 +128,21 @@
         ];
 
         /**
-         * UI HELPERS
+         * PKT TIMEZONE HELPERS
          */
+        function getPktTime() {
+            return new Date().toLocaleTimeString('en-US', {
+                timeZone: 'Asia/Karachi',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true
+            });
+        }
+
+        function getPktDate() {
+            return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Karachi' });
+        }
+
         function formatDate(dateString) {
             if (!dateString) return 'N/A';
             const date = new Date(dateString);
@@ -200,12 +213,10 @@
         }
 
         /**
-         * INITIALIZATION WITH FAIL-SAFE
+         * INITIALIZATION
          */
         async function init() {
-            console.log("System: Starting initialization sequence...");
             const saved = localStorage.getItem('hr_user');
-            
             const failSafe = setTimeout(() => {
                 hideLoading();
                 if (saved) { state.user = JSON.parse(saved); showApp(); } else showLogin();
@@ -223,7 +234,6 @@
                     showLogin();
                 }
             } catch (err) {
-                console.error("Init Error:", err);
                 hideLoading();
                 showLogin();
             }
@@ -275,14 +285,13 @@
                 hideLogin();
                 document.getElementById('app-shell').classList.remove('hidden');
                 if (state.user) {
-                    document.getElementById('user-display-name').innerText = state.user.name || 'User';
-                    document.getElementById('user-display-role').innerText = state.user.role || 'Staff';
+                    document.getElementById('user-display-name').innerText = state.user.name || 'Staff';
+                    document.getElementById('user-display-role').innerText = state.user.role || 'Personnel';
                     document.getElementById('user-avatar').innerText = getInitial(state.user.name);
                 }
                 renderSidebar();
                 switchTab(state.currentTab);
             } catch (e) {
-                console.error("App Crash:", e);
                 showLogin();
             }
         }
@@ -422,14 +431,15 @@
                         </div>
                     </div>
                     <div class="bg-white rounded-[2.5rem] py-16 flex flex-col items-center border shadow-2xl">
-                        <h3 class="text-6xl font-black text-slate-800 font-mono mb-10">${new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</h3>
+                        <h3 class="text-6xl font-black text-slate-800 font-mono mb-10">${getPktTime()}</h3>
+                        <p class="text-xs font-bold text-slate-400 uppercase mb-10 tracking-widest">Pakistan Standard Time (PKT)</p>
                         <div class="flex gap-4">
                             <button onclick="logAttendance('Clock In')" class="bg-green-700 text-white px-10 py-5 rounded-2xl font-black uppercase shadow-xl hover:bg-green-800 active:scale-95 transition-all">Clock In</button>
                             <button onclick="logAttendance('Clock Out')" class="bg-white border-2 border-slate-200 px-10 py-5 rounded-2xl font-black uppercase text-slate-700 hover:bg-slate-50 transition-all active:scale-95">Clock Out</button>
                         </div>
                     </div>
-                    <div class="bg-white rounded-[2.5rem] p-10 border border-slate-100 shadow-sm max-h-[500px] overflow-y-auto custom-scrollbar">
-                         <h4 class="text-xs font-black uppercase text-slate-400 mb-6">Recent Activity Logs</h4>
+                    <div class="bg-white rounded-[2.5rem] p-10 border border-slate-100 shadow-sm max-h-[400px] overflow-y-auto custom-scrollbar">
+                         <h4 class="text-xs font-black uppercase text-slate-400 mb-6">Activity Logs</h4>
                          ${filtered.map(l => {
                             const isEditing = state.editingAttendanceId === l.id;
                             return `
@@ -462,12 +472,19 @@
                     const res = await fetch(`${API_BASE}/attendance`, {
                         method: 'POST',
                         headers: {'Content-Type':'application/json'},
-                        body: JSON.stringify({ employeeId: state.user.id, type, date: new Date().toISOString().split('T')[0], time: new Date().toLocaleTimeString(), lat: pos.coords.latitude, lng: pos.coords.longitude })
+                        body: JSON.stringify({ 
+                            employeeId: state.user.id, 
+                            type, 
+                            date: getPktDate(), 
+                            time: getPktTime(), 
+                            lat: pos.coords.latitude, 
+                            lng: pos.coords.longitude 
+                        })
                     });
                     if (res.ok) { alert(`${type} Successful!`); await syncData(); renderAttendance(); }
                 } catch(e) { alert("Matrix Sync Error."); }
                 finally { hideLoading(); }
-            }, () => { alert("GPS identity verification required."); hideLoading(); });
+            }, () => { alert("Location required for identity verification."); hideLoading(); });
         }
 
         function renderPayroll() {
