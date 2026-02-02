@@ -116,7 +116,10 @@
             currentTab: 'dashboard',
             loading: true,
             selectedMonth: new Date().toISOString().slice(0, 7),
-            boardFormVisible: false
+            boardFormVisible: false,
+            memberFormVisible: false,
+            editingMemberId: null,
+            editingPayrollId: null
         };
 
         const NAV_ITEMS = [
@@ -266,6 +269,11 @@
 
         function switchTab(id) {
             state.currentTab = id;
+            state.boardFormVisible = false;
+            state.memberFormVisible = false;
+            state.editingMemberId = null;
+            state.editingPayrollId = null;
+            
             document.querySelectorAll('.nav-btn').forEach(btn => {
                 const isActive = btn.outerHTML.includes(`switchTab('${id}')`);
                 btn.className = `nav-btn w-full flex items-center gap-4 px-5 py-4 rounded-2xl transition-all font-bold ${isActive ? 'bg-green-700 text-white shadow-xl scale-105' : 'text-slate-500 hover:bg-slate-50'}`;
@@ -357,6 +365,23 @@
                         </div>
                     </div>
 
+                    ${state.editingPayrollId ? `
+                        <div class="bg-blue-50/20 border-blue-100 border-2 p-8 rounded-[2rem] mb-10 shadow-xl animate-slide-up">
+                            <form id="payroll-edit-form" class="grid grid-cols-2 md:grid-cols-4 gap-6">
+                                ${['basic_salary', 'others_allowance', 'invigilation', 'increment', 'eidi', 'tax', 'loan_deduction', 'insurance'].map(field => `
+                                    <div class="space-y-1">
+                                        <label class="block text-[10px] font-black uppercase text-slate-400 tracking-widest">${field.replace('_', ' ')}</label>
+                                        <input type="number" id="pay-${field}" class="w-full p-3 rounded-xl border-2 border-white bg-white shadow-sm outline-none focus:ring-4 focus:ring-blue-50 font-bold" value="${state.employees.find(e => e.id === state.editingPayrollId)[field] || 0}">
+                                    </div>
+                                `).join('')}
+                                <div class="col-span-2 md:col-span-4 flex justify-end gap-3 pt-4 border-t border-blue-50">
+                                    <button type="button" onclick="state.editingPayrollId=null; renderPayroll()" class="px-6 py-3 font-bold text-slate-400">Discard</button>
+                                    <button type="submit" class="bg-blue-600 text-white px-10 py-3 rounded-xl font-black uppercase tracking-widest shadow-lg">Save Salary Data</button>
+                                </div>
+                            </form>
+                        </div>
+                    ` : ''}
+
                     <div class="overflow-x-auto rounded-[2rem] border bg-white shadow-xl">
                         <table class="w-full text-left text-sm">
                             <thead class="bg-slate-50 border-b font-black text-slate-400 uppercase tracking-widest">
@@ -366,13 +391,10 @@
                                     <th class="p-6 text-right">Basic</th>
                                     <th class="p-6 text-right">Extra</th>
                                     <th class="p-6 text-right">Invig</th>
-                                    <th class="p-6 text-right">Incr</th>
-                                    <th class="p-6 text-right">Others</th>
                                     <th class="p-6 text-right text-red-500">Tax</th>
                                     <th class="p-6 text-right text-red-500">Loan</th>
-                                    <th class="p-6 text-right text-red-500">Ins</th>
                                     <th class="p-6 text-right font-black text-slate-900">Net Pay</th>
-                                    ${isAdmin ? `<th class="p-6 text-center">Action</th>` : ''}
+                                    ${isAdmin ? `<th class="p-6 text-center">Edit</th>` : ''}
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-50 font-bold">
@@ -385,15 +407,12 @@
                                             <td class="p-6 text-right font-mono text-slate-800">${(Number(emp.basic_salary)||0).toLocaleString()}</td>
                                             <td class="p-6 text-right font-mono text-slate-500">${(Number(emp.others_allowance)||0).toLocaleString()}</td>
                                             <td class="p-6 text-right font-mono text-slate-500">${(Number(emp.invigilation)||0).toLocaleString()}</td>
-                                            <td class="p-6 text-right font-mono text-slate-500">${(Number(emp.increment)||0).toLocaleString()}</td>
-                                            <td class="p-6 text-right font-mono text-slate-500">${(Number(emp.eidi)||0).toLocaleString()}</td>
                                             <td class="p-6 text-right font-mono text-red-400">${(Number(emp.tax)||0).toLocaleString()}</td>
                                             <td class="p-6 text-right font-mono text-red-400">${(Number(emp.loan_deduction)||0).toLocaleString()}</td>
-                                            <td class="p-6 text-right font-mono text-red-400">${(Number(emp.insurance)||0).toLocaleString()}</td>
                                             <td class="p-6 text-right font-black text-slate-900">Rs. ${net.toLocaleString()}</td>
                                             ${isAdmin ? `
                                                 <td class="p-6 text-center">
-                                                    <button onclick="alert('Editor coming soon')" class="text-blue-500 p-2 hover:bg-blue-50 rounded-xl transition-all"><i data-lucide="pencil" size="18"></i></button>
+                                                    <button onclick="openPayrollEditor('${emp.id}')" class="text-blue-500 p-2 hover:bg-blue-50 rounded-xl transition-all"><i data-lucide="pencil" size="18"></i></button>
                                                 </td>
                                             ` : ''}
                                         </tr>
@@ -405,6 +424,9 @@
                 </div>
             `;
             lucide.createIcons();
+            if(isAdmin && state.editingPayrollId) {
+                document.getElementById('payroll-edit-form').addEventListener('submit', handlePayrollUpdate);
+            }
         }
 
         function renderDirectory() {
@@ -412,29 +434,63 @@
             container.innerHTML = `
                 <div class="animate-fade-in space-y-8">
                     <div class="flex justify-between items-center">
-                        <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Directory</h2>
+                        <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Staff Directory</h2>
                         <div class="flex gap-3">
-                            <button onclick="alert('Downloading template...')" class="bg-white border px-5 py-3 rounded-2xl font-black text-sm uppercase tracking-widest shadow-sm">Sample</button>
-                            <label class="bg-white border px-5 py-3 rounded-2xl font-black text-sm uppercase tracking-widest cursor-pointer shadow-sm">
-                                Import <input type="file" onchange="alert('Importing...')" class="hidden">
+                            <button onclick="downloadSampleDir()" class="bg-white border px-5 py-3 rounded-2xl font-black text-sm uppercase tracking-widest shadow-sm hover:bg-slate-50">Sample</button>
+                            <label class="bg-white border px-5 py-3 rounded-2xl font-black text-sm uppercase tracking-widest cursor-pointer shadow-sm hover:bg-slate-50">
+                                Import <input type="file" onchange="importDir(this)" class="hidden">
                             </label>
-                            <button onclick="alert('Form opening...')" class="bg-green-700 text-white px-8 py-3 rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl">Add Member</button>
+                            <button onclick="openAddMember()" class="bg-green-700 text-white px-8 py-3 rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl hover:bg-green-800">Add Member</button>
                         </div>
                     </div>
+
+                    <div id="member-form-container" class="${state.memberFormVisible ? '' : 'hidden'} animate-slide-up">
+                        <div class="bg-white border-2 border-green-100 shadow-2xl p-10 rounded-[2.5rem] mb-10">
+                            <form id="member-form" class="space-y-6">
+                                <h3 class="font-black text-slate-800 text-lg uppercase tracking-widest border-b pb-4">${state.editingMemberId ? 'Update Staff Identity' : 'Generate New Account'}</h3>
+                                <div class="grid md:grid-cols-2 gap-6">
+                                    <div class="space-y-1">
+                                        <label class="block text-[10px] font-black uppercase text-slate-400 tracking-widest">Employee ID</label>
+                                        <input type="text" id="m-id" class="w-full p-4 rounded-2xl border-2 border-slate-50 bg-slate-50 outline-none focus:ring-4 focus:ring-green-50 font-bold" placeholder="EMP001" ${state.editingMemberId ? 'disabled' : ''}>
+                                    </div>
+                                    <div class="space-y-1">
+                                        <label class="block text-[10px] font-black uppercase text-slate-400 tracking-widest">System Access Key</label>
+                                        <input type="password" id="m-pass" class="w-full p-4 rounded-2xl border-2 border-slate-50 bg-slate-50 outline-none focus:ring-4 focus:ring-green-50 font-bold" placeholder="Set Password">
+                                    </div>
+                                    <div class="space-y-1">
+                                        <label class="block text-[10px] font-black uppercase text-slate-400 tracking-widest">Full Name</label>
+                                        <input type="text" id="m-name" class="w-full p-4 rounded-2xl border-2 border-slate-50 bg-slate-50 outline-none focus:ring-4 focus:ring-green-50 font-bold" placeholder="Legal Name" required>
+                                    </div>
+                                    <div class="space-y-1">
+                                        <label class="block text-[10px] font-black uppercase text-slate-400 tracking-widest">Administrative Permission</label>
+                                        <select id="m-role" class="w-full p-4 rounded-2xl border-2 border-slate-50 bg-white shadow-sm outline-none focus:ring-4 focus:ring-green-50 font-bold">
+                                            <option value="employee">Standard Staff</option>
+                                            <option value="admin">HR Administrator</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="flex justify-end gap-3 pt-6 border-t border-slate-100">
+                                    <button type="button" onclick="state.memberFormVisible=false; state.editingMemberId=null; renderDirectory()" class="px-8 py-3 font-bold text-slate-400">Discard</button>
+                                    <button type="submit" class="bg-green-700 text-white px-12 py-3 rounded-2xl font-black uppercase tracking-widest shadow-xl">Confirm & Sync</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                         ${state.employees.map(emp => `
                             <div class="bg-white p-8 rounded-[2rem] border shadow-sm flex items-center gap-6 group relative hover:border-green-300 transition-all">
-                                <div class="h-16 w-16 rounded-2xl bg-green-100 flex items-center justify-center font-black text-green-700 text-2xl border-4 border-white shadow-md">${emp.name.charAt(0)}</div>
+                                <div class="h-16 w-16 rounded-2xl bg-green-100 flex items-center justify-center font-black text-green-700 text-2xl border-4 border-white shadow-md uppercase">${emp.name.charAt(0)}</div>
                                 <div class="flex-1 overflow-hidden">
-                                    <h4 class="font-black text-slate-800 text-lg truncate uppercase">${emp.name}</h4>
+                                    <h4 class="font-black text-slate-800 text-lg truncate uppercase leading-tight">${emp.name}</h4>
                                     <div class="flex flex-col gap-1 mt-1">
-                                        <span class="bg-green-50 text-green-700 text-[10px] font-black px-2 py-0.5 rounded-lg uppercase w-fit">${emp.role}</span>
+                                        <span class="bg-green-50 text-green-700 text-[10px] font-black px-2 py-0.5 rounded-lg uppercase w-fit tracking-tighter">${emp.role}</span>
                                         <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">ID: ${emp.id}</p>
                                     </div>
                                 </div>
                                 <div class="flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all absolute top-6 right-6">
-                                    <button onclick="alert('Editing ${emp.id}')" class="p-2.5 bg-white border shadow-sm rounded-xl text-blue-500 hover:bg-blue-50"><i data-lucide="pencil" size="18"></i></button>
-                                    <button onclick="alert('Deleting ${emp.id}')" class="p-2.5 bg-white border shadow-sm rounded-xl text-red-500 hover:bg-red-50"><i data-lucide="trash-2" size="18"></i></button>
+                                    <button onclick="editMember('${emp.id}')" class="p-2.5 bg-white border shadow-sm rounded-xl text-blue-500 hover:bg-blue-50 transition-transform hover:scale-110"><i data-lucide="pencil" size="18"></i></button>
+                                    <button onclick="deleteMember('${emp.id}')" class="p-2.5 bg-white border shadow-sm rounded-xl text-red-500 hover:bg-red-50 transition-transform hover:scale-110"><i data-lucide="trash-2" size="18"></i></button>
                                 </div>
                             </div>
                         `).join('')}
@@ -442,6 +498,7 @@
                 </div>
             `;
             lucide.createIcons();
+            document.getElementById('member-form')?.addEventListener('submit', handleMemberSubmit);
         }
 
         function renderDiscussion() { 
@@ -479,7 +536,7 @@
                         ${state.discussions.map(p => `
                             <div class="bg-white rounded-[2.5rem] border-l-[12px] border-l-green-600 shadow-xl group !p-10 relative">
                                 <div class="flex justify-between items-start mb-6">
-                                    <h4 class="font-black text-slate-800 text-2xl uppercase tracking-tight leading-tight max-w-2xl">${p.title}</h4>
+                                    <h4 class="font-black text-slate-800 text-2xl uppercase tracking-tight max-w-2xl">${p.title}</h4>
                                     <div class="flex items-center gap-4">
                                         <span class="text-[10px] font-black text-slate-300 uppercase tracking-widest">${formatDate(p.date)}</span>
                                         ${isAdmin ? `<button onclick="deleteNotice(${p.id})" class="text-red-400 opacity-0 group-hover:opacity-100 transition-all hover:text-red-600"><i data-lucide="trash-2" size="18"></i></button>` : ''}
@@ -503,7 +560,7 @@
                                 ` : ''}
                             </div>
                         `).join('')}
-                        ${state.discussions.length === 0 ? '<div class="py-40 text-center text-slate-300 font-black uppercase tracking-[0.5em] bg-white rounded-[4rem] border-4 border-dashed">Board Ledger Empty</div>' : ''}
+                        ${state.discussions.length === 0 ? '<div class="py-40 text-center text-slate-300 font-black uppercase tracking-[0.5em] bg-white border border-dashed rounded-[4rem]">Board Ledger Empty</div>' : ''}
                     </div>
                 </div>
             `;
@@ -515,73 +572,136 @@
         }
 
         /**
-         * HANDLERS & LOGIC
+         * DIRECTORY LOGIC
          */
-        function toggleBoardForm() {
-            state.boardFormVisible = !state.boardFormVisible;
-            renderDiscussion();
+        function openAddMember() {
+            state.editingMemberId = null;
+            state.memberFormVisible = true;
+            renderDirectory();
+            document.getElementById('m-id').focus();
         }
 
-        async function handleBoardSubmit(e) {
-            e.preventDefault();
-            const btn = e.target.querySelector('button[type="submit"]');
-            btn.disabled = true;
-            btn.innerText = "Syncing...";
+        function editMember(id) {
+            const emp = state.employees.find(e => String(e.id) === String(id));
+            if(!emp) return;
+            state.editingMemberId = id;
+            state.memberFormVisible = true;
+            renderDirectory();
+            
+            document.getElementById('m-name').value = emp.name;
+            document.getElementById('m-role').value = emp.role;
+            document.getElementById('m-id').value = emp.id;
+        }
 
+        async function handleMemberSubmit(e) {
+            e.preventDefault();
+            showLoading();
             const payload = {
-                title: document.getElementById('notice-title').value,
-                message: document.getElementById('notice-message').value,
-                recipientId: document.getElementById('notice-recipient').value,
-                senderName: state.user.name,
-                senderId: state.user.id,
-                date: new Date().toISOString()
+                id: document.getElementById('m-id').value,
+                name: document.getElementById('m-name').value,
+                role: document.getElementById('m-role').value,
+                password: document.getElementById('m-pass').value || document.getElementById('m-id').value
             };
 
+            const method = state.editingMemberId ? 'PUT' : 'POST';
+            const url = state.editingMemberId ? `${API_BASE}/employees/${state.editingMemberId}` : `${API_BASE}/employees`;
+
             try {
-                const res = await fetch(`${API_BASE}/discussions`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
+                const res = await fetch(url, {
+                    method: method,
+                    headers: {'Content-Type':'application/json'},
                     body: JSON.stringify(payload)
                 });
-
-                if (res.ok) {
-                    await fetch(`${API_BASE}/notify`, {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({ 
-                            recipientId: payload.recipientId, 
-                            title: payload.title, 
-                            message: payload.message, 
-                            senderName: payload.senderName 
-                        })
-                    });
-                    
-                    alert("System Success: Broadcast Published.");
-                    state.boardFormVisible = false;
+                if(res.ok) {
+                    alert("System Success: Staff identity synchronized.");
+                    state.memberFormVisible = false;
+                    state.editingMemberId = null;
                     await syncData();
-                    renderDiscussion();
-                } else {
-                    alert("Database Error: Failed to save post.");
+                    renderDirectory();
                 }
-            } catch (err) {
-                alert("Matrix Error: Connectivity failure.");
-            } finally {
-                btn.disabled = false;
-                btn.innerText = "Confirm Publish";
-            }
+            } catch(err) { alert("Matrix Error: Connectivity failure."); }
+            finally { hideLoading(); }
         }
 
-        async function deleteNotice(id) {
-            if(!confirm("Archive Notice: Permanently remove from staff view?")) return;
+        async function deleteMember(id) {
+            if(!confirm("CRITICAL: Permanently erase employee " + id + " from system database?")) return;
+            showLoading();
             try {
-                const res = await fetch(`${API_BASE}/discussions/${id}`, { method: 'DELETE' });
+                const res = await fetch(`${API_BASE}/employees/${id}`, { method: 'DELETE' });
                 if(res.ok) {
                     await syncData();
-                    renderDiscussion();
+                    renderDirectory();
                 }
-            } catch(e) { alert("Fail."); }
+            } catch(e) { alert("Delete Failed."); }
+            finally { hideLoading(); }
         }
 
+        function downloadSampleDir() {
+            const sample = [{ id: 'EMP101', name: 'Standard Name', designation: 'Lecturer', department: 'Academic', basic_salary: 80000, email: 'user@lsaf.edu.pk', doj: '2025-01-01', pan: 'ABC12345' }];
+            exportToCSV(sample, "Directory_Template.csv");
+        }
+
+        function importDir(input) {
+            const file = input.files[0];
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const lines = e.target.result.split(/\r?\n/);
+                showLoading();
+                for (let i = 1; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if(!line) continue;
+                    const cols = parseCSVLine(line);
+                    if(cols.length < 5) continue;
+                    await fetch(`${API_BASE}/employees`, {
+                        method: 'POST',
+                        headers: {'Content-Type':'application/json'},
+                        body: JSON.stringify({ id: cols[0], name: cols[1], designation: cols[2], department: cols[3], basic_salary: cleanNumber(cols[4]), email: cols[5], doj: cols[6], pan: cols[7], role: 'employee' })
+                    });
+                }
+                await syncData();
+                renderDirectory();
+                hideLoading();
+                alert("Bulk Import Finished.");
+            };
+            reader.readAsText(file);
+        }
+
+        /**
+         * PAYROLL LOGIC
+         */
+        function openPayrollEditor(id) {
+            state.editingPayrollId = id;
+            renderPayroll();
+        }
+
+        async function handlePayrollUpdate(e) {
+            e.preventDefault();
+            const emp = state.employees.find(e => e.id === state.editingPayrollId);
+            const fields = ['basic_salary', 'others_allowance', 'invigilation', 'increment', 'eidi', 'tax', 'loan_deduction', 'insurance'];
+            
+            const updates = {};
+            fields.forEach(f => updates[f] = Number(document.getElementById('pay-'+f).value));
+            
+            showLoading();
+            try {
+                const res = await fetch(`${API_BASE}/employees/${state.editingPayrollId}`, {
+                    method: 'PUT',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({ ...emp, ...updates })
+                });
+                if(res.ok) {
+                    state.editingPayrollId = null;
+                    await syncData();
+                    renderPayroll();
+                }
+            } catch(e) { alert("Update failed."); }
+            finally { hideLoading(); }
+        }
+
+        /**
+         * HANDLERS & NAVIGATION
+         */
         function calculateNet(emp) {
             const basic = Number(emp.basic_salary) || 0;
             const allowance = Number(emp.others_allowance) || 0;
@@ -758,6 +878,71 @@
                 </div>
             `;
             lucide.createIcons();
+        }
+
+        function toggleBoardForm() {
+            state.boardFormVisible = !state.boardFormVisible;
+            renderDiscussion();
+        }
+
+        async function handleBoardSubmit(e) {
+            e.preventDefault();
+            const btn = e.target.querySelector('button[type="submit"]');
+            btn.disabled = true;
+            btn.innerText = "Syncing...";
+
+            const payload = {
+                title: document.getElementById('notice-title').value,
+                message: document.getElementById('notice-message').value,
+                recipientId: document.getElementById('notice-recipient').value,
+                senderName: state.user.name,
+                senderId: state.user.id,
+                date: new Date().toISOString()
+            };
+
+            try {
+                const res = await fetch(`${API_BASE}/discussions`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    await fetch(`${API_BASE}/notify`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ 
+                            recipientId: payload.recipientId, 
+                            title: payload.title, 
+                            message: payload.message, 
+                            senderName: payload.senderName 
+                        })
+                    });
+                    
+                    alert("System Success: Broadcast Published.");
+                    state.boardFormVisible = false;
+                    await syncData();
+                    renderDiscussion();
+                } else {
+                    alert("Database Error: Failed to save post.");
+                }
+            } catch (err) {
+                alert("Matrix Error: Connectivity failure.");
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Confirm Publish";
+            }
+        }
+
+        async function deleteNotice(id) {
+            if(!confirm("Archive Notice: Permanently remove from staff view?")) return;
+            try {
+                const res = await fetch(`${API_BASE}/discussions/${id}`, { method: 'DELETE' });
+                if(res.ok) {
+                    await syncData();
+                    renderDiscussion();
+                }
+            } catch(e) { alert("Fail."); }
         }
 
         /**
