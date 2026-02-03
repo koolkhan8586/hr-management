@@ -6,6 +6,8 @@
     <title>LSAF-HR Management System</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- PDF Generation Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
         body { font-family: 'Plus Jakarta Sans', sans-serif; overflow-x: hidden; }
@@ -19,9 +21,15 @@
         input[type="number"]::-webkit-inner-spin-button { display: none; }
         .animate-slide-up { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
         @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* PDF Slip Styles - Hidden in browser */
+        #pdf-template { position: absolute; left: -9999px; top: -9999px; width: 800px; padding: 40px; background: white; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900">
+
+    <!-- HIDDEN PDF SLIP TEMPLATE -->
+    <div id="pdf-template"></div>
 
     <!-- GLOBAL LOADING SCREEN -->
     <div id="loading-screen" class="fixed inset-0 bg-white z-[999] flex flex-col items-center justify-center">
@@ -148,7 +156,6 @@
 
         function getInitial(name) { return name ? String(name).charAt(0).toUpperCase() : '?'; }
 
-        // --- Robust CSV Splitter ---
         function parseCSVLine(text) {
             const result = [];
             let current = '';
@@ -222,7 +229,7 @@
                     state.user = JSON.parse(saved);
                     await syncData();
                     
-                    // Logic fix: Default to latest posted month for employees
+                    // SMART ROUTING: Default to latest posted month for employees
                     if (state.user.role !== 'admin' && state.payrollPostedMonths.length > 0) {
                         const sorted = [...state.payrollPostedMonths].sort((a,b) => b.month_year.localeCompare(a.month_year));
                         state.selectedMonth = sorted[0].month_year;
@@ -242,10 +249,10 @@
         async function syncData() {
             try {
                 const [eRes, dRes, pRes, lRes] = await Promise.all([
-                    fetch(`${API_BASE}/employees`),
-                    fetch(`${API_BASE}/discussions`),
-                    fetch(`${API_BASE}/payroll-posted`),
-                    fetch(`${API_BASE}/loans`)
+                    fetch(`${API_BASE}/employees`).catch(() => ({ ok: false })),
+                    fetch(`${API_BASE}/discussions`).catch(() => ({ ok: false })),
+                    fetch(`${API_BASE}/payroll-posted`).catch(() => ({ ok: false })),
+                    fetch(`${API_BASE}/loans`).catch(() => ({ ok: false }))
                 ]);
 
                 if (eRes.ok) state.employees = await eRes.json();
@@ -256,12 +263,12 @@
                 if (state.user) {
                     const fresh = state.employees.find(e => String(e.id) === String(state.user.id));
                     if (fresh) state.user = fresh;
-                    const atRes = await fetch(`${API_BASE}/attendance/${state.user.id}`);
-                    if (atRes.ok) state.attendance = await atRes.json();
-                    const lvRes = await fetch(`${API_BASE}/leaves/${state.user.id}`);
-                    if (lvRes.ok) state.leaves = await lvRes.json();
+                    const atRes = await fetch(`${API_BASE}/attendance/${state.user.id}`).catch(() => null);
+                    if (atRes && atRes.ok) state.attendance = await atRes.json();
+                    const lvRes = await fetch(`${API_BASE}/leaves/${state.user.id}`).catch(() => null);
+                    if (lvRes && lvRes.ok) state.leaves = await lvRes.json();
                 }
-            } catch (e) { console.warn("Background sync failed."); }
+            } catch (e) { console.warn("Background sync partially failed."); }
             finally { hideLoading(); }
         }
 
@@ -331,7 +338,7 @@
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 font-sans">
                         <div class="bg-green-700 p-8 rounded-[2rem] text-white shadow-xl">
-                            <p class="text-[10px] font-black uppercase opacity-60">Identity Status</p>
+                            <p class="text-[10px] font-black uppercase opacity-60">Status</p>
                             <p class="text-3xl font-black mt-2">ACTIVE</p>
                         </div>
                         <div class="bg-white p-8 rounded-[2rem] border shadow-sm">
@@ -360,22 +367,6 @@
             }
         }
 
-        async function saveAttendanceAdjustment(id) {
-            const time = document.getElementById('adj-time').value;
-            const type = document.getElementById('adj-type').value;
-            showLoading();
-            const res = await fetch(`${API_BASE}/attendance/${id}`, {
-                method: 'PUT',
-                headers: {'Content-Type':'application/json'},
-                body: JSON.stringify({ time_str: time, type: type })
-            });
-            if(res.ok) {
-                state.editingAttendanceId = null;
-                await syncData();
-                renderAttendance();
-            } else { alert("Update failed."); hideLoading(); }
-        }
-
         function renderAttendance() { 
             const filtered = (state.attendance || []).filter(log => log.date_str.startsWith(state.selectedAttendanceMonth));
             const stats = getAttendanceStats(filtered);
@@ -399,7 +390,7 @@
                         </div>
                         <div class="bg-white border-2 p-8 rounded-[2rem] flex items-center gap-6 shadow-sm">
                             <div class="h-14 w-14 rounded-2xl bg-blue-50 text-blue-700 flex items-center justify-center shadow-inner"><i data-lucide="clock"></i></div>
-                            <div><p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Hours</p><p class="text-3xl font-black">${stats.hours}h</p></div>
+                            <div><p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Hours</p><p class="text-3xl font-black">${stats.hours}h Total</p></div>
                         </div>
                     </div>
                     <div class="bg-white rounded-[2.5rem] py-16 flex flex-col items-center border shadow-2xl">
@@ -409,27 +400,6 @@
                             <button onclick="logAttendance('Clock In')" class="bg-green-700 text-white px-10 py-5 rounded-2xl font-black uppercase shadow-xl hover:bg-green-800 active:scale-95 transition-all">Clock In</button>
                             <button onclick="logAttendance('Clock Out')" class="bg-white border-2 border-slate-200 px-10 py-5 rounded-2xl font-black uppercase text-slate-700 hover:bg-slate-50 transition-all active:scale-95">Clock Out</button>
                         </div>
-                    </div>
-                    <div class="bg-white rounded-[2.5rem] p-10 border border-slate-100 shadow-sm max-h-[400px] overflow-y-auto custom-scrollbar">
-                         <h4 class="text-xs font-black uppercase text-slate-400 mb-6">Recent Activity Logs</h4>
-                         ${filtered.map(l => {
-                            const isEditing = state.editingAttendanceId === l.id;
-                            return `
-                                <div class="flex justify-between py-4 border-b items-center">
-                                    <div>
-                                        <p class="font-black text-slate-700 uppercase text-xs">${isEditing ? `<select id="adj-type" class="border rounded p-1 text-[10px]"><option ${l.type==='Clock In'?'selected':''}>Clock In</option><option ${l.type==='Clock Out'?'selected':''}>Clock Out</option></select>` : l.type}</p>
-                                        <p class="text-[10px] text-slate-400 font-bold">${formatDate(l.date_str)}</p>
-                                    </div>
-                                    <div class="flex items-center gap-4">
-                                        <p class="font-mono font-bold text-slate-500 text-xs">${isEditing ? `<input type="text" id="adj-time" value="${l.time_str}" class="border rounded p-1 w-24 text-[10px]">` : l.time_str}</p>
-                                        ${isAdmin ? (isEditing ? 
-                                            `<button onclick="saveAttendanceAdjustment('${l.id}')" class="text-green-600 font-black text-[10px] uppercase underline">Save</button>` : 
-                                            `<button onclick="state.editingAttendanceId='${l.id}'; renderAttendance()" class="text-blue-500 opacity-30 hover:opacity-100 transition-all"><i data-lucide="pencil" size="14"></i></button>`
-                                        ) : ''}
-                                    </div>
-                                </div>
-                            `;
-                         }).join('')}
                     </div>
                 </div>
             `;
@@ -450,7 +420,85 @@
             }, () => { alert("Location required."); hideLoading(); });
         }
 
-        // --- PAYROLL MODULE ---
+        // --- PAYROLL MODULE & PDF GENERATION ---
+        async function downloadSalarySlipPDF(id) {
+            const emp = state.employees.find(e => String(e.id) === String(id));
+            if(!emp) return;
+            const m = calculateSalaryMetrics(emp);
+            const monthName = new Date(state.selectedMonth).toLocaleString('default', { month: 'long', year: 'numeric' });
+            
+            const template = `
+                <div style="padding: 20px; font-family: 'Plus Jakarta Sans', sans-serif;">
+                    <div style="text-align: center; border-bottom: 2px solid #15803d; padding-bottom: 20px;">
+                        <h1 style="margin: 0; color: #15803d; text-transform: uppercase; font-size: 24px;">The University of Lahore</h1>
+                        <p style="margin: 5px 0; font-weight: bold; color: #64748b;">City Campus Lahore</p>
+                        <h2 style="margin: 10px 0; text-transform: uppercase; font-size: 18px;">Salary Slip - ${monthName}</h2>
+                    </div>
+                    
+                    <div style="display: flex; justify-content: space-between; margin-top: 30px;">
+                        <div>
+                            <p><strong>Employee Name:</strong> ${emp.name}</p>
+                            <p><strong>Employee Code:</strong> ${emp.id}</p>
+                        </div>
+                        <div style="text-align: right;">
+                            <p><strong>Identity:</strong> ${emp.role.toUpperCase()}</p>
+                            <p><strong>Printed On:</strong> ${getPktDate()}</p>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 40px; margin-top: 30px;">
+                        <div style="flex: 1;">
+                            <h3 style="background: #f1f5f9; padding: 10px; font-size: 14px; text-transform: uppercase;">Earnings</h3>
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <tr><td style="padding: 8px 0;">Basic Salary</td><td style="text-align: right;">${cleanNumber(emp.basic_salary).toLocaleString()}</td></tr>
+                                <tr><td style="padding: 8px 0;">Invigilation</td><td style="text-align: right;">${cleanNumber(emp.invigilation).toLocaleString()}</td></tr>
+                                <tr><td style="padding: 8px 0;">T. Payment</td><td style="text-align: right;">${cleanNumber(emp.t_payment).toLocaleString()}</td></tr>
+                                <tr><td style="padding: 8px 0;">Increment</td><td style="text-align: right;">${cleanNumber(emp.increment).toLocaleString()}</td></tr>
+                                <tr style="border-top: 1px solid #e2e8f0; font-weight: bold;">
+                                    <td style="padding: 10px 0;">Gross Total</td><td style="text-align: right;">PKR ${m.totalAddition.toLocaleString()}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div style="flex: 1;">
+                            <h3 style="background: #f1f5f9; padding: 10px; font-size: 14px; text-transform: uppercase;">Deductions</h3>
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <tr><td style="padding: 8px 0;">Extra Leaves</td><td style="text-align: right;">${cleanNumber(emp.extra_leaves_deduction).toLocaleString()}</td></tr>
+                                <tr><td style="padding: 8px 0;">Income Tax</td><td style="text-align: right;">${cleanNumber(emp.tax).toLocaleString()}</td></tr>
+                                <tr><td style="padding: 8px 0;">Loan Recovery</td><td style="text-align: right;">${cleanNumber(emp.loan_deduction).toLocaleString()}</td></tr>
+                                <tr><td style="padding: 8px 0;">Insurance</td><td style="text-align: right;">${cleanNumber(emp.insurance).toLocaleString()}</td></tr>
+                                <tr style="border-top: 1px solid #e2e8f0; font-weight: bold; color: #ef4444;">
+                                    <td style="padding: 10px 0;">Total Deductions</td><td style="text-align: right;">PKR ${m.totalDeduction.toLocaleString()}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 40px; padding: 20px; background: #15803d; color: white; border-radius: 12px; display: flex; justify-content: space-between; align-items: center;">
+                        <h2 style="margin: 0; font-size: 16px; text-transform: uppercase;">Net Salary Paid</h2>
+                        <h1 style="margin: 0; font-size: 24px;">PKR ${m.netPaid.toLocaleString()}</h1>
+                    </div>
+
+                    <div style="margin-top: 80px; display: flex; justify-content: space-between;">
+                        <div style="text-align: center; width: 200px; border-top: 1px solid #000; padding-top: 10px; font-size: 12px;">Employee Signature</div>
+                        <div style="text-align: center; width: 200px; border-top: 1px solid #000; padding-top: 10px; font-size: 12px;">Authorized Seal</div>
+                    </div>
+                </div>
+            `;
+            
+            const element = document.getElementById('pdf-template');
+            element.innerHTML = template;
+            
+            const options = {
+                margin: 0,
+                filename: `LSAF_PaySlip_${emp.id}_${state.selectedMonth}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+            };
+
+            html2pdf().set(options).from(element).save();
+        }
+
         function renderPayroll() {
             const container = document.getElementById('view-container');
             const isAdmin = state.user.role === 'admin';
@@ -463,15 +511,19 @@
                         <div class="flex gap-3">
                             <input type="month" id="month-picker" value="${state.selectedMonth}" onchange="state.selectedMonth=this.value; renderPayroll()" class="p-3 border-2 rounded-2xl font-black bg-white shadow-sm">
                             ${isAdmin ? `
-                                <button onclick="postSalary()" class="bg-slate-900 text-white px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl hover:bg-black transition-all">
+                                <button onclick="postSalary()" class="bg-slate-900 text-white px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl">
                                     ${isPosted ? 'PUBLISHED' : 'PUBLISH DATA'}
                                 </button>
-                                <button onclick="downloadSalaryTemplate()" class="bg-white border-2 px-6 py-3 rounded-2xl font-black text-[10px] uppercase hover:bg-slate-50 transition-all">TEMPLATE</button>
-                                <label class="bg-white border-2 px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest cursor-pointer shadow-sm hover:bg-slate-50 transition-all">
+                                <button onclick="downloadSalaryTemplate()" class="bg-white border-2 px-6 py-3 rounded-2xl font-black text-[10px] uppercase hover:bg-slate-50">TEMPLATE</button>
+                                <label class="bg-white border-2 px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest cursor-pointer shadow-sm">
                                     IMPORT <input type="file" onchange="importSalaryCSV(this)" class="hidden">
                                 </label>
-                            ` : ''}
-                            <button onclick="exportSalaryCSV()" class="bg-green-50 text-green-700 px-6 py-3 rounded-2xl font-black text-[10px] uppercase hover:bg-green-100 transition-all">EXPORT</button>
+                                <button onclick="exportSalaryCSV()" class="bg-green-50 text-green-700 px-6 py-3 rounded-2xl font-black text-[10px] uppercase">EXPORT CSV</button>
+                            ` : `
+                                <button onclick="downloadSalarySlipPDF('${state.user.id}')" class="bg-green-700 text-white px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl flex items-center gap-2">
+                                    <i data-lucide="file-text" size="14"></i> Download PDF Slip
+                                </button>
+                            `}
                         </div>
                     </div>
 
@@ -480,12 +532,11 @@
                             <i data-lucide="lock" size="64" class="text-slate-200"></i>
                             <h2 class="text-xl font-black text-slate-400 uppercase tracking-widest">Sheet Locked</h2>
                             <p class="text-sm text-slate-400">The salary sheet for ${state.selectedMonth} has not been published yet.</p>
-                            <p class="text-[10px] font-black text-slate-300 uppercase tracking-widest">Please check January or other posted months.</p>
                         </div>
                     ` : `
                         <div class="overflow-x-auto rounded-[2rem] border bg-white shadow-xl">
                             <table class="w-full text-left text-[10px]">
-                                <thead class="bg-slate-50 border-b font-black text-slate-400 uppercase tracking-widest">
+                                <thead class="bg-slate-50 border-b font-black text-slate-400 uppercase">
                                     <tr>
                                         <th class="p-4">ID</th><th class="p-4">Name</th>
                                         <th class="p-4 text-right">Basic</th><th class="p-4 text-right">Invig</th>
@@ -493,14 +544,14 @@
                                         <th class="p-4 text-right">Total Add</th><th class="p-4 text-right text-red-500">Ex.Lv</th>
                                         <th class="p-4 text-right text-red-500">Tax</th><th class="p-4 text-right text-red-500">Loan</th>
                                         <th class="p-4 text-right font-black text-slate-900 uppercase">Net Paid</th>
-                                        ${isAdmin ? `<th class="p-4 text-center">Edit</th>` : ''}
+                                        ${isAdmin ? `<th class="p-4 text-center">Action</th>` : ''}
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-slate-50 font-bold">
                                     ${state.employees.filter(e => isAdmin || e.id === state.user.id).map(emp => {
                                         const m = calculateSalaryMetrics(emp);
                                         return `
-                                            <tr class="hover:bg-slate-50/50 transition-colors">
+                                            <tr>
                                                 <td class="p-4 font-black text-slate-900">${emp.id}</td>
                                                 <td class="p-4 uppercase truncate max-w-[120px]">${emp.name}</td>
                                                 <td class="p-4 text-right">${cleanNumber(emp.basic_salary).toLocaleString()}</td>
@@ -512,7 +563,7 @@
                                                 <td class="p-4 text-right text-red-400">-${cleanNumber(emp.tax).toLocaleString()}</td>
                                                 <td class="p-4 text-right text-red-400">-${cleanNumber(emp.loan_deduction).toLocaleString()}</td>
                                                 <td class="p-4 text-right font-black text-slate-900">Rs. ${m.netPaid.toLocaleString()}</td>
-                                                ${isAdmin ? `<td class="p-4 text-center"><button onclick="editPayroll('${emp.id}')" class="text-blue-500 hover:scale-110 transition-transform"><i data-lucide="pencil" size="14"></i></button></td>` : ''}
+                                                ${isAdmin ? `<td class="p-4 text-center"><button onclick="editPayroll('${emp.id}')" class="text-blue-500"><i data-lucide="pencil" size="14"></i></button></td>` : ''}
                                             </tr>
                                         `;
                                     }).join('')}
@@ -599,13 +650,13 @@
         }
 
         async function postSalary() {
-            if(!confirm(`Publish salary data for ${state.selectedMonth}? This makes it visible to employees.`)) return;
+            if(!confirm(`Publish salary data for ${state.selectedMonth}?`)) return;
             const res = await fetch(`${API_BASE}/payroll-post`, {
                 method: 'POST',
                 headers: {'Content-Type':'application/json'},
                 body: JSON.stringify({ month: state.selectedMonth })
             });
-            if(res.ok) { alert("Broadcast Published: Payroll data visible to staff."); await syncData(); renderPayroll(); }
+            if(res.ok) { alert("Payroll Published."); await syncData(); renderPayroll(); }
         }
 
         function editPayroll(id) {
@@ -616,23 +667,23 @@
             renderDirectory();
         }
 
-        // --- STAFF HUB ---
+        // --- STAFF HUB & ACTIONS ---
         function renderDirectory() {
             const container = document.getElementById('view-container');
             container.innerHTML = `
                 <div class="animate-fade-in space-y-8 text-slate-900 font-sans">
-                    <div class="flex justify-between items-center"><h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase font-sans">Staff Hub</h2><button onclick="openAddMember()" class="bg-green-700 text-white px-10 py-3 rounded-2xl font-black uppercase text-xs shadow-xl active:scale-95 transition-all hover:bg-green-800">New Member</button></div>
+                    <div class="flex justify-between items-center"><h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Staff Hub</h2><button onclick="openAddMember()" class="bg-green-700 text-white px-10 py-3 rounded-2xl font-black uppercase text-xs shadow-xl active:scale-95 transition-all hover:bg-green-800">New Member</button></div>
                     <div id="member-form-container" class="${state.memberFormVisible ? '' : 'hidden'} bg-white p-10 rounded-[3rem] border-4 shadow-2xl mb-12 animate-slide-up">
                         <form id="member-form" class="space-y-6">
-                            <div class="grid md:grid-cols-2 gap-8 font-sans">
-                                <input type="text" id="m-id" class="p-4 rounded-2xl border-2 font-bold bg-slate-50 outline-none" placeholder="Employee ID" ${state.editingMemberId ? 'disabled' : ''}>
+                            <div class="grid md:grid-cols-2 gap-8">
+                                <input type="text" id="m-id" class="p-4 rounded-2xl border-2 font-bold bg-slate-50 outline-none" placeholder="ID" ${state.editingMemberId ? 'disabled' : ''}>
                                 <input type="email" id="m-email" class="p-4 rounded-2xl border-2 font-bold bg-slate-50 outline-none" placeholder="Email Address">
                                 <input type="text" id="m-name" class="p-4 rounded-2xl border-2 font-bold bg-slate-50 outline-none" placeholder="Full Name" required>
-                                <select id="m-role" class="w-full p-4 rounded-2xl border-2 border-slate-50 font-black text-sm bg-slate-50 outline-none"><option value="employee">Staff Member</option><option value="admin">System Admin</option></select>
-                                <div class="space-y-1"><label class="text-[10px] uppercase font-black text-slate-400 ml-2">AL Allocation</label><input type="number" id="m-leave-annual" class="p-4 w-full rounded-2xl border-2 font-bold shadow-inner" placeholder="14"></div>
-                                <div class="space-y-1"><label class="text-[10px] uppercase font-black text-slate-400 ml-2">WOP Allocation</label><input type="number" id="m-leave-wop" class="p-4 w-full rounded-2xl border-2 font-bold shadow-inner" placeholder="10"></div>
+                                <select id="m-role" class="p-4 rounded-2xl border-2 border-slate-50 font-black text-sm bg-slate-50 outline-none"><option value="employee">Staff Member</option><option value="admin">System Admin</option></select>
+                                <div class="space-y-1"><label class="text-[10px] font-black text-slate-400 ml-2">AL ALLOCATION</label><input type="number" id="m-leave-annual" class="p-4 w-full rounded-2xl border-2 font-bold" placeholder="Annual Bal"></div>
+                                <div class="space-y-1"><label class="text-[10px] font-black text-slate-400 ml-2">WOP ALLOCATION</label><input type="number" id="m-leave-wop" class="p-4 w-full rounded-2xl border-2 font-bold" placeholder="WOP Bal"></div>
                             </div>
-                            <div class="flex justify-end gap-3 pt-6 border-t"><button type="button" onclick="state.memberFormVisible=false; renderDirectory()" class="px-8 py-3 text-slate-400 font-bold uppercase text-xs hover:text-slate-600 transition-colors">Cancel</button><button type="submit" class="bg-green-700 text-white px-12 py-3 rounded-2xl font-black uppercase shadow-lg active:scale-95 transition-all">Save Identity</button></div>
+                            <div class="flex justify-end gap-3 pt-6 border-t"><button type="button" onclick="state.memberFormVisible=false; renderDirectory()" class="px-8 py-3 text-slate-400 font-bold uppercase text-xs">Cancel</button><button type="submit" class="bg-green-700 text-white px-12 py-3 rounded-2xl font-black uppercase shadow-lg">Confirm & Sync</button></div>
                         </form>
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 font-sans">
@@ -641,8 +692,7 @@
                                 <div class="h-14 w-14 rounded-2xl bg-green-50 text-green-700 flex items-center justify-center font-black text-2xl uppercase">${getInitial(emp.name)}</div>
                                 <div class="flex-1 overflow-hidden"> 
                                     <h4 class="font-black uppercase truncate leading-none text-slate-800 text-sm">${emp.name}</h4>
-                                    <p class="text-[9px] font-bold text-slate-400 uppercase mt-2 tracking-widest">ID: ${emp.id}</p>
-                                    <p class="text-[8px] font-black text-slate-300 uppercase tracking-tighter mt-1">AL: ${emp.leave_annual || 0} | WOP: ${emp.leave_casual || 0}</p>
+                                    <p class="text-[9px] font-bold text-slate-400 uppercase mt-2">ID: ${emp.id}</p>
                                 </div>
                                 <div class="opacity-0 group-hover:opacity-100 flex gap-2 absolute right-6 transition-all">
                                     <button onclick="editMember('${emp.id}')" class="p-2.5 bg-white border shadow-xl rounded-xl text-blue-500 hover:scale-110 transition-all"><i data-lucide="pencil" size="14"></i></button>
@@ -657,7 +707,6 @@
             document.getElementById('member-form')?.addEventListener('submit', handleMemberSubmit);
         }
 
-        // --- LEAVES MODULE ---
         function renderLeaves() {
             const list = (state.leaves || []).filter(l => l.start_date.startsWith(state.selectedLeaveMonth));
             const container = document.getElementById('view-container');
@@ -668,26 +717,22 @@
                         <div class="flex bg-slate-200 p-1.5 rounded-2xl shadow-inner"><button onclick="state.leaveTab='apply'; renderLeaves()" class="px-8 py-2 rounded-xl font-black text-xs uppercase tracking-widest ${state.leaveTab==='apply'?'bg-white text-green-700 shadow-md':'text-slate-500'}">Apply</button><button onclick="state.leaveTab='history'; renderLeaves()" class="px-8 py-2 rounded-xl font-black text-xs uppercase tracking-widest ${state.leaveTab==='history'?'bg-white text-green-700 shadow-md':'text-slate-500'}">Archive</button></div>
                     </div>
                     ${state.leaveTab === 'apply' ? `
-                        <div class="bg-white p-12 rounded-[2.5rem] shadow-2xl max-w-xl mx-auto animate-slide-up font-sans">
+                        <div class="bg-white p-12 rounded-[2.5rem] shadow-2xl max-w-xl mx-auto animate-slide-up">
                             <form id="leave-form" class="space-y-6">
                                 <select id="l-type" class="w-full p-4 rounded-2xl border-2 font-bold bg-slate-50 outline-none focus:ring-4 focus:ring-green-50 shadow-inner"><option>Annual Leave</option><option>Sick Leave</option><option>WOP Leave</option></select>
-                                <div class="grid grid-cols-2 gap-4 font-sans">
+                                <div class="grid grid-cols-2 gap-4">
                                     <input type="date" id="l-date" class="w-full p-4 rounded-2xl border-2 font-bold bg-slate-50 shadow-inner" required>
                                     <input type="number" id="l-days" class="w-full p-4 rounded-2xl border-2 font-bold bg-slate-50 shadow-inner" placeholder="Days" required>
                                 </div>
-                                <textarea id="l-reason" class="w-full p-4 rounded-2xl border-2 border-bold bg-slate-50 h-32 shadow-inner font-bold" placeholder="Provide description for HR..." required></textarea>
-                                <button type="submit" class="w-full py-5 bg-green-700 text-white font-black rounded-3xl shadow-xl hover:bg-green-800 transition-all uppercase tracking-widest active:scale-95 font-sans">Confirm Application</button>
+                                <textarea id="l-reason" class="w-full p-4 rounded-2xl border-2 border-bold bg-slate-50 h-32 shadow-inner" placeholder="Description for HR..." required></textarea>
+                                <button type="submit" class="w-full py-5 bg-green-700 text-white font-black rounded-3xl shadow-xl hover:bg-green-800 transition-all uppercase tracking-widest active:scale-95">Confirm Request</button>
                             </form>
                         </div>
                     ` : `
                         <div class="space-y-6">
-                             <div class="flex justify-end items-center gap-3">
-                                 <p class="text-[10px] font-black uppercase text-slate-400">View Month:</p>
-                                 <input type="month" value="${state.selectedLeaveMonth}" onchange="state.selectedLeaveMonth=this.value; renderLeaves()" class="p-2 border rounded-xl font-bold bg-white text-xs shadow-sm">
-                             </div>
+                             <div class="flex justify-end items-center gap-3"><p class="text-[10px] font-black uppercase text-slate-400">Month:</p><input type="month" value="${state.selectedLeaveMonth}" onchange="state.selectedLeaveMonth=this.value; renderLeaves()" class="p-2 border rounded-xl font-bold bg-white text-xs shadow-sm"></div>
                              <div class="space-y-4">
-                                ${list.map(l => `<div class="bg-white p-8 rounded-[2rem] border shadow-sm flex justify-between items-center group hover:border-green-300 transition-all"><div><h4 class="font-black uppercase text-lg text-slate-800">${l.leave_type}</h4><p class="text-xs text-slate-400 mt-1 uppercase tracking-widest">${formatDate(l.start_date)} • ${l.days} Days</p><p class="text-xs text-slate-500 mt-3 italic font-medium leading-relaxed">"${l.reason}"</p></div>${Badge({ status: l.status })}</div>`).join('')}
-                                ${list.length === 0 ? '<p class="text-center py-20 text-slate-300 font-black uppercase text-xs tracking-widest">No data found</p>' : ''}
+                                ${list.map(l => `<div class="bg-white p-8 rounded-[2rem] border shadow-sm flex justify-between items-center group hover:border-green-300 transition-all"><div><h4 class="font-black uppercase text-lg text-slate-800">${l.leave_type}</h4><p class="text-[10px] text-slate-400 mt-1 uppercase tracking-widest">${formatDate(l.start_date)} • ${l.days} Days</p><p class="text-xs text-slate-500 mt-3 italic font-medium leading-relaxed">"${l.reason}"</p></div>${Badge({ status: l.status })}</div>`).join('')}
                              </div>
                         </div>
                     `}
@@ -705,7 +750,6 @@
             hideLoading();
         }
 
-        // --- LOANS MODULE ---
         function renderLoans() {
             const container = document.getElementById('view-container');
             const isAdmin = state.user.role === 'admin';
@@ -744,7 +788,6 @@
             if(res.ok) { alert("Matrix Alert: Loan Dispatched via System Mail."); await syncData(); renderLoans(); } else hideLoading();
         }
 
-        // --- DISCUSSION BOARD ---
         function renderDiscussion() {
             const container = document.getElementById('view-container');
             const isAdmin = state.user.role === 'admin';
@@ -761,7 +804,7 @@
                                 <textarea id="n-msg" class="w-full p-4 rounded-xl border h-32 font-medium shadow-inner outline-none" placeholder="Detailed content..."></textarea>
                                 <div class="flex justify-end gap-3 pt-2">
                                     <button type="button" onclick="state.boardFormVisible=false; renderDiscussion()" class="px-6 py-2 text-slate-400 font-bold uppercase text-xs">Discard</button>
-                                    <button type="submit" class="bg-green-700 text-white px-10 py-3 rounded-xl font-black uppercase text-xs shadow-lg shadow-green-100 hover:bg-green-800 active:scale-95 transition-all">Publish</button>
+                                    <button type="submit" class="bg-green-700 text-white px-10 py-3 rounded-xl font-black uppercase text-xs shadow-lg shadow-green-100 active:scale-95 transition-all">Publish</button>
                                 </div>
                             </form>
                         </div>
@@ -774,10 +817,7 @@
                                     <span class="text-[10px] font-black text-slate-300 uppercase tracking-widest">${formatDate(p.date)}</span>
                                 </div>
                                 <p class="text-lg text-slate-600 font-medium leading-relaxed mb-8 border-b pb-8">${p.message}</p>
-                                <div class="flex justify-between items-center">
-                                    <span class="bg-green-50 text-green-700 font-black text-[10px] px-5 py-2 rounded-xl border border-green-100 uppercase tracking-widest shadow-sm">Verified: ${p.senderName}</span>
-                                    <button class="text-blue-600 font-black text-xs uppercase tracking-widest border-2 border-blue-50 px-8 py-3 rounded-[1.25rem] hover:bg-blue-50 transition-all active:scale-95 shadow-sm">Post Response</button>
-                                </div>
+                                <div class="flex justify-between items-center"><span class="bg-green-50 text-green-700 font-black text-[10px] px-5 py-2 rounded-xl border border-green-100 uppercase tracking-widest shadow-sm">Verified: ${p.senderName}</span><button class="text-blue-600 font-black text-xs uppercase tracking-widest border-2 border-blue-50 px-8 py-3 rounded-[1.25rem] hover:bg-blue-50 transition-all active:scale-95 shadow-sm">Post Response</button></div>
                             </div>
                         `).join('')}
                     </div>
@@ -795,14 +835,12 @@
         function renderSettings() {
              document.getElementById('view-container').innerHTML = `
                 <div class="animate-fade-in space-y-8 text-slate-900 font-sans text-center">
-                    <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase leading-none">Security Matrix</h2>
-                    <div class="bg-white border p-12 shadow-2xl rounded-[3rem] max-w-xl mx-auto mt-10 relative overflow-hidden">
+                    <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase leading-none">Security</h2>
+                    <div class="bg-white border p-12 shadow-2xl rounded-[3rem] max-w-xl mx-auto mt-10 relative overflow-hidden shadow-xl">
                         <div class="absolute top-0 right-0 w-32 h-32 bg-red-50 rounded-full blur-3xl -mr-16 -mt-16 opacity-30"></div>
                         <div class="space-y-8 relative z-10">
                             <div class="h-20 w-20 bg-slate-900 rounded-3xl flex items-center justify-center text-white mx-auto shadow-2xl mb-8"><i data-lucide="lock" size="40"></i></div>
-                            <div class="space-y-4">
-                                <input type="password" id="s-p1" class="w-full p-4 rounded-2xl border-2 font-black outline-none focus:ring-4 focus:ring-green-50 transition-all bg-slate-50 shadow-inner" placeholder="New Access Password">
-                            </div>
+                            <div class="space-y-4"><input type="password" id="s-p1" class="w-full p-4 rounded-2xl border-2 font-black outline-none focus:ring-4 focus:ring-green-50 transition-all bg-slate-50 shadow-inner" placeholder="New Password"></div>
                             <button onclick="alert('Hub Alert: Security key synchronized.')" class="w-full py-5 bg-slate-900 text-white font-black uppercase rounded-[2rem] shadow-2xl hover:bg-black transition-all active:scale-95 shadow-slate-200">Sync Security Matrix</button>
                         </div>
                     </div>
@@ -811,7 +849,9 @@
             lucide.createIcons();
         }
 
-        // --- CORE ACTIONS ---
+        /**
+         * CORE ACTIONS
+         */
         async function handleMemberSubmit(e) {
             e.preventDefault(); showLoading();
             const payload = { id: document.getElementById('m-id').value, name: document.getElementById('m-name').value, email: document.getElementById('m-email').value, role: document.getElementById('m-role').value, password: document.getElementById('m-id').value, leave_annual: Number(document.getElementById('m-leave-annual').value || 0), leave_casual: Number(document.getElementById('m-leave-wop').value || 0) };
@@ -833,7 +873,7 @@
         }
         
         async function deleteMember(id) { 
-            if(confirm("CRITICAL: Permanently wipe identity " + id + " from matrix?")) { 
+            if(confirm("CRITICAL: Wipe account identity " + id + " from system matrix?")) { 
                 try {
                     const res = await fetch(`${API_BASE}/employees/${id}`, { method: 'DELETE' }); 
                     if(res.ok) { await syncData(); renderDirectory(); }
