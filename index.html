@@ -121,7 +121,7 @@
 
         const NAV_ITEMS = [
             { id: 'dashboard', label: 'Home', icon: 'home', admin: false },
-            { id: 'attendance', label: 'Clock Center', icon: 'clock', admin: false },
+            { id: 'attendance', label: 'Clock Hub', icon: 'clock', admin: false },
             { id: 'payroll', label: 'Salary Hub', icon: 'dollar-sign', admin: false },
             { id: 'directory', label: 'Staff Hub', icon: 'users', admin: true },
             { id: 'loans', label: 'Loans', icon: 'wallet', admin: false },
@@ -188,10 +188,10 @@
         async function syncData() {
             try {
                 const [eRes, pRes, dRes, lRes] = await Promise.all([
-                    fetch(`${API_BASE}/employees`).catch(() => ({ ok: false })),
-                    fetch(`${API_BASE}/payroll-posted`).catch(() => ({ ok: false })),
-                    fetch(`${API_BASE}/discussions`).catch(() => ({ ok: false })),
-                    fetch(`${API_BASE}/loans`).catch(() => ({ ok: false }))
+                    fetch(`${API_BASE}/employees`),
+                    fetch(`${API_BASE}/payroll-posted`),
+                    fetch(`${API_BASE}/discussions`),
+                    fetch(`${API_BASE}/loans`)
                 ]);
                 if (eRes.ok) state.employees = await eRes.json();
                 if (pRes.ok) state.payrollPostedMonths = await pRes.json();
@@ -202,8 +202,8 @@
                     const fresh = state.employees.find(e => String(e.id).toUpperCase() === String(state.user.id).toUpperCase());
                     if (fresh) state.user = fresh;
                     const [atRes, lvRes] = await Promise.all([
-                        fetch(`${API_BASE}/attendance/${state.user.id}`).catch(() => ({ ok: false })),
-                        fetch(`${API_BASE}/leaves/${state.user.id}`).catch(() => ({ ok: false }))
+                        fetch(`${API_BASE}/attendance/${state.user.id}`),
+                        fetch(`${API_BASE}/leaves/${state.user.id}`)
                     ]);
                     if (atRes.ok) state.attendance = await atRes.json();
                     if (lvRes.ok) state.leaves = await lvRes.json();
@@ -433,87 +433,80 @@
             const emp = state.employees.find(e => String(e.id).toUpperCase() === String(state.user.id).toUpperCase()) || state.user;
             const m = calculateSalaryMetrics(emp);
             
-            // Format month manually from state.selectedMonth (YYYY-MM)
-            const [year, month] = state.selectedMonth.split('-');
+            // Explicit Manual Month Format parsing from state.selectedMonth (YYYY-MM)
+            const parts = state.selectedMonth.split('-');
             const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-            const monthLabel = `${monthNames[parseInt(month) - 1]} ${year}`;
+            const monthLabel = `${monthNames[parseInt(parts[1]) - 1]} ${parts[0]}`;
             
-            // Generate HTML content block for PDF
+            // Build the slip strictly on a single page
             const slipHtml = `
-                <div style="padding: 20px; font-family: sans-serif; background: white; width: 700px; color: #1e293b; line-height: 1.2;">
-                    <div style="text-align: center; border-bottom: 3px solid #15803d; padding-bottom: 10px; margin-bottom: 20px;">
-                        <img src="UOL-Green-V1.png" style="height: 70px; margin-bottom: 10px;" alt="UOL Logo">
-                        <h1 style="margin: 0; color: #15803d; text-transform: uppercase; font-size: 24px; font-weight: 900;">The University of Lahore</h1>
-                        <p style="margin: 2px 0; font-weight: 800; color: #64748b; text-transform: uppercase; font-size: 11px; letter-spacing: 2px;">City Campus Lahore</p>
-                        <div style="display: inline-block; background: #f1f5f9; padding: 6px 20px; border-radius: 50px; margin-top: 10px;">
-                            <h2 style="margin: 0; text-transform: uppercase; font-size: 12px; font-weight: 900; color: #1e293b;">Salary Slip: ${monthLabel}</h2>
+                <div style="padding: 25px; font-family: 'Plus Jakarta Sans', sans-serif; background: white; width: 680px; margin: 0 auto; color: #1e293b; line-height: 1.2;">
+                    <div style="text-align: center; border-bottom: 3px solid #15803d; padding-bottom: 10px; margin-bottom: 15px;">
+                        <img src="UOL-Green-V1.png" style="height: 65px; margin-bottom: 5px;" alt="Logo">
+                        <h1 style="margin: 0; color: #15803d; text-transform: uppercase; font-size: 22px; font-weight: 900;">The University of Lahore</h1>
+                        <p style="margin: 2px 0; font-weight: 800; color: #64748b; text-transform: uppercase; font-size: 10px; letter-spacing: 2px;">City Campus Lahore</p>
+                        <div style="display: inline-block; background: #f1f5f9; padding: 5px 25px; border-radius: 50px; margin-top: 10px;">
+                            <h2 style="margin: 0; text-transform: uppercase; font-size: 11px; font-weight: 900; color: #1e293b;">Salary Statement: ${monthLabel}</h2>
                         </div>
                     </div>
 
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 25px; font-size: 12px; border-bottom: 1px dashed #e2e8f0; padding-bottom: 10px;">
-                        <div style="width: 55%;">
-                            <p style="margin: 4px 0;"><strong>Staff Name:</strong> <span style="text-transform: uppercase; font-weight: 800;">${emp.name}</span></p>
-                            <p style="margin: 4px 0;"><strong>Employee ID:</strong> <span style="font-family: monospace; font-weight: bold;">${emp.id}</span></p>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 12px; border-bottom: 1px dashed #cbd5e1; padding-bottom: 10px;">
+                        <div style="width: 50%;">
+                            <p style="margin: 2px 0;"><strong>Staff Name:</strong> <span style="text-transform: uppercase; font-weight: 800;">${emp.name}</span></p>
+                            <p style="margin: 2px 0;"><strong>Employee ID:</strong> <span style="font-family: monospace;">${emp.id}</span></p>
                         </div>
-                        <div style="text-align: right; width: 45%;">
-                            <p style="margin: 4px 0;"><strong>Printed On:</strong> ${getPktDate()}</p>
-                            <p style="margin: 4px 0; color: #15803d; font-weight: 800;"><strong>Identity Verified: LSAF-HR</strong></p>
+                        <div style="text-align: right; width: 50%;">
+                            <p style="margin: 2px 0;"><strong>Printed On:</strong> ${getPktDate()}</p>
+                            <div style="background: #15803d; color: white; display: inline-block; padding: 2px 10px; border-radius: 4px; margin-top: 4px; font-size: 10px; font-weight: 900;">Identity Verified: LSAF-HR</div>
                         </div>
                     </div>
                     
-                    <div style="display: flex; gap: 15px; margin-bottom: 25px;">
+                    <div style="display: flex; gap: 15px; margin-bottom: 15px;">
                         <div style="flex: 1;">
-                            <h3 style="background: #f8fafc; padding: 8px; font-size: 10px; text-transform: uppercase; border-left: 4px solid #15803d; font-weight: 900; margin-bottom: 8px;">Earnings</h3>
+                            <h3 style="background: #f8fafc; padding: 6px; font-size: 10px; text-transform: uppercase; border-left: 4px solid #15803d; font-weight: 900; margin-bottom: 6px;">Earnings Detail</h3>
                             <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
-                                <tr><td style="padding: 6px 5px; border-bottom: 1px solid #f1f5f9;">Basic Salary</td><td style="text-align: right; font-weight: bold;">${cleanNumber(emp.basic_salary).toLocaleString()}</td></tr>
-                                <tr><td style="padding: 6px 5px; border-bottom: 1px solid #f1f5f9;">Invigilation</td><td style="text-align: right; font-weight: bold;">${cleanNumber(emp.invigilation).toLocaleString()}</td></tr>
-                                <tr><td style="padding: 6px 5px; border-bottom: 1px solid #f1f5f9;">T. Payment</td><td style="text-align: right; font-weight: bold;">${cleanNumber(emp.t_payment).toLocaleString()}</td></tr>
-                                <tr><td style="padding: 6px 5px; border-bottom: 1px solid #f1f5f9;">Increment</td><td style="text-align: right; font-weight: bold;">${cleanNumber(emp.increment).toLocaleString()}</td></tr>
-                                <tr style="background: #fdfdfd; font-weight: 900; border-top: 2px solid #15803d;"><td style="padding: 10px 5px;">Gross Total</td><td style="text-align: right;">${m.totalAdd.toLocaleString()}</td></tr>
+                                <tr><td style="padding: 5px; border-bottom: 1px solid #f1f5f9;">Basic Salary</td><td style="text-align: right; font-weight: bold;">${cleanNumber(emp.basic_salary).toLocaleString()}</td></tr>
+                                <tr><td style="padding: 5px; border-bottom: 1px solid #f1f5f9;">Invigilation</td><td style="text-align: right; font-weight: bold;">${cleanNumber(emp.invigilation).toLocaleString()}</td></tr>
+                                <tr><td style="padding: 5px; border-bottom: 1px solid #f1f5f9;">T. Payment</td><td style="text-align: right; font-weight: bold;">${cleanNumber(emp.t_payment).toLocaleString()}</td></tr>
+                                <tr><td style="padding: 5px; border-bottom: 1px solid #f1f5f9;">Increment</td><td style="text-align: right; font-weight: bold;">${cleanNumber(emp.increment).toLocaleString()}</td></tr>
+                                <tr style="background: #fdfdfd; font-weight: 900; border-top: 1px solid #15803d;"><td style="padding: 10px 5px;">Gross Total</td><td style="text-align: right;">${m.totalAdd.toLocaleString()}</td></tr>
                             </table>
                         </div>
                         <div style="flex: 1;">
-                            <h3 style="background: #fff1f2; padding: 8px; font-size: 10px; text-transform: uppercase; border-left: 4px solid #ef4444; font-weight: 900; margin-bottom: 8px;">Deductions</h3>
+                            <h3 style="background: #fff1f2; padding: 6px; font-size: 10px; text-transform: uppercase; border-left: 4px solid #ef4444; font-weight: 900; margin-bottom: 6px;">Deductions Detail</h3>
                             <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
-                                <tr><td style="padding: 6px 5px; border-bottom: 1px solid #f1f5f9;">Extra Leaves</td><td style="text-align: right; color: #ef4444;">-${cleanNumber(emp.extra_leaves_deduction).toLocaleString()}</td></tr>
-                                <tr><td style="padding: 6px 5px; border-bottom: 1px solid #f1f5f9;">Income Tax</td><td style="text-align: right; color: #ef4444;">-${cleanNumber(emp.tax).toLocaleString()}</td></tr>
-                                <tr><td style="padding: 6px 5px; border-bottom: 1px solid #f1f5f9;">Loan Recovery</td><td style="text-align: right; color: #ef4444;">-${cleanNumber(emp.loan_deduction).toLocaleString()}</td></tr>
-                                <tr><td style="padding: 6px 5px; border-bottom: 1px solid #f1f5f9;">Insurance</td><td style="text-align: right; color: #ef4444;">-${cleanNumber(emp.insurance).toLocaleString()}</td></tr>
-                                <tr><td style="padding: 6px 5px; border-bottom: 1px solid #f1f5f9;">Others</td><td style="text-align: right; color: #ef4444;">-${cleanNumber(emp.others_deduction).toLocaleString()}</td></tr>
-                                <tr style="font-weight: 900; color: #ef4444; border-top: 2px solid #ef4444;"><td style="padding: 10px 5px;">Total Deductions</td><td style="text-align: right;">-${m.totalSub.toLocaleString()}</td></tr>
+                                <tr><td style="padding: 5px; border-bottom: 1px solid #f1f5f9;">Extra Leaves</td><td style="text-align: right; color: #ef4444;">-${cleanNumber(emp.extra_leaves_deduction).toLocaleString()}</td></tr>
+                                <tr><td style="padding: 5px; border-bottom: 1px solid #f1f5f9;">Income Tax</td><td style="text-align: right; color: #ef4444;">-${cleanNumber(emp.tax).toLocaleString()}</td></tr>
+                                <tr><td style="padding: 5px; border-bottom: 1px solid #f1f5f9;">Loan Recovery</td><td style="text-align: right; color: #ef4444;">-${cleanNumber(emp.loan_deduction).toLocaleString()}</td></tr>
+                                <tr><td style="padding: 5px; border-bottom: 1px solid #f1f5f9;">Insurance</td><td style="text-align: right; color: #ef4444;">-${cleanNumber(emp.insurance).toLocaleString()}</td></tr>
+                                <tr><td style="padding: 5px; border-bottom: 1px solid #f1f5f9;">Others</td><td style="text-align: right; color: #ef4444;">-${cleanNumber(emp.others_deduction).toLocaleString()}</td></tr>
+                                <tr style="font-weight: 900; color: #ef4444; border-top: 1px solid #ef4444;"><td style="padding: 10px 5px;">Total Deductions</td><td style="text-align: right;">-${m.totalSub.toLocaleString()}</td></tr>
                             </table>
                         </div>
                     </div>
 
-                    <div style="margin-top: 10px; padding: 20px; background: #15803d; color: white; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 10px rgba(21,128,61,0.15);">
-                        <h2 style="margin: 0; font-size: 16px; text-transform: uppercase; font-weight: 800;">Net PKR Disbursed</h2>
-                        <h1 style="margin: 0; font-size: 28px; font-weight: 900; letter-spacing: -1px;">Rs. ${m.netPaid.toLocaleString()}</h1>
+                    <div style="margin-top: 5px; padding: 20px; background: #15803d; color: white; border-radius: 10px; display: flex; justify-content: space-between; align-items: center;">
+                        <h2 style="margin: 0; font-size: 16px; text-transform: uppercase; font-weight: 800;">Net Payable Amount</h2>
+                        <h1 style="margin: 0; font-size: 26px; font-weight: 900; letter-spacing: -1px;">Rs. ${m.netPaid.toLocaleString()}</h1>
                     </div>
                     
-                    <div style="margin-top: 60px; text-align: center; border-top: 1px solid #eee; padding-top: 15px;">
-                        <p style="font-size: 9px; color: #64748b; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">Computer Generated Receipt • Validated via LSAF NexusHR CORE Matrix</p>
+                    <div style="margin-top: 40px; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 10px;">
+                        <p style="font-size: 9px; color: #64748b; font-weight: bold; text-transform: uppercase;">Computer Generated Slip • LSAF NexusHR Core Matrix Verified</p>
                     </div>
                 </div>
             `;
 
             const opt = { 
-                margin: 0.2, 
+                margin: 0, 
                 filename: `LSAF_Slip_${emp.id}_${state.selectedMonth}.pdf`, 
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 3, useCORS: true, letterRendering: true, backgroundColor: '#ffffff', logging: false }, 
+                image: { type: 'jpeg', quality: 1 },
+                html2canvas: { scale: 3, useCORS: true, letterRendering: true, backgroundColor: '#ffffff' }, 
                 jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' } 
             };
             
             notify("Generating Document...");
-            
-            // Re-injecting into a clean temporary node for capture
-            const tempNode = document.createElement('div');
-            tempNode.innerHTML = slipHtml;
-            document.body.appendChild(tempNode);
-
-            html2pdf().set(opt).from(tempNode).save().then(() => {
-                document.body.removeChild(tempNode);
-            });
+            // Use html2pdf string conversion directly
+            html2pdf().set(opt).from(slipHtml).save();
         }
 
         // --- HUB ACTIONS ---
@@ -573,7 +566,7 @@
                         ${state.employees.map(emp => `
                             <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4 hover:border-green-300 transition-all group">
                                 <div class="h-12 w-12 bg-green-50 text-green-700 rounded-xl flex items-center justify-center font-black text-xl uppercase">${getInitial(emp.name)}</div>
-                                <div class="flex-1 overflow-hidden"><h4 class="font-black text-slate-800 uppercase truncate leading-none mb-1 font-sans text-sm">${emp.name}</h4><p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">${emp.id} • ${emp.role}</p></div>
+                                <div class="flex-1 overflow-hidden text-left"><h4 class="font-black text-slate-800 uppercase truncate leading-none mb-1 font-sans text-sm">${emp.name}</h4><p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">${emp.id} • ${emp.role}</p></div>
                                 <div class="opacity-0 group-hover:opacity-100 flex transition-all"><button onclick="deleteStaff('${emp.id}')" class="text-red-400 p-2 hover:bg-red-50 rounded-lg"><i data-lucide="trash-2" size="16"></i></button></div>
                             </div>
                         `).join('')}
@@ -612,14 +605,14 @@
             if(res.ok) { notify("Purged."); await syncData(); renderDirectory(); }
         }
 
-        // --- FINANCE & BOARD ---
+        // --- FINANCE ---
         function renderLoans() {
             const container = document.getElementById('view-container');
             const isAdmin = state.user.role === 'admin';
             const list = (state.loans || []).filter(l => isAdmin || String(l.employee_id).toUpperCase() === String(state.user.id).toUpperCase());
             container.innerHTML = `
                 <div class="animate-fade-in space-y-6 font-sans">
-                    <div class="flex justify-between items-center border-b pb-4 border-slate-100 font-sans text-slate-800 text-left"><h2 class="text-xl font-black uppercase tracking-widest">Finance Hub / Loans</h2><button onclick="promptLoan()" class="bg-green-700 text-white px-6 py-2 rounded-xl font-black text-[10px] uppercase shadow-lg">New Application</button></div>
+                    <div class="flex justify-between items-center border-b pb-4 border-slate-100 font-sans text-slate-800 text-left"><h2 class="text-xl font-black uppercase tracking-widest text-slate-800">Finance Hub / Loans</h2><button onclick="promptLoan()" class="bg-green-700 text-white px-6 py-2 rounded-xl font-black text-[10px] uppercase shadow-lg">New Application</button></div>
                     <div class="grid gap-4">
                         ${list.map(l => `
                             <div class="bg-white p-8 rounded-[2rem] border-2 border-slate-50 shadow-sm flex flex-col md:flex-row justify-between items-center gap-6">
@@ -642,6 +635,7 @@
             if(res.ok) { notify("Request Recorded."); await syncData(); renderLoans(); }
         }
 
+        // --- LEAVES ---
         function renderLeaves() {
             const container = document.getElementById('view-container');
             container.innerHTML = `
@@ -675,6 +669,7 @@
             if(res.ok) { notify("Request Synchronized."); await syncData(); state.leaveTab = 'history'; renderLeaves(); }
         }
 
+        // --- BOARD ---
         function renderDiscussion() {
             const container = document.getElementById('view-container');
             const isAdmin = state.user.role === 'admin';
@@ -735,7 +730,7 @@
                 if (found) {
                     state.user = found; localStorage.setItem('hr_user', JSON.stringify(found));
                     await syncData(); showApp();
-                } else alert("Verification Failed: identity mismatch.");
+                } else alert("Verification Failed.");
             } catch(e) { alert("Matrix Offline."); }
         });
 
