@@ -25,7 +25,6 @@ const db = mysql.createPool({
 });
 
 // --- DATABASE AUTO-INITIALIZATION ---
-// This ensures that the required tables exist so the "Refused" error doesn't occur.
 db.query(`
     CREATE TABLE IF NOT EXISTS payroll_posts (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -39,16 +38,13 @@ db.query(`
 
 // --- PAYROLL POSTING ENDPOINTS ---
 
-// Get all months that have been authorized for employee viewing
 app.get('/api/payroll-posted', (req, res) => {
     db.query('SELECT month_year FROM payroll_posts', (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
-        // Return a simple array of strings for easier frontend handling
         res.json(results.map(r => r.month_year));
     });
 });
 
-// Authorize a specific month (Publish)
 app.post('/api/payroll-post', (req, res) => {
     const { month } = req.body;
     if (!month) return res.status(400).json({ error: "Month is required" });
@@ -62,7 +58,6 @@ app.post('/api/payroll-post', (req, res) => {
     });
 });
 
-// Remove authorization for a month (Unpublish)
 app.delete('/api/payroll-post/:month', (req, res) => {
     db.query('DELETE FROM payroll_posts WHERE month_year = ?', [req.params.month], (err) => {
         if (err) {
@@ -75,7 +70,6 @@ app.delete('/api/payroll-post/:month', (req, res) => {
 
 // --- EMPLOYEE HUB ROUTES ---
 
-// Fetch all staff members
 app.get('/api/employees', (req, res) => {
     db.query('SELECT * FROM employees', (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -83,7 +77,6 @@ app.get('/api/employees', (req, res) => {
     });
 });
 
-// Create new staff identity
 app.post('/api/employees', (req, res) => {
     const data = req.body;
     db.query('INSERT INTO employees SET ?', data, (err) => {
@@ -92,7 +85,6 @@ app.post('/api/employees', (req, res) => {
     });
 });
 
-// Update profile or salary data (Used for both Directory and Salary Hub)
 app.put('/api/employees/:id', (req, res) => {
     const data = req.body;
     const fields = [
@@ -120,7 +112,6 @@ app.put('/api/employees/:id', (req, res) => {
     });
 });
 
-// Delete staff account
 app.delete('/api/employees/:id', (req, res) => {
     db.query('DELETE FROM employees WHERE id = ?', [req.params.id], (err) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -130,7 +121,6 @@ app.delete('/api/employees/:id', (req, res) => {
 
 // --- ATTENDANCE ROUTES ---
 
-// Fetch logs for specific employee
 app.get('/api/attendance/:id', (req, res) => {
     db.query('SELECT * FROM attendance WHERE employee_id = ? ORDER BY date_str DESC, time_str DESC', [req.params.id], (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -138,7 +128,6 @@ app.get('/api/attendance/:id', (req, res) => {
     });
 });
 
-// Fetch all logs (Admin Export)
 app.get('/api/attendance', (req, res) => {
     const query = `
         SELECT a.*, e.name as employee_name 
@@ -152,7 +141,6 @@ app.get('/api/attendance', (req, res) => {
     });
 });
 
-// Post new log
 app.post('/api/attendance', (req, res) => {
     const { employeeId, type, date, time, lat, lng } = req.body;
     db.query('INSERT INTO attendance (employee_id, type, date_str, time_str, latitude, longitude) VALUES (?, ?, ?, ?, ?, ?)', 
@@ -162,7 +150,6 @@ app.post('/api/attendance', (req, res) => {
     });
 });
 
-// Manual Log Adjustment (Admin)
 app.put('/api/attendance/:id', (req, res) => {
     const { type, time_str } = req.body;
     db.query('UPDATE attendance SET type = ?, time_str = ? WHERE id = ?', [type, time_str, req.params.id], (err) => {
