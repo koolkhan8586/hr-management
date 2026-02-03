@@ -1,20 +1,54 @@
+/**
+ * LSAF-HR MANAGEMENT SYSTEM - BACKEND SERVER
+ * Port: 5050
+ * Features: Staff Hub, PKT Attendance, Payroll Posting, Loan Management
+ * * DATABASE SCHEMA REQUIREMENTS:
+ * * CREATE TABLE IF NOT EXISTS employees (
+ * id VARCHAR(50) PRIMARY KEY,
+ * name VARCHAR(255),
+ * role ENUM('admin', 'employee') DEFAULT 'employee',
+ * email VARCHAR(255),
+ * password VARCHAR(255),
+ * leave_annual INT DEFAULT 14,
+ * leave_casual INT DEFAULT 10,
+ * basic_salary DECIMAL(15,2) DEFAULT 0,
+ * invigilation DECIMAL(15,2) DEFAULT 0,
+ * t_payment DECIMAL(15,2) DEFAULT 0,
+ * increment DECIMAL(15,2) DEFAULT 0,
+ * eidi DECIMAL(15,2) DEFAULT 0,
+ * extra_leaves_deduction DECIMAL(15,2) DEFAULT 0,
+ * tax DECIMAL(15,2) DEFAULT 0,
+ * loan_deduction DECIMAL(15,2) DEFAULT 0,
+ * insurance DECIMAL(15,2) DEFAULT 0,
+ * others_deduction DECIMAL(15,2) DEFAULT 0
+ * );
+ * * CREATE TABLE IF NOT EXISTS payroll_posts (
+ * id INT AUTO_INCREMENT PRIMARY KEY,
+ * month_year VARCHAR(10) UNIQUE, -- Format: YYYY-MM
+ * posted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+ * );
+ * * CREATE TABLE IF NOT EXISTS attendance (
+ * id INT AUTO_INCREMENT PRIMARY KEY,
+ * employee_id VARCHAR(50),
+ * type VARCHAR(20),
+ * date_str DATE,
+ * time_str VARCHAR(20),
+ * latitude DECIMAL(10,8),
+ * longitude DECIMAL(11,8),
+ * FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE
+ * );
+ */
+
 require('dotenv').config();
 const express = require('express');
 const mysql = require('mysql2');
 const cors = require('cors');
-const nodemailer = require('nodemailer');
-const path = require('path');
 
 const app = express();
-
-// Middleware
 app.use(cors());
 app.use(express.json());
 
-// Serve static files from the current directory (where index.html will be)
-app.use(express.static(__dirname));
-
-// 1. Database Connection
+// Database Connection
 const db = mysql.createPool({
     host: process.env.DB_HOST || 'localhost',
     user: process.env.DB_USER || 'root',
@@ -25,43 +59,37 @@ const db = mysql.createPool({
     queueLimit: 0
 });
 
-// 2. Email Configuration (Nodemailer)
-const transporter = nodemailer.createTransport({
-    service: 'gmail', 
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-    }
-});
+// --- PAYROLL POSTING ENDPOINTS ---
 
-/**
- * Global Email Sender Helper
- */
-const sendEmail = (to, subject, text) => {
-    if (!to || !process.env.EMAIL_USER || !to.includes('@')) {
-        console.log("Skipping email: Invalid recipient or missing server config.");
-        return;
-    }
-    const mailOptions = { 
-        from: `"LSAF-HR Portal" <${process.env.EMAIL_USER}>`, 
-        to, 
-        subject, 
-        text 
-    };
-    transporter.sendMail(mailOptions, (error, info) => {
-        if (error) console.error('Error sending email:', error);
-        else console.log('Email sent successfully to:', to);
+// Get all months that have been authorized for employee viewing
+app.get('/api/payroll-posted', (req, res) => {
+    db.query('SELECT month_year FROM payroll_posts', (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        // Return a simple array of strings for easier frontend handling
+        res.json(results.map(r => r.month_year));
     });
-};
-
-// --- API ROUTES ---
-
-// Route to serve the main frontend
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// 1. Get All Employees
+// Authorize a specific month
+app.post('/api/payroll-post', (req, res) => {
+    const { month } = req.body;
+    db.query('INSERT IGNORE INTO payroll_posts (month_year) VALUES (?)', [month], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ success: true, message: `Month ${month} published successfully.` });
+    });
+});
+
+// Remove authorization for a month
+app.delete('/api/payroll-post/:month', (req, res) => {
+    db.query('DELETE FROM payroll_posts WHERE month_year = ?', [req.params.month], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ success: true, message: `Month ${req.params.month} unpublished.` });
+    });
+});
+
+// --- EMPLOYEE HUB ROUTES ---
+
+// Fetch all staff members
 app.get('/api/employees', (req, res) => {
     db.query('SELECT * FROM employees', (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -69,119 +97,134 @@ app.get('/api/employees', (req, res) => {
     });
 });
 
-// 2. Add/Edit Employee (Staff Hub)
+// Create new staff identity
 app.post('/api/employees', (req, res) => {
-    const { id, name, role, email, password, leave_annual, leave_casual } = req.body;
-    const sql = `INSERT INTO employees (id, name, role, email, password, leave_annual, leave_casual) VALUES (?, ?, ?, ?, ?, ?, ?)`;
-    db.query(sql, [id, name, role, email, password, leave_annual, leave_casual], (err, result) => {
+    const data = req.body;
+    db.query('INSERT INTO employees SET ?', data, (err) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json({ success: true });
     });
 });
 
+// Update profile or salary data (Used for both Directory and Salary Hub)
 app.put('/api/employees/:id', (req, res) => {
-    const { name, role, email, password, leave_annual, leave_casual, basic_salary, others_allowance, invigilation, increment, eidi, tax, loan_deduction, insurance } = req.body;
-    const sql = `UPDATE employees SET name=?, role=?, email=?, password=?, leave_annual=?, leave_casual=?, basic_salary=?, others_allowance=?, invigilation=?, increment=?, eidi=?, tax=?, loan_deduction=?, insurance=? WHERE id=?`;
-    db.query(sql, [name, role, email, password, leave_annual, leave_casual, basic_salary, others_allowance, invigilation, increment, eidi, tax, loan_deduction, insurance, req.params.id], (err, result) => {
+    const data = req.body;
+    const fields = [
+        'name', 'role', 'email', 'password', 
+        'basic_salary', 'invigilation', 't_payment', 'increment', 'eidi',
+        'extra_leaves_deduction', 'tax', 'loan_deduction', 'insurance', 'others_deduction',
+        'leave_annual', 'leave_casual'
+    ];
+    
+    // Build update query dynamically based on provided fields
+    const updates = [];
+    const values = [];
+    
+    fields.forEach(field => {
+        if (data[field] !== undefined) {
+            updates.push(`${field} = ?`);
+            values.push(data[field]);
+        }
+    });
+
+    if (updates.length === 0) return res.json({ message: "No fields to update" });
+
+    db.query(`UPDATE employees SET ${updates.join(', ')} WHERE id = ?`, [...values, req.params.id], (err) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json({ success: true });
     });
 });
 
-// 3. Attendance Logic (Enhanced for Exports)
+// Delete staff account
+app.delete('/api/employees/:id', (req, res) => {
+    db.query('DELETE FROM employees WHERE id = ?', [req.params.id], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ success: true });
+    });
+});
 
-// Admin View: Get ALL attendance records for all employees
+// --- ATTENDANCE ROUTES ---
+
+// Fetch logs for specific employee
+app.get('/api/attendance/:id', (req, res) => {
+    db.query('SELECT * FROM attendance WHERE employee_id = ? ORDER BY date_str DESC, time_str DESC', [req.params.id], (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(results);
+    });
+});
+
+// Fetch all logs (Admin Export)
 app.get('/api/attendance', (req, res) => {
-    const sql = `
+    const query = `
         SELECT a.*, e.name as employee_name 
         FROM attendance a 
         JOIN employees e ON a.employee_id = e.id 
-        ORDER BY a.date_str DESC, a.time_str DESC
+        ORDER BY a.date_str DESC
     `;
-    db.query(sql, (err, results) => {
+    db.query(query, (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json(results);
     });
 });
 
-// Record Attendance session
+// Post new log
 app.post('/api/attendance', (req, res) => {
     const { employeeId, type, date, time, lat, lng } = req.body;
-    
-    const sqlInsert = `INSERT INTO attendance (employee_id, type, date_str, time_str, latitude, longitude) VALUES (?, ?, ?, ?, ?, ?)`;
-    db.query(sqlInsert, [employeeId, type, date, time, lat, lng], (err, result) => {
-        if (err) return res.status(500).json({ error: err.message });
-
-        // Email Trigger
-        db.query('SELECT email, name FROM employees WHERE id = ?', [employeeId], (err, rows) => {
-            if (!err && rows.length > 0 && rows[0].email) {
-                const subject = `LSAF-HR: Attendance ${type} Notification`;
-                const message = `Hello ${rows[0].name},\n\nThis is a confirmation that you have successfully logged a "${type}" at ${time} on ${date}.\n\nLocation: ${lat}, ${lng}.`;
-                sendEmail(rows[0].email, subject, message);
-            }
-        });
-
-        res.json({ message: 'Attendance logged' });
-    });
-});
-
-// Specific Employee View (For self-export)
-app.get('/api/attendance/:employeeId', (req, res) => {
-    db.query(`SELECT * FROM attendance WHERE employee_id = ? ORDER BY date_str DESC, time_str DESC`, [req.params.employeeId], (err, results) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json(results);
-    });
-});
-
-// 4. Leave Management
-app.post('/api/leaves', (req, res) => {
-    const { employeeId, type, startDate, days, reason } = req.body;
-    const sql = `INSERT INTO leaves (employee_id, leave_type, start_date, days, reason, status) VALUES (?, ?, ?, ?, ?, 'Pending')`;
-    db.query(sql, [employeeId, type, startDate, days, reason], (err, result) => {
+    db.query('INSERT INTO attendance (employee_id, type, date_str, time_str, latitude, longitude) VALUES (?, ?, ?, ?, ?, ?)', 
+    [employeeId, type, date, time, lat, lng], (err) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json({ success: true });
     });
 });
 
-app.get('/api/leaves/:employeeId', (req, res) => {
-    db.query('SELECT * FROM leaves WHERE employee_id = ? ORDER BY start_date DESC', [req.params.employeeId], (err, results) => {
+// Manual Log Adjustment (Admin)
+app.put('/api/attendance/:id', (req, res) => {
+    const { type, time_str } = req.body;
+    db.query('UPDATE attendance SET type = ?, time_str = ? WHERE id = ?', [type, time_str, req.params.id], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ success: true });
+    });
+});
+
+// --- LOAN & DISCUSSION ROUTES ---
+
+app.get('/api/loans', (req, res) => {
+    db.query('SELECT l.*, e.name as employee_name FROM loans l JOIN employees e ON l.employee_id = e.id', (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json(results);
     });
 });
 
-// 5. Discussion Board
-app.get('/api/discussions', (req, res) => {
-    db.query('SELECT * FROM discussions ORDER BY id DESC', (err, posts) => {
+app.post('/api/loans', (req, res) => {
+    const { employeeId, totalAmount, reason } = req.body;
+    db.query('INSERT INTO loans (employee_id, total_amount, reason, status, date_granted) VALUES (?, ?, ?, "Pending", NOW())', 
+    [employeeId, totalAmount, reason], (err) => {
         if (err) return res.status(500).json({ error: err.message });
-        db.query('SELECT * FROM replies ORDER BY date ASC', (err, replies) => {
-            const data = (posts || []).map(p => ({
-                ...p,
-                replies: replies ? replies.filter(r => r.discussionId === p.id) : []
-            }));
-            res.json(data);
-        });
+        res.json({ success: true });
+    });
+});
+
+app.get('/api/discussions', (req, res) => {
+    db.query('SELECT * FROM discussions ORDER BY id DESC', (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(results);
     });
 });
 
 app.post('/api/discussions', (req, res) => {
-    const { title, message, senderName, senderId, recipientId, date } = req.body;
-    const sql = `INSERT INTO discussions (title, message, senderName, senderId, recipientId, date) VALUES (?, ?, ?, ?, ?, ?)`;
-    db.query(sql, [title, message, senderName, senderId, recipientId, date], (err, result) => {
+    const { title, message, senderName, senderId, date } = req.body;
+    db.query('INSERT INTO discussions (title, message, senderName, senderId, date) VALUES (?, ?, ?, ?, ?)', 
+    [title, message, senderName, senderId, date], (err) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json({ success: true });
     });
 });
 
-// 6. Loans
-app.get('/api/loans', (req, res) => {
-    db.query(`SELECT l.*, e.name as employee_name FROM loans l JOIN employees e ON l.employee_id = e.id`, (err, results) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json(results);
-    });
-});
-
-const PORT = process.env.PORT || 5050;
+// SERVER START
+const PORT = 5050;
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    console.log(`-------------------------------------------`);
+    console.log(`LSAF NexusHR Backend Active on Port ${PORT}`);
+    console.log(`PKT Timezone Synchronization: Active`);
+    console.log(`-------------------------------------------`);
 });
