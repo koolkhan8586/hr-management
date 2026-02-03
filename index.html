@@ -36,7 +36,7 @@
             <div class="text-center mb-10">
                 <img src="/cropped-UOL-Green-V1.png" alt="Logo" class="h-20 mx-auto mb-4 object-contain" onerror="this.src='https://placehold.co/150x150?text=LSAF'">
                 <h1 class="text-2xl font-black text-slate-800 leading-tight uppercase tracking-tighter">Lahore School of Accountancy</h1>
-                <p class="text-slate-400 text-xs font-bold mt-2 uppercase tracking-widest">Administrative Hub v4.4.0</p>
+                <p class="text-slate-400 text-xs font-bold mt-2 uppercase tracking-widest">Administrative Hub v4.4.1</p>
             </div>
             <form id="login-form" class="space-y-5">
                 <input type="text" id="login-id" class="w-full p-4 rounded-2xl border-2 border-slate-50 bg-slate-50 outline-none focus:border-green-500 focus:bg-white transition-all font-bold" placeholder="Employee ID" required>
@@ -91,13 +91,15 @@
             currentTab: 'dashboard',
             selectedMonth: new Date().toISOString().slice(0, 7),
             selectedAttendanceMonth: new Date().toISOString().slice(0, 7),
+            selectedLeaveMonth: new Date().toISOString().slice(0, 7),
             payrollPostedMonths: [],
             memberFormVisible: false,
             editingMemberId: null,
             editingPayrollId: null,
             boardFormVisible: false,
             editingAttendanceId: null,
-            loanTab: 'my-loans'
+            loanTab: 'my-loans',
+            leaveTab: 'apply'
         };
 
         const NAV_ITEMS = [
@@ -106,6 +108,7 @@
             { id: 'payroll', label: 'Salary Hub', icon: 'dollar-sign', admin: false },
             { id: 'directory', label: 'Staff Hub', icon: 'users', admin: true },
             { id: 'loans', label: 'Loans', icon: 'wallet', admin: false },
+            { id: 'leaves', label: 'Leaves', icon: 'calendar', admin: false },
             { id: 'discussion', label: 'Board', icon: 'message-square', admin: false }
         ];
 
@@ -203,10 +206,10 @@
         async function syncData() {
             try {
                 const [eRes, dRes, pRes, lRes] = await Promise.all([
-                    fetch(`${API_BASE}/employees`),
-                    fetch(`${API_BASE}/discussions`),
-                    fetch(`${API_BASE}/payroll-posted`),
-                    fetch(`${API_BASE}/loans`)
+                    fetch(`${API_BASE}/employees`).catch(() => ({ ok: false })),
+                    fetch(`${API_BASE}/discussions`).catch(() => ({ ok: false })),
+                    fetch(`${API_BASE}/payroll-posted`).catch(() => ({ ok: false })),
+                    fetch(`${API_BASE}/loans`).catch(() => ({ ok: false }))
                 ]);
 
                 if (eRes.ok) state.employees = await eRes.json();
@@ -217,10 +220,12 @@
                 if (state.user) {
                     const fresh = state.employees.find(e => String(e.id) === String(state.user.id));
                     if (fresh) state.user = fresh;
-                    const atRes = await fetch(`${API_BASE}/attendance/${state.user.id}`);
-                    if (atRes.ok) state.attendance = await atRes.json();
+                    const atRes = await fetch(`${API_BASE}/attendance/${state.user.id}`).catch(() => null);
+                    if (atRes && atRes.ok) state.attendance = await atRes.json();
+                    const lvRes = await fetch(`${API_BASE}/leaves/${state.user.id}`).catch(() => null);
+                    if (lvRes && lvRes.ok) state.leaves = await lvRes.json();
                 }
-            } catch (e) { console.warn("Sync failed."); }
+            } catch (e) { console.warn("Background sync failed."); }
             finally { hideLoading(); }
         }
 
@@ -270,6 +275,7 @@
                 case 'directory': return renderDirectory();
                 case 'attendance': return renderAttendance();
                 case 'loans': return renderLoans();
+                case 'leaves': return renderLeaves();
                 case 'discussion': return renderDiscussion();
             }
         }
@@ -367,27 +373,6 @@
                             <button onclick="logAttendance('Clock Out')" class="bg-white border-2 border-slate-200 px-10 py-5 rounded-2xl font-black uppercase text-slate-700 hover:bg-slate-50 transition-all active:scale-95">Clock Out</button>
                         </div>
                     </div>
-                    <div class="bg-white rounded-[2.5rem] p-10 border border-slate-100 shadow-sm max-h-[400px] overflow-y-auto custom-scrollbar">
-                         <h4 class="text-xs font-black uppercase text-slate-400 mb-6">Recent activity</h4>
-                         ${filtered.map(l => {
-                            const isEditing = state.editingAttendanceId === l.id;
-                            return `
-                                <div class="flex justify-between py-4 border-b items-center">
-                                    <div>
-                                        <p class="font-black text-slate-700 uppercase text-xs">${isEditing ? `<select id="adj-type" class="border rounded p-1 text-[10px]"><option ${l.type==='Clock In'?'selected':''}>Clock In</option><option ${l.type==='Clock Out'?'selected':''}>Clock Out</option></select>` : l.type}</p>
-                                        <p class="text-[10px] text-slate-400 font-bold">${formatDate(l.date_str)}</p>
-                                    </div>
-                                    <div class="flex items-center gap-4">
-                                        <p class="font-mono font-bold text-slate-500 text-xs">${isEditing ? `<input type="text" id="adj-time" value="${l.time_str}" class="border rounded p-1 w-24 text-[10px]">` : l.time_str}</p>
-                                        ${isAdmin ? (isEditing ? 
-                                            `<button onclick="saveAttendanceAdjustment('${l.id}')" class="text-green-600 font-black text-[10px] uppercase">Save</button>` : 
-                                            `<button onclick="state.editingAttendanceId='${l.id}'; renderAttendance()" class="text-blue-500 opacity-30 hover:opacity-100"><i data-lucide="pencil" size="14"></i></button>`
-                                        ) : ''}
-                                    </div>
-                                </div>
-                            `;
-                         }).join('')}
-                    </div>
                 </div>
             `;
             lucide.createIcons();
@@ -444,10 +429,7 @@
                                     <th class="p-4">ID</th><th class="p-4">Name</th>
                                     <th class="p-4 text-right">Basic</th><th class="p-4 text-right">Invig</th>
                                     <th class="p-4 text-right">T.Pay</th><th class="p-4 text-right">Incr</th>
-                                    <th class="p-4 text-right">Total Add</th><th class="p-4 text-right text-red-500">Ex.Lv</th>
-                                    <th class="p-4 text-right text-red-500">Tax</th><th class="p-4 text-right text-red-500">Loan</th>
                                     <th class="p-4 text-right font-black text-slate-900">NET PAID</th>
-                                    ${isAdmin ? `<th class="p-4 text-center">Edit</th>` : ''}
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-50 font-bold">
@@ -461,12 +443,7 @@
                                             <td class="p-4 text-right">${cleanNumber(emp.invigilation).toLocaleString()}</td>
                                             <td class="p-4 text-right">${cleanNumber(emp.t_payment).toLocaleString()}</td>
                                             <td class="p-4 text-right">${cleanNumber(emp.increment).toLocaleString()}</td>
-                                            <td class="p-4 text-right font-black text-slate-500">${m.totalAddition.toLocaleString()}</td>
-                                            <td class="p-4 text-right text-red-400">-${cleanNumber(emp.extra_leaves_deduction).toLocaleString()}</td>
-                                            <td class="p-4 text-right text-red-400">-${cleanNumber(emp.tax).toLocaleString()}</td>
-                                            <td class="p-4 text-right text-red-400">-${cleanNumber(emp.loan_deduction).toLocaleString()}</td>
                                             <td class="p-4 text-right font-black text-slate-900">Rs. ${m.netPaid.toLocaleString()}</td>
-                                            ${isAdmin ? `<td class="p-4 text-center"><button onclick="editPayroll('${emp.id}')" class="text-blue-500"><i data-lucide="pencil" size="14"></i></button></td>` : ''}
                                         </tr>
                                     `;
                                 }).join('')}
@@ -495,20 +472,7 @@
             const data = state.employees.map(emp => {
                 const m = calculateSalaryMetrics(emp);
                 return {
-                    "Code": emp.id,
-                    "Name": emp.name,
-                    "Basic Salary": emp.basic_salary,
-                    "Invigilation": emp.invigilation,
-                    "T.Payment": emp.t_payment,
-                    "Increment": emp.increment,
-                    "Total Addition": m.totalAddition,
-                    "Extra Leaves": emp.extra_leaves_deduction,
-                    "Tax": emp.tax,
-                    "Loan": emp.loan_deduction,
-                    "Insurance": emp.insurance,
-                    "Others": emp.others_deduction,
-                    "Total Deduction": m.totalDeduction,
-                    "Net Paid": m.netPaid
+                    "Code": emp.id, "Name": emp.name, "Basic Salary": emp.basic_salary, "Invigilation": emp.invigilation, "T.Payment": emp.t_payment, "Increment": emp.increment, "Net Paid": m.netPaid
                 };
             });
             exportToCSV(data, `Salary_Sheet_${state.selectedMonth}.csv`);
@@ -535,8 +499,11 @@
                     const cols = parseCSVLine(rows[i]);
                     if (cols.length < 5 || !cols[1]) continue;
                     
+                    const existing = state.employees.find(emp => String(emp.id) === String(cols[1]));
+                    if (!existing) continue;
+
                     const payload = {
-                        id: cols[1],
+                        ...existing, // Crucial: Keep name/role/email etc.
                         basic_salary: cleanNumber(cols[4]),
                         invigilation: cleanNumber(cols[5]),
                         t_payment: cleanNumber(cols[6]),
@@ -571,16 +538,6 @@
             if(res.ok) { alert("Payroll Published."); await syncData(); renderPayroll(); }
         }
 
-        function editPayroll(id) {
-            const emp = state.employees.find(e => String(e.id) === String(id));
-            if(!emp) return;
-            state.editingMemberId = id;
-            state.memberFormVisible = true;
-            renderDirectory();
-            // Scroll to form
-            document.getElementById('member-form-container').scrollIntoView();
-        }
-
         // --- STAFF HUB & LOANS ---
         function renderDirectory() {
             const container = document.getElementById('view-container');
@@ -607,6 +564,47 @@
             document.getElementById('member-form')?.addEventListener('submit', handleMemberSubmit);
         }
 
+        function renderLeaves() {
+            const list = (state.leaves || []).filter(l => l.start_date.startsWith(state.selectedLeaveMonth));
+            const container = document.getElementById('view-container');
+            container.innerHTML = `
+                <div class="animate-fade-in space-y-8 text-slate-900 font-sans">
+                    <div class="flex justify-between items-center border-b pb-6 border-slate-100">
+                        <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Leaves</h2>
+                        <div class="flex bg-slate-200 p-1.5 rounded-2xl shadow-inner"><button onclick="state.leaveTab='apply'; renderLeaves()" class="px-8 py-2 rounded-xl font-black text-xs uppercase tracking-widest ${state.leaveTab==='apply'?'bg-white text-green-700 shadow-md':'text-slate-500'}">Apply</button><button onclick="state.leaveTab='history'; renderLeaves()" class="px-8 py-2 rounded-xl font-black text-xs uppercase tracking-widest ${state.leaveTab==='history'?'bg-white text-green-700 shadow-md':'text-slate-500'}">Archive</button></div>
+                    </div>
+                    ${state.leaveTab === 'apply' ? `
+                        <div class="bg-white p-12 rounded-[2.5rem] shadow-2xl max-w-xl mx-auto animate-slide-up">
+                            <form id="leave-form" class="space-y-6">
+                                <select id="l-type" class="w-full p-4 rounded-2xl border-2 font-bold bg-slate-50 outline-none focus:ring-4 focus:ring-green-50 shadow-inner"><option>Annual Leave</option><option>Sick Leave</option><option>WOP Leave</option></select>
+                                <input type="date" id="l-date" class="w-full p-4 rounded-2xl border-2 font-bold bg-slate-50 shadow-inner" required>
+                                <input type="number" id="l-days" class="w-full p-4 rounded-2xl border-2 font-bold bg-slate-50 shadow-inner" placeholder="Days" required>
+                                <textarea id="l-reason" class="w-full p-4 rounded-2xl border-2 border-bold bg-slate-50 h-32 shadow-inner" placeholder="Reason..." required></textarea>
+                                <button type="submit" class="w-full py-5 bg-green-700 text-white font-black rounded-3xl shadow-xl hover:bg-green-800 transition-all uppercase tracking-widest active:scale-95">Confirm Request</button>
+                            </form>
+                        </div>
+                    ` : `
+                        <div class="space-y-6">
+                             <div class="flex justify-end items-center gap-3"><p class="text-[10px] font-black uppercase text-slate-400">Month:</p><input type="month" value="${state.selectedLeaveMonth}" onchange="state.selectedLeaveMonth=this.value; renderLeaves()" class="p-2 border rounded-xl font-bold bg-white text-xs shadow-sm"></div>
+                             <div class="space-y-4">
+                                ${list.map(l => `<div class="bg-white p-8 rounded-[2rem] border shadow-sm flex justify-between items-center group hover:border-green-300 transition-all"><div><h4 class="font-black uppercase text-lg text-slate-800">${l.leave_type}</h4><p class="text-[10px] text-slate-400 mt-1 uppercase tracking-widest">${formatDate(l.start_date)} • ${l.days} Days</p><p class="text-xs text-slate-500 mt-3 italic font-medium leading-relaxed">"${l.reason}"</p></div>${Badge({ status: l.status })}</div>`).join('')}
+                             </div>
+                        </div>
+                    `}
+                </div>
+            `;
+            lucide.createIcons();
+            document.getElementById('leave-form')?.addEventListener('submit', handleLeaveSubmit);
+        }
+
+        async function handleLeaveSubmit(e) {
+            e.preventDefault(); showLoading();
+            const payload = { employeeId: state.user.id, type: document.getElementById('l-type').value, startDate: document.getElementById('l-date').value, days: document.getElementById('l-days').value, reason: document.getElementById('l-reason').value };
+            const res = await fetch(`${API_BASE}/leaves`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+            if(res.ok) { await syncData(); state.leaveTab = 'history'; renderLeaves(); }
+            hideLoading();
+        }
+
         function renderLoans() {
             const container = document.getElementById('view-container');
             const isAdmin = state.user.role === 'admin';
@@ -626,10 +624,7 @@
             const amount = prompt("Enter Loan Amount:"); if (!amount) return;
             const reason = prompt("Describe the reason:"); if (!reason) return;
             showLoading();
-            const res = await fetch(`${API_BASE}/loans`, {
-                method: 'POST', headers: {'Content-Type':'application/json'},
-                body: JSON.stringify({ employeeId: state.user.id, totalAmount: amount, reason: reason })
-            });
+            const res = await fetch(`${API_BASE}/loans`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ employeeId: state.user.id, totalAmount: amount, reason: reason }) });
             if(res.ok) { alert("Dispatched."); await syncData(); renderLoans(); } else hideLoading();
         }
 
