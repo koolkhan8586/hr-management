@@ -48,7 +48,7 @@
             <div class="text-center mb-10">
                 <img src="/cropped-UOL-Green-V1.png" alt="Logo" class="h-20 mx-auto mb-4 object-contain" onerror="this.src='https://placehold.co/150x150?text=LSAF'">
                 <h1 class="text-2xl font-black text-slate-800 leading-tight uppercase tracking-tighter">Lahore School of Accountancy</h1>
-                <p class="text-slate-400 text-xs font-bold mt-2 uppercase tracking-widest">Administrative Hub v4.4.2</p>
+                <p class="text-slate-400 text-xs font-bold mt-2 uppercase tracking-widest">Administrative Hub v4.4.5</p>
             </div>
             <form id="login-form" class="space-y-5">
                 <div class="space-y-1">
@@ -324,7 +324,7 @@
             container.innerHTML = `
                 <div class="animate-fade-in space-y-8">
                     <div class="flex justify-between items-center">
-                        <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Portal Home</h2>
+                        <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase font-sans">Dashboard</h2>
                         <div class="bg-white p-4 rounded-2xl border shadow-sm text-right">
                             <p class="text-[10px] font-black text-slate-400 uppercase">Pakistan Standard Time (PKT)</p>
                             <p class="text-green-700 font-black">${getPktTime()}</p>
@@ -332,12 +332,12 @@
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 font-sans">
                         <div class="bg-green-700 p-8 rounded-[2rem] text-white shadow-xl">
-                            <p class="text-[10px] font-black uppercase opacity-60">Identity Status</p>
-                            <p class="text-3xl font-black mt-2">ACTIVE</p>
+                            <p class="text-[10px] font-black uppercase opacity-60">Status</p>
+                            <p class="text-3xl font-black mt-2 uppercase">${(state.attendance && state.attendance[0]?.type === 'Clock In') ? 'Active' : 'Offline'}</p>
                         </div>
-                        <div class="bg-white p-8 rounded-[2rem] border shadow-sm">
-                            <p class="text-[10px] font-black text-slate-400 uppercase">Annual Leaves</p>
-                            <p class="text-3xl font-black text-slate-800 mt-2">${annual} Days</p>
+                        <div class="bg-gradient-to-br from-blue-600 to-blue-700 p-8 rounded-[2rem] text-white shadow-xl">
+                            <p class="text-[10px] font-black uppercase opacity-60">Leaves Bal</p>
+                            <p class="text-3xl font-black mt-2">${annual} Days</p>
                         </div>
                         <div class="bg-white p-8 rounded-[2rem] border shadow-sm">
                             <p class="text-[10px] font-black text-slate-400 uppercase">Verification</p>
@@ -477,15 +477,35 @@
         async function postSalary() {
             if(!confirm(`Publish salary data for ${state.selectedMonth}?`)) return;
             showLoading();
-            const res = await fetch(`${API_BASE}/payroll-post`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ month: state.selectedMonth }) });
-            if(res.ok) { notify("Data Published."); await syncData(); renderPayroll(); } else hideLoading();
+            try {
+                const res = await fetch(`${API_BASE}/payroll-post`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ month: state.selectedMonth }) });
+                if(res.ok) { 
+                    alert("Status: Broadcast Published."); 
+                    await syncData(); 
+                    renderPayroll(); 
+                } else {
+                    alert("Error: Server refused publishing command.");
+                }
+            } catch(e) {
+                alert("Error: Connection failure.");
+            } finally { hideLoading(); }
         }
 
         async function unpostSalary() {
             if(!confirm("Hiding salary visibility for " + state.selectedMonth + "?")) return;
             showLoading();
-            const res = await fetch(`${API_BASE}/payroll-post/${state.selectedMonth}`, { method: 'DELETE' });
-            if(res.ok) { notify("Unpublished."); await syncData(); renderPayroll(); } else hideLoading();
+            try {
+                const res = await fetch(`${API_BASE}/payroll-post/${state.selectedMonth}`, { method: 'DELETE' });
+                if(res.ok) { 
+                    alert("Status: Month Unpublished."); 
+                    await syncData(); 
+                    renderPayroll(); 
+                } else {
+                    alert("Error: Server refused unpublishing command.");
+                }
+            } catch(e) {
+                alert("Error: Connection failure.");
+            } finally { hideLoading(); }
         }
 
         async function purgeSalaryData() {
@@ -516,7 +536,7 @@
         }
 
         async function deleteIndividualSalary(id) {
-            if(!confirm("Reset salary data for employee " + id + "?")) return;
+            if(!confirm("Reset salary data for employee " + id + " for current period?")) return;
             showLoading();
             const emp = state.employees.find(e => String(e.id) === String(id));
             const payload = { ...emp, basic_salary: 0, invigilation: 0, t_payment: 0, increment: 0, extra_leaves_deduction: 0, tax: 0, loan_deduction: 0, insurance: 0, others_deduction: 0 };
@@ -537,7 +557,7 @@
             container.innerHTML = `
                 <div class="animate-fade-in space-y-8">
                     <div class="flex flex-col md:flex-row justify-between items-center gap-6">
-                        <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase font-sans">Salary Hub</h2>
+                        <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase font-sans">Salary Matrix</h2>
                         <div class="flex flex-wrap gap-3 justify-center">
                             <input type="month" id="month-picker" value="${state.selectedMonth}" onchange="state.selectedMonth=this.value; renderPayroll()" class="p-3 border-2 rounded-2xl font-black bg-white shadow-sm outline-none">
                             ${isAdmin ? `
@@ -570,8 +590,7 @@
                                         <th class="p-4">ID</th><th class="p-4">Name</th>
                                         <th class="p-4 text-right">Basic</th><th class="p-4 text-right">Invig</th>
                                         <th class="p-4 text-right">T.Pay</th><th class="p-4 text-right">Incr</th>
-                                        <th class="p-4 text-right">Total Add</th><th class="p-4 text-right text-red-500">Ex.Lv</th>
-                                        <th class="p-4 text-right text-red-500">Tax</th><th class="p-4 text-right text-red-500">Loan</th>
+                                        <th class="p-4 text-right">Insurance</th><th class="p-4 text-right">Others</th>
                                         <th class="p-4 text-right font-black text-slate-900 uppercase">Net Paid</th>
                                         ${isAdmin ? `<th class="p-4 text-center">Edit</th>` : ''}
                                     </tr>
@@ -589,10 +608,8 @@
                                                 <td class="p-4 text-right">${isEditing ? `<input type="number" class="w-16 p-1 border rounded" value="${target.invigilation}" onchange="state.tempSalaryForm.invigilation=this.value">` : cleanNumber(emp.invigilation).toLocaleString()}</td>
                                                 <td class="p-4 text-right">${isEditing ? `<input type="number" class="w-16 p-1 border rounded" value="${target.t_payment}" onchange="state.tempSalaryForm.t_payment=this.value">` : cleanNumber(emp.t_payment).toLocaleString()}</td>
                                                 <td class="p-4 text-right">${isEditing ? `<input type="number" class="w-16 p-1 border rounded" value="${target.increment}" onchange="state.tempSalaryForm.increment=this.value">` : cleanNumber(emp.increment).toLocaleString()}</td>
-                                                <td class="p-4 text-right font-black text-slate-500">${m.totalAddition.toLocaleString()}</td>
-                                                <td class="p-4 text-right text-red-400">-${cleanNumber(emp.extra_leaves_deduction).toLocaleString()}</td>
-                                                <td class="p-4 text-right text-red-400">-${cleanNumber(emp.tax).toLocaleString()}</td>
-                                                <td class="p-4 text-right text-red-400">-${cleanNumber(emp.loan_deduction).toLocaleString()}</td>
+                                                <td class="p-4 text-right">${isEditing ? `<input type="number" class="w-16 p-1 border rounded" value="${target.insurance}" onchange="state.tempSalaryForm.insurance=this.value">` : cleanNumber(emp.insurance).toLocaleString()}</td>
+                                                <td class="p-4 text-right">${isEditing ? `<input type="number" class="w-16 p-1 border rounded" value="${target.others_deduction}" onchange="state.tempSalaryForm.others_deduction=this.value">` : cleanNumber(emp.others_deduction).toLocaleString()}</td>
                                                 <td class="p-4 text-right font-black text-slate-900">Rs. ${m.netPaid.toLocaleString()}</td>
                                                 ${isAdmin ? `
                                                     <td class="p-4 text-center">
@@ -730,7 +747,7 @@
 
         async function applyLoanPrompt() {
             const amount = prompt("Enter Loan Amount:"); if (!amount) return;
-            const reason = prompt("Reason for request:"); if (!reason) return;
+            const reason = prompt("Describe the reason for this loan request:"); if (!reason) return;
             showLoading();
             const res = await fetch(`${API_BASE}/loans`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ employeeId: state.user.id, totalAmount: amount, reason: reason }) });
             if(res.ok) { notify("Dispatched."); await syncData(); renderLoans(); } else hideLoading();
