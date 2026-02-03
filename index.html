@@ -113,10 +113,25 @@
         function getPktTime() { return new Date().toLocaleTimeString('en-US', { timeZone: 'Asia/Karachi', hour: '2-digit', minute: '2-digit', hour12: true }); }
         function getPktDate() { return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Karachi' }); }
         function formatDate(dateString) { if (!dateString) return 'N/A'; const date = new Date(dateString); return isNaN(date.getTime()) ? 'N/A' : date.toLocaleDateString(); }
-        function cleanNumber(val) { const num = parseFloat(String(val || 0).replace(/,/g, '').trim()); return isNaN(num) ? 0 : num; }
+        function cleanNumber(val) { const num = parseFloat(String(val || 0).replace(/[^0-9.-]+/g, '').trim()); return isNaN(num) ? 0 : num; }
         function getInitial(name) { return name ? String(name).charAt(0).toUpperCase() : '?'; }
 
-        // --- SALARY CALCULATION (Exact Excel Mapping) ---
+        // --- Robust CSV Splitter ---
+        function parseCSVLine(text) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+            for (let i = 0; i < text.length; i++) {
+                const char = text[i];
+                if (char === '"') inQuotes = !inQuotes;
+                else if (char === ',' && !inQuotes) { result.push(current.trim()); current = ''; }
+                else current += char;
+            }
+            result.push(current.trim());
+            return result;
+        }
+
+        // --- SALARY CALCULATION (Matches Excel Structure) ---
         function calculateSalaryMetrics(emp) {
             const basic = cleanNumber(emp.basic_salary);
             const invigilation = cleanNumber(emp.invigilation);
@@ -346,6 +361,7 @@
                     </div>
                     <div class="bg-white rounded-[2.5rem] py-16 flex flex-col items-center border shadow-2xl">
                         <h3 class="text-6xl font-black text-slate-800 font-mono mb-10">${getPktTime()}</h3>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase mb-10 tracking-widest">Pakistan Standard Time (PKT)</p>
                         <div class="flex gap-4">
                             <button onclick="logAttendance('Clock In')" class="bg-green-700 text-white px-10 py-5 rounded-2xl font-black uppercase shadow-xl hover:bg-green-800 active:scale-95 transition-all">Clock In</button>
                             <button onclick="logAttendance('Clock Out')" class="bg-white border-2 border-slate-200 px-10 py-5 rounded-2xl font-black uppercase text-slate-700 hover:bg-slate-50 transition-all active:scale-95">Clock Out</button>
@@ -412,10 +428,12 @@
                                 <button onclick="postSalary()" class="bg-slate-900 text-white px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl">
                                     ${isPosted ? 'PUBLISHED' : 'PUBLISH DATA'}
                                 </button>
+                                <button onclick="downloadSalaryTemplate()" class="bg-white border-2 px-6 py-3 rounded-2xl font-black text-[10px] uppercase hover:bg-slate-50">TEMPLATE</button>
                                 <label class="bg-white border-2 px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest cursor-pointer shadow-sm">
                                     IMPORT <input type="file" onchange="importSalaryCSV(this)" class="hidden">
                                 </label>
                             ` : ''}
+                            <button onclick="exportSalaryCSV()" class="bg-green-50 text-green-700 px-6 py-3 rounded-2xl font-black text-[10px] uppercase">EXPORT</button>
                         </div>
                     </div>
 
@@ -429,6 +447,7 @@
                                     <th class="p-4 text-right">Total Add</th><th class="p-4 text-right text-red-500">Ex.Lv</th>
                                     <th class="p-4 text-right text-red-500">Tax</th><th class="p-4 text-right text-red-500">Loan</th>
                                     <th class="p-4 text-right font-black text-slate-900">NET PAID</th>
+                                    ${isAdmin ? `<th class="p-4 text-center">Edit</th>` : ''}
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-50 font-bold">
@@ -436,7 +455,7 @@
                                     const m = calculateSalaryMetrics(emp);
                                     return `
                                         <tr>
-                                            <td class="p-4 font-black">${emp.id}</td>
+                                            <td class="p-4 font-black text-slate-900">${emp.id}</td>
                                             <td class="p-4 uppercase truncate max-w-[120px]">${emp.name}</td>
                                             <td class="p-4 text-right">${cleanNumber(emp.basic_salary).toLocaleString()}</td>
                                             <td class="p-4 text-right">${cleanNumber(emp.invigilation).toLocaleString()}</td>
@@ -447,6 +466,7 @@
                                             <td class="p-4 text-right text-red-400">-${cleanNumber(emp.tax).toLocaleString()}</td>
                                             <td class="p-4 text-right text-red-400">-${cleanNumber(emp.loan_deduction).toLocaleString()}</td>
                                             <td class="p-4 text-right font-black text-slate-900">Rs. ${m.netPaid.toLocaleString()}</td>
+                                            ${isAdmin ? `<td class="p-4 text-center"><button onclick="editPayroll('${emp.id}')" class="text-blue-500"><i data-lucide="pencil" size="14"></i></button></td>` : ''}
                                         </tr>
                                     `;
                                 }).join('')}
@@ -458,11 +478,46 @@
             lucide.createIcons();
         }
 
+        function downloadSalaryTemplate() {
+            const headers = "Sr.No,Code,Name,DOJ,Salary & Wages,Invigilation,T.payment,Increament,Total Addition, Extra Leaves ,Tax,Loan,Insurance 7,others,Total Deduction,Total salary Paid";
+            const row = "1,EMP001,Employee Name,2025-01-01,60000,0,0,0,60000,0,0,0,0,0,0,60000";
+            const csvContent = "data:text/csv;charset=utf-8," + "University of Lahore Salary Import Template\n" + headers + "\n" + row;
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "LSAF_Salary_Template.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        async function exportSalaryCSV() {
+            const data = state.employees.map(emp => {
+                const m = calculateSalaryMetrics(emp);
+                return {
+                    "Code": emp.id,
+                    "Name": emp.name,
+                    "Basic Salary": emp.basic_salary,
+                    "Invigilation": emp.invigilation,
+                    "T.Payment": emp.t_payment,
+                    "Increment": emp.increment,
+                    "Total Addition": m.totalAddition,
+                    "Extra Leaves": emp.extra_leaves_deduction,
+                    "Tax": emp.tax,
+                    "Loan": emp.loan_deduction,
+                    "Insurance": emp.insurance,
+                    "Others": emp.others_deduction,
+                    "Total Deduction": m.totalDeduction,
+                    "Net Paid": m.netPaid
+                };
+            });
+            exportToCSV(data, `Salary_Sheet_${state.selectedMonth}.csv`);
+        }
+
         async function importSalaryCSV(input) {
             const file = input.files[0];
             if (!file) return;
 
-            // ASK FOR MONTH FIRST
             const targetMonth = prompt("Enter the month for this salary import (YYYY-MM):", state.selectedMonth);
             if (!targetMonth || !/^\d{4}-\d{2}$/.test(targetMonth)) {
                 alert("Import aborted. Invalid month format (Use YYYY-MM).");
@@ -473,11 +528,13 @@
             const reader = new FileReader();
             reader.onload = async (e) => {
                 const text = e.target.result;
-                const rows = text.split('\n');
+                const rows = text.split(/\r?\n/);
                 showLoading();
+                let count = 0;
                 for(let i = 2; i < rows.length; i++) {
-                    const cols = rows[i].split(',').map(c => c.trim().replace(/"/g, ''));
-                    if (cols.length < 5) continue;
+                    const cols = parseCSVLine(rows[i]);
+                    if (cols.length < 5 || !cols[1]) continue;
+                    
                     const payload = {
                         id: cols[1],
                         basic_salary: cleanNumber(cols[4]),
@@ -490,13 +547,15 @@
                         insurance: cleanNumber(cols[12]),
                         others_deduction: cleanNumber(cols[13])
                     };
-                    await fetch(`${API_BASE}/employees/${payload.id}`, {
+
+                    const res = await fetch(`${API_BASE}/employees/${payload.id}`, {
                         method: 'PUT',
                         headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify(payload)
                     });
+                    if(res.ok) count++;
                 }
-                alert("Imported for " + targetMonth);
+                alert(`Successfully imported ${count} records for ${targetMonth}`);
                 await syncData(); renderPayroll();
             };
             reader.readAsText(file);
@@ -510,6 +569,16 @@
                 body: JSON.stringify({ month: state.selectedMonth })
             });
             if(res.ok) { alert("Payroll Published."); await syncData(); renderPayroll(); }
+        }
+
+        function editPayroll(id) {
+            const emp = state.employees.find(e => String(e.id) === String(id));
+            if(!emp) return;
+            state.editingMemberId = id;
+            state.memberFormVisible = true;
+            renderDirectory();
+            // Scroll to form
+            document.getElementById('member-form-container').scrollIntoView();
         }
 
         // --- STAFF HUB & LOANS ---
