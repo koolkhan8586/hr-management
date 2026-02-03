@@ -22,19 +22,18 @@
         .animate-slide-up { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
         @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         
-        /* PDF Slip Styles - Hidden in browser */
+        /* PDF Slip Styles */
         #pdf-template { position: absolute; left: -9999px; top: -9999px; width: 800px; padding: 40px; background: white; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900">
 
-    <!-- HIDDEN PDF SLIP TEMPLATE -->
     <div id="pdf-template"></div>
 
     <!-- GLOBAL LOADING SCREEN -->
     <div id="loading-screen" class="fixed inset-0 bg-white z-[999] flex flex-col items-center justify-center">
         <div class="loader w-16 h-16 border-4 border-slate-100 border-t-green-700 rounded-full mb-4"></div>
-        <p class="text-slate-400 font-black uppercase tracking-[0.3em] text-sm animate-pulse">Synchronizing LSAF Matrix</p>
+        <p class="text-slate-400 font-black uppercase tracking-[0.3em] text-sm animate-pulse">Syncing LSAF HR Core</p>
         <button id="skip-sync-btn" onclick="bypassSync()" class="hidden mt-8 text-[10px] font-black uppercase text-slate-300 border-b border-slate-200 tracking-widest hover:text-slate-500 transition-colors">Bypass Sync</button>
     </div>
 
@@ -130,30 +129,10 @@
         /**
          * PKT TIMEZONE HELPERS
          */
-        function getPktTime() {
-            return new Date().toLocaleTimeString('en-US', {
-                timeZone: 'Asia/Karachi',
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: true
-            });
-        }
-
-        function getPktDate() {
-            return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Karachi' });
-        }
-
-        function formatDate(dateString) {
-            if (!dateString) return 'N/A';
-            const date = new Date(dateString);
-            return isNaN(date.getTime()) ? 'N/A' : date.toLocaleDateString();
-        }
-
-        function cleanNumber(val) {
-            const num = parseFloat(String(val || 0).replace(/[^0-9.-]+/g, '').trim());
-            return isNaN(num) ? 0 : num;
-        }
-
+        function getPktTime() { return new Date().toLocaleTimeString('en-US', { timeZone: 'Asia/Karachi', hour: '2-digit', minute: '2-digit', hour12: true }); }
+        function getPktDate() { return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Karachi' }); }
+        function formatDate(dateString) { if (!dateString) return 'N/A'; const date = new Date(dateString); return isNaN(date.getTime()) ? 'N/A' : date.toLocaleDateString(); }
+        function cleanNumber(val) { const num = parseFloat(String(val || 0).replace(/[^0-9.-]+/g, '').trim()); return isNaN(num) ? 0 : num; }
         function getInitial(name) { return name ? String(name).charAt(0).toUpperCase() : '?'; }
 
         function parseCSVLine(text) {
@@ -170,25 +149,20 @@
             return result;
         }
 
-        // --- SALARY CALCULATION ---
         function calculateSalaryMetrics(emp) {
             const basic = cleanNumber(emp.basic_salary);
             const invigilation = cleanNumber(emp.invigilation);
             const tPayment = cleanNumber(emp.t_payment);
             const increment = cleanNumber(emp.increment);
             const eidi = cleanNumber(emp.eidi);
-            
             const totalAddition = basic + invigilation + tPayment + increment + eidi;
-
             const extraLeaves = cleanNumber(emp.extra_leaves_deduction);
             const tax = cleanNumber(emp.tax);
             const loan = cleanNumber(emp.loan_deduction);
             const insurance = cleanNumber(emp.insurance);
             const others = cleanNumber(emp.others_deduction);
-
             const totalDeduction = extraLeaves + tax + loan + insurance + others;
             const netPaid = totalAddition - totalDeduction;
-
             return { totalAddition, totalDeduction, netPaid };
         }
 
@@ -206,8 +180,7 @@
                 if (log.type === 'Clock Out') dailyData[d].out = log.time_str;
             });
             let totalMinutes = 0;
-            const dates = Object.keys(dailyData);
-            dates.forEach(d => {
+            Object.keys(dailyData).forEach(d => {
                 const day = dailyData[d];
                 if (day.in && day.out) {
                     try {
@@ -217,7 +190,7 @@
                     } catch(e) {}
                 }
             });
-            return { daysPresent: dates.length, hours: (totalMinutes / 60).toFixed(1) };
+            return { daysPresent: Object.keys(dailyData).length, hours: (totalMinutes / 60).toFixed(1) };
         }
 
         // --- INITIALIZATION ---
@@ -229,12 +202,11 @@
                     state.user = JSON.parse(saved);
                     await syncData();
                     
-                    // SMART ROUTING: Default to latest posted month for employees
+                    // Default to latest posted month for employees
                     if (state.user.role !== 'admin' && state.payrollPostedMonths.length > 0) {
                         const sorted = [...state.payrollPostedMonths].sort((a,b) => b.month_year.localeCompare(a.month_year));
                         state.selectedMonth = sorted[0].month_year;
                     }
-
                     showApp();
                 } catch(e) {
                     console.error(e);
@@ -370,14 +342,13 @@
         function renderAttendance() { 
             const filtered = (state.attendance || []).filter(log => log.date_str.startsWith(state.selectedAttendanceMonth));
             const stats = getAttendanceStats(filtered);
-            const isAdmin = state.user.role === 'admin';
             const container = document.getElementById('view-container');
             container.innerHTML = `
                 <div class="animate-fade-in space-y-8 text-slate-900 font-sans">
                     <div class="flex flex-col md:flex-row justify-between items-center gap-4">
                         <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase font-sans">Attendance</h2>
                         <div class="flex gap-2">
-                             <input type="month" value="${state.selectedAttendanceMonth}" onchange="state.selectedAttendanceMonth=this.value; renderAttendance()" class="p-3 border-2 rounded-2xl font-bold shadow-sm">
+                             <input type="month" value="${state.selectedAttendanceMonth}" onchange="state.selectedAttendanceMonth=this.value; renderAttendance()" class="p-3 border-2 rounded-2xl font-bold shadow-sm outline-none">
                              <button onclick="handleAttendanceExport()" class="bg-white border-2 px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-50 transition-all flex items-center gap-2">
                                 <i data-lucide="download" size="14"></i> Export
                              </button>
@@ -420,7 +391,7 @@
             }, () => { alert("Location required."); hideLoading(); });
         }
 
-        // --- PAYROLL MODULE & PDF GENERATION ---
+        // --- PAYROLL MODULE ---
         async function downloadSalarySlipPDF(id) {
             const emp = state.employees.find(e => String(e.id) === String(id));
             if(!emp) return;
@@ -428,75 +399,88 @@
             const monthName = new Date(state.selectedMonth).toLocaleString('default', { month: 'long', year: 'numeric' });
             
             const template = `
-                <div style="padding: 20px; font-family: 'Plus Jakarta Sans', sans-serif;">
-                    <div style="text-align: center; border-bottom: 2px solid #15803d; padding-bottom: 20px;">
-                        <h1 style="margin: 0; color: #15803d; text-transform: uppercase; font-size: 24px;">The University of Lahore</h1>
-                        <p style="margin: 5px 0; font-weight: bold; color: #64748b;">City Campus Lahore</p>
-                        <h2 style="margin: 10px 0; text-transform: uppercase; font-size: 18px;">Salary Slip - ${monthName}</h2>
+                <div style="padding: 40px; font-family: 'Plus Jakarta Sans', sans-serif;">
+                    <div style="text-align: center; border-bottom: 3px solid #15803d; padding-bottom: 20px; margin-bottom: 30px;">
+                        <h1 style="margin: 0; color: #15803d; text-transform: uppercase; font-size: 28px; letter-spacing: -1px;">The University of Lahore</h1>
+                        <p style="margin: 5px 0; font-weight: 800; color: #64748b; text-transform: uppercase; font-size: 12px; letter-spacing: 2px;">City Campus Lahore</p>
+                        <div style="display: inline-block; background: #f1f5f9; padding: 5px 20px; border-radius: 50px; margin-top: 15px;">
+                            <h2 style="margin: 0; text-transform: uppercase; font-size: 14px; font-weight: 900; color: #1e293b;">Salary Slip - ${monthName}</h2>
+                        </div>
                     </div>
-                    
-                    <div style="display: flex; justify-content: space-between; margin-top: 30px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 40px; font-size: 13px;">
                         <div>
-                            <p><strong>Employee Name:</strong> ${emp.name}</p>
-                            <p><strong>Employee Code:</strong> ${emp.id}</p>
+                            <p style="margin: 3px 0;"><strong>Employee Name:</strong> <span style="text-transform: uppercase;">${emp.name}</span></p>
+                            <p style="margin: 3px 0;"><strong>Employee Code:</strong> ${emp.id}</p>
                         </div>
                         <div style="text-align: right;">
-                            <p><strong>Identity:</strong> ${emp.role.toUpperCase()}</p>
-                            <p><strong>Printed On:</strong> ${getPktDate()}</p>
+                            <p style="margin: 3px 0;"><strong>Identity:</strong> ${emp.role.toUpperCase()}</p>
+                            <p style="margin: 3px 0;"><strong>Printed:</strong> ${getPktDate()}</p>
                         </div>
                     </div>
-
-                    <div style="display: flex; gap: 40px; margin-top: 30px;">
+                    <div style="display: flex; gap: 30px; margin-top: 20px;">
                         <div style="flex: 1;">
-                            <h3 style="background: #f1f5f9; padding: 10px; font-size: 14px; text-transform: uppercase;">Earnings</h3>
-                            <table style="width: 100%; border-collapse: collapse;">
-                                <tr><td style="padding: 8px 0;">Basic Salary</td><td style="text-align: right;">${cleanNumber(emp.basic_salary).toLocaleString()}</td></tr>
-                                <tr><td style="padding: 8px 0;">Invigilation</td><td style="text-align: right;">${cleanNumber(emp.invigilation).toLocaleString()}</td></tr>
-                                <tr><td style="padding: 8px 0;">T. Payment</td><td style="text-align: right;">${cleanNumber(emp.t_payment).toLocaleString()}</td></tr>
-                                <tr><td style="padding: 8px 0;">Increment</td><td style="text-align: right;">${cleanNumber(emp.increment).toLocaleString()}</td></tr>
-                                <tr style="border-top: 1px solid #e2e8f0; font-weight: bold;">
-                                    <td style="padding: 10px 0;">Gross Total</td><td style="text-align: right;">PKR ${m.totalAddition.toLocaleString()}</td>
-                                </tr>
+                            <h3 style="background: #f8fafc; padding: 12px; font-size: 12px; text-transform: uppercase; border-left: 4px solid #15803d; font-weight: 900;">Earnings</h3>
+                            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                                <tr><td style="padding: 10px 5px; border-bottom: 1px solid #f1f5f9;">Basic Salary</td><td style="text-align: right; font-weight: 700;">${cleanNumber(emp.basic_salary).toLocaleString()}</td></tr>
+                                <tr><td style="padding: 10px 5px; border-bottom: 1px solid #f1f5f9;">Invigilation</td><td style="text-align: right; font-weight: 700;">${cleanNumber(emp.invigilation).toLocaleString()}</td></tr>
+                                <tr><td style="padding: 10px 5px; border-bottom: 1px solid #f1f5f9;">T. Payment</td><td style="text-align: right; font-weight: 700;">${cleanNumber(emp.t_payment).toLocaleString()}</td></tr>
+                                <tr><td style="padding: 10px 5px; border-bottom: 1px solid #f1f5f9;">Increment</td><td style="text-align: right; font-weight: 700;">${cleanNumber(emp.increment).toLocaleString()}</td></tr>
+                                <tr style="font-weight: 900; background: #fdfdfd;"><td style="padding: 15px 5px;">Gross Total</td><td style="text-align: right;">PKR ${m.totalAddition.toLocaleString()}</td></tr>
                             </table>
                         </div>
                         <div style="flex: 1;">
-                            <h3 style="background: #f1f5f9; padding: 10px; font-size: 14px; text-transform: uppercase;">Deductions</h3>
-                            <table style="width: 100%; border-collapse: collapse;">
-                                <tr><td style="padding: 8px 0;">Extra Leaves</td><td style="text-align: right;">${cleanNumber(emp.extra_leaves_deduction).toLocaleString()}</td></tr>
-                                <tr><td style="padding: 8px 0;">Income Tax</td><td style="text-align: right;">${cleanNumber(emp.tax).toLocaleString()}</td></tr>
-                                <tr><td style="padding: 8px 0;">Loan Recovery</td><td style="text-align: right;">${cleanNumber(emp.loan_deduction).toLocaleString()}</td></tr>
-                                <tr><td style="padding: 8px 0;">Insurance</td><td style="text-align: right;">${cleanNumber(emp.insurance).toLocaleString()}</td></tr>
-                                <tr style="border-top: 1px solid #e2e8f0; font-weight: bold; color: #ef4444;">
-                                    <td style="padding: 10px 0;">Total Deductions</td><td style="text-align: right;">PKR ${m.totalDeduction.toLocaleString()}</td>
-                                </tr>
+                            <h3 style="background: #fef2f2; padding: 12px; font-size: 12px; text-transform: uppercase; border-left: 4px solid #ef4444; font-weight: 900;">Deductions</h3>
+                            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                                <tr><td style="padding: 10px 5px; border-bottom: 1px solid #f1f5f9;">Extra Leaves</td><td style="text-align: right; font-weight: 700;">${cleanNumber(emp.extra_leaves_deduction).toLocaleString()}</td></tr>
+                                <tr><td style="padding: 10px 5px; border-bottom: 1px solid #f1f5f9;">Income Tax</td><td style="text-align: right; font-weight: 700;">${cleanNumber(emp.tax).toLocaleString()}</td></tr>
+                                <tr><td style="padding: 10px 5px; border-bottom: 1px solid #f1f5f9;">Loan Recovery</td><td style="text-align: right; font-weight: 700;">${cleanNumber(emp.loan_deduction).toLocaleString()}</td></tr>
+                                <tr><td style="padding: 10px 5px; border-bottom: 1px solid #f1f5f9;">Insurance</td><td style="text-align: right; font-weight: 700;">${cleanNumber(emp.insurance).toLocaleString()}</td></tr>
+                                <tr style="font-weight: 900; color: #ef4444;"><td style="padding: 15px 5px;">Total Deductions</td><td style="text-align: right;">PKR ${m.totalDeduction.toLocaleString()}</td></tr>
                             </table>
                         </div>
                     </div>
-
-                    <div style="margin-top: 40px; padding: 20px; background: #15803d; color: white; border-radius: 12px; display: flex; justify-content: space-between; align-items: center;">
-                        <h2 style="margin: 0; font-size: 16px; text-transform: uppercase;">Net Salary Paid</h2>
-                        <h1 style="margin: 0; font-size: 24px;">PKR ${m.netPaid.toLocaleString()}</h1>
+                    <div style="margin-top: 50px; padding: 25px; background: #15803d; color: white; border-radius: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 10px 20px rgba(21,128,61,0.2);">
+                        <h2 style="margin: 0; font-size: 16px; text-transform: uppercase; font-weight: 800;">Net Salary Paid</h2>
+                        <h1 style="margin: 0; font-size: 32px; font-weight: 900;">PKR ${m.netPaid.toLocaleString()}</h1>
                     </div>
-
-                    <div style="margin-top: 80px; display: flex; justify-content: space-between;">
-                        <div style="text-align: center; width: 200px; border-top: 1px solid #000; padding-top: 10px; font-size: 12px;">Employee Signature</div>
-                        <div style="text-align: center; width: 200px; border-top: 1px solid #000; padding-top: 10px; font-size: 12px;">Authorized Seal</div>
+                    <div style="margin-top: 100px; display: flex; justify-content: space-between;">
+                        <div style="text-align: center; width: 220px; border-top: 2px solid #e2e8f0; padding-top: 12px; font-size: 11px; color: #64748b; font-weight: 800; text-transform: uppercase;">Employee Signature</div>
+                        <div style="text-align: center; width: 220px; border-top: 2px solid #e2e8f0; padding-top: 12px; font-size: 11px; color: #64748b; font-weight: 800; text-transform: uppercase;">Authorized Registrar</div>
                     </div>
                 </div>
             `;
-            
             const element = document.getElementById('pdf-template');
             element.innerHTML = template;
-            
-            const options = {
-                margin: 0,
-                filename: `LSAF_PaySlip_${emp.id}_${state.selectedMonth}.pdf`,
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2 },
-                jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-            };
-
+            const options = { margin: 0, filename: `LSAF_Slip_${emp.id}_${state.selectedMonth}.pdf`, html2canvas: { scale: 2 }, jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' } };
             html2pdf().set(options).from(element).save();
+        }
+
+        async function purgeMonthData() {
+            if(!confirm("DANGER: Wipe all salary figures for " + state.selectedMonth + " for ALL staff? This cannot be undone.")) return;
+            showLoading();
+            for(const emp of state.employees) {
+                const payload = { ...emp, basic_salary: 0, invigilation: 0, t_payment: 0, increment: 0, extra_leaves_deduction: 0, tax: 0, loan_deduction: 0, insurance: 0, others_deduction: 0 };
+                await fetch(`${API_BASE}/employees/${emp.id}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+            }
+            alert("Matrix Cleared.");
+            await syncData(); renderPayroll();
+        }
+
+        async function deleteIndividualSalary(id) {
+            if(!confirm("Reset salary data for employee " + id + "?")) return;
+            showLoading();
+            const emp = state.employees.find(e => String(e.id) === String(id));
+            const payload = { ...emp, basic_salary: 0, invigilation: 0, t_payment: 0, increment: 0, extra_leaves_deduction: 0, tax: 0, loan_deduction: 0, insurance: 0, others_deduction: 0 };
+            await fetch(`${API_BASE}/employees/${id}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+            await syncData(); renderPayroll();
+        }
+
+        async function unpostSalary() {
+            if(!confirm("Remove visibility for " + state.selectedMonth + " from all employees?")) return;
+            showLoading();
+            const res = await fetch(`${API_BASE}/payroll-post/${state.selectedMonth}`, { method: 'DELETE' });
+            if(res.ok) { alert("Month Unpublished."); await syncData(); renderPayroll(); }
+            else hideLoading();
         }
 
         function renderPayroll() {
@@ -508,17 +492,18 @@
                 <div class="animate-fade-in space-y-8">
                     <div class="flex flex-col md:flex-row justify-between items-center gap-6">
                         <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase font-sans">Salary Matrix</h2>
-                        <div class="flex gap-3">
-                            <input type="month" id="month-picker" value="${state.selectedMonth}" onchange="state.selectedMonth=this.value; renderPayroll()" class="p-3 border-2 rounded-2xl font-black bg-white shadow-sm">
+                        <div class="flex flex-wrap gap-3 justify-center">
+                            <input type="month" id="month-picker" value="${state.selectedMonth}" onchange="state.selectedMonth=this.value; renderPayroll()" class="p-3 border-2 rounded-2xl font-black bg-white shadow-sm outline-none">
                             ${isAdmin ? `
-                                <button onclick="postSalary()" class="bg-slate-900 text-white px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl">
-                                    ${isPosted ? 'PUBLISHED' : 'PUBLISH DATA'}
+                                <button onclick="${isPosted ? 'unpostSalary()' : 'postSalary()'}" class="${isPosted ? 'bg-red-600' : 'bg-slate-900'} text-white px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl transition-all">
+                                    ${isPosted ? 'UNPUBLISH' : 'PUBLISH DATA'}
                                 </button>
-                                <button onclick="downloadSalaryTemplate()" class="bg-white border-2 px-6 py-3 rounded-2xl font-black text-[10px] uppercase hover:bg-slate-50">TEMPLATE</button>
+                                <button onclick="purgeMonthData()" class="bg-red-50 text-red-600 border-2 border-red-100 px-6 py-3 rounded-2xl font-black text-[10px] uppercase">WIPE MONTH</button>
+                                <button onclick="downloadSalaryTemplate()" class="bg-white border-2 px-6 py-3 rounded-2xl font-black text-[10px] uppercase hover:bg-slate-50 transition-all">TEMPLATE</button>
                                 <label class="bg-white border-2 px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest cursor-pointer shadow-sm">
                                     IMPORT <input type="file" onchange="importSalaryCSV(this)" class="hidden">
                                 </label>
-                                <button onclick="exportSalaryCSV()" class="bg-green-50 text-green-700 px-6 py-3 rounded-2xl font-black text-[10px] uppercase">EXPORT CSV</button>
+                                <button onclick="exportSalaryCSV()" class="bg-green-50 text-green-700 px-6 py-3 rounded-2xl font-black text-[10px] uppercase">EXPORT</button>
                             ` : `
                                 <button onclick="downloadSalarySlipPDF('${state.user.id}')" class="bg-green-700 text-white px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl flex items-center gap-2">
                                     <i data-lucide="file-text" size="14"></i> Download PDF Slip
@@ -529,10 +514,10 @@
 
                     ${!isAdmin && !isPosted ? `
                         <div class="flex flex-col items-center justify-center py-40 text-center space-y-4">
-                            <i data-lucide="lock" size="64" class="text-slate-200"></i>
-                            <h2 class="text-xl font-black text-slate-400 uppercase tracking-widest">Sheet Locked</h2>
-                            <p class="text-sm text-slate-400">The salary sheet for ${state.selectedMonth} has not been published yet.</p>
-                            <p class="text-[10px] font-black text-slate-300 uppercase tracking-widest mt-4">Tip: Use the picker above to check January.</p>
+                            <div class="bg-slate-100 p-8 rounded-full mb-4"><i data-lucide="lock" size="48" class="text-slate-300"></i></div>
+                            <h2 class="text-xl font-black text-slate-400 uppercase tracking-widest">Payroll Blocked</h2>
+                            <p class="text-sm text-slate-400">The administrator has not authorized visibility for ${state.selectedMonth}.</p>
+                            <p class="text-[10px] font-black text-slate-300 uppercase tracking-widest mt-4">Please use the month picker to view January records.</p>
                         </div>
                     ` : `
                         <div class="overflow-x-auto rounded-[2rem] border bg-white shadow-xl">
@@ -542,23 +527,36 @@
                                         <th class="p-4">ID</th><th class="p-4">Name</th>
                                         <th class="p-4 text-right">Basic</th><th class="p-4 text-right">Invig</th>
                                         <th class="p-4 text-right">T.Pay</th><th class="p-4 text-right">Incr</th>
+                                        <th class="p-4 text-right">Total Add</th><th class="p-4 text-right text-red-500">Ex.Lv</th>
+                                        <th class="p-4 text-right text-red-500">Tax</th><th class="p-4 text-right text-red-500">Loan</th>
                                         <th class="p-4 text-right font-black text-slate-900 uppercase">Net Paid</th>
-                                        ${isAdmin ? `<th class="p-4 text-center">Edit</th>` : ''}
+                                        ${isAdmin ? `<th class="p-4 text-center">Action</th>` : ''}
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-slate-50 font-bold">
                                     ${state.employees.filter(e => isAdmin || e.id === state.user.id).map(emp => {
                                         const m = calculateSalaryMetrics(emp);
                                         return `
-                                            <tr>
+                                            <tr class="hover:bg-slate-50 transition-colors">
                                                 <td class="p-4 font-black text-slate-900">${emp.id}</td>
                                                 <td class="p-4 uppercase truncate max-w-[120px]">${emp.name}</td>
                                                 <td class="p-4 text-right">${cleanNumber(emp.basic_salary).toLocaleString()}</td>
                                                 <td class="p-4 text-right">${cleanNumber(emp.invigilation).toLocaleString()}</td>
                                                 <td class="p-4 text-right">${cleanNumber(emp.t_payment).toLocaleString()}</td>
                                                 <td class="p-4 text-right">${cleanNumber(emp.increment).toLocaleString()}</td>
+                                                <td class="p-4 text-right font-black text-slate-500">${m.totalAddition.toLocaleString()}</td>
+                                                <td class="p-4 text-right text-red-400">-${cleanNumber(emp.extra_leaves_deduction).toLocaleString()}</td>
+                                                <td class="p-4 text-right text-red-400">-${cleanNumber(emp.tax).toLocaleString()}</td>
+                                                <td class="p-4 text-right text-red-400">-${cleanNumber(emp.loan_deduction).toLocaleString()}</td>
                                                 <td class="p-4 text-right font-black text-slate-900">Rs. ${m.netPaid.toLocaleString()}</td>
-                                                ${isAdmin ? `<td class="p-4 text-center"><button onclick="editPayroll('${emp.id}')" class="text-blue-500"><i data-lucide="pencil" size="14"></i></button></td>` : ''}
+                                                ${isAdmin ? `
+                                                    <td class="p-4 text-center">
+                                                        <div class="flex items-center justify-center gap-2">
+                                                            <button onclick="editPayroll('${emp.id}')" class="text-blue-500 hover:scale-110 transition-transform"><i data-lucide="pencil" size="14"></i></button>
+                                                            <button onclick="deleteIndividualSalary('${emp.id}')" class="text-red-400 hover:text-red-600 hover:scale-110 transition-transform"><i data-lucide="trash-2" size="14"></i></button>
+                                                        </div>
+                                                    </td>
+                                                ` : ''}
                                             </tr>
                                         `;
                                     }).join('')}
@@ -598,9 +596,9 @@
             const file = input.files[0];
             if (!file) return;
 
-            const targetMonth = prompt("Enter the month for this salary import (YYYY-MM):", state.selectedMonth);
+            const targetMonth = prompt("Target Month for Import (YYYY-MM):", state.selectedMonth);
             if (!targetMonth || !/^\d{4}-\d{2}$/.test(targetMonth)) {
-                alert("Import aborted. Invalid month format (Use YYYY-MM).");
+                alert("Aborted: Invalid month format.");
                 input.value = ''; return;
             }
             state.selectedMonth = targetMonth;
@@ -614,10 +612,8 @@
                 for(let i = 2; i < rows.length; i++) {
                     const cols = parseCSVLine(rows[i]);
                     if (cols.length < 5 || !cols[1]) continue;
-                    
                     const existing = state.employees.find(emp => String(emp.id) === String(cols[1]));
                     if (!existing) continue;
-
                     const payload = {
                         ...existing,
                         basic_salary: cleanNumber(cols[4]),
@@ -630,27 +626,18 @@
                         insurance: cleanNumber(cols[12]),
                         others_deduction: cleanNumber(cols[13])
                     };
-
-                    const res = await fetch(`${API_BASE}/employees/${payload.id}`, {
-                        method: 'PUT',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify(payload)
-                    });
+                    const res = await fetch(`${API_BASE}/employees/${payload.id}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
                     if(res.ok) count++;
                 }
-                alert(`Matrix Sync: Successfully imported ${count} records for ${targetMonth}`);
+                alert(`Imported ${count} records for ${targetMonth}`);
                 await syncData(); renderPayroll();
             };
             reader.readAsText(file);
         }
 
         async function postSalary() {
-            if(!confirm(`Publish salary data for ${state.selectedMonth}? This makes it visible to employees.`)) return;
-            const res = await fetch(`${API_BASE}/payroll-post`, {
-                method: 'POST',
-                headers: {'Content-Type':'application/json'},
-                body: JSON.stringify({ month: state.selectedMonth })
-            });
+            if(!confirm(`Publish salary data for ${state.selectedMonth}?`)) return;
+            const res = await fetch(`${API_BASE}/payroll-post`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ month: state.selectedMonth }) });
             if(res.ok) { alert("Payroll Published."); await syncData(); renderPayroll(); }
         }
 
@@ -660,6 +647,7 @@
             state.editingMemberId = id;
             state.memberFormVisible = true;
             renderDirectory();
+            document.getElementById('member-form-container').scrollIntoView();
         }
 
         // --- STAFF HUB & ACTIONS ---
@@ -667,34 +655,22 @@
             const container = document.getElementById('view-container');
             container.innerHTML = `
                 <div class="animate-fade-in space-y-8 text-slate-900 font-sans">
-                    <div class="flex justify-between items-center"><h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Staff Hub</h2><button onclick="openAddMember()" class="bg-green-700 text-white px-10 py-3 rounded-2xl font-black uppercase text-xs shadow-xl active:scale-95 transition-all hover:bg-green-800">New Member</button></div>
+                    <div class="flex justify-between items-center"><h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase font-sans">Staff Hub</h2><button onclick="openAddMember()" class="bg-green-700 text-white px-10 py-3 rounded-2xl font-black uppercase text-xs shadow-xl active:scale-95 transition-all hover:bg-green-800">New Member</button></div>
                     <div id="member-form-container" class="${state.memberFormVisible ? '' : 'hidden'} bg-white p-10 rounded-[3rem] border-4 shadow-2xl mb-12 animate-slide-up">
                         <form id="member-form" class="space-y-6">
-                            <div class="grid md:grid-cols-2 gap-8">
-                                <input type="text" id="m-id" class="p-4 rounded-2xl border-2 font-bold bg-slate-50 outline-none" placeholder="ID" ${state.editingMemberId ? 'disabled' : ''}>
+                            <div class="grid md:grid-cols-2 gap-8 font-sans">
+                                <input type="text" id="m-id" class="p-4 rounded-2xl border-2 font-bold bg-slate-50 outline-none" placeholder="Employee ID" ${state.editingMemberId ? 'disabled' : ''}>
                                 <input type="email" id="m-email" class="p-4 rounded-2xl border-2 font-bold bg-slate-50 outline-none" placeholder="Email Address">
                                 <input type="text" id="m-name" class="p-4 rounded-2xl border-2 font-bold bg-slate-50 outline-none" placeholder="Full Name" required>
                                 <select id="m-role" class="p-4 rounded-2xl border-2 border-slate-50 font-black text-sm bg-slate-50 outline-none"><option value="employee">Staff Member</option><option value="admin">System Admin</option></select>
-                                <div class="space-y-1"><label class="text-[10px] font-black text-slate-400 ml-2">AL ALLOCATION</label><input type="number" id="m-leave-annual" class="p-4 w-full rounded-2xl border-2 font-bold" placeholder="Annual Bal"></div>
-                                <div class="space-y-1"><label class="text-[10px] font-black text-slate-400 ml-2">WOP ALLOCATION</label><input type="number" id="m-leave-wop" class="p-4 w-full rounded-2xl border-2 font-bold" placeholder="WOP Bal"></div>
+                                <div class="space-y-1"><label class="text-[10px] uppercase font-black text-slate-400 ml-2">AL Allocation</label><input type="number" id="m-leave-annual" class="p-4 w-full rounded-2xl border-2 font-bold shadow-inner" placeholder="14"></div>
+                                <div class="space-y-1"><label class="text-[10px] uppercase font-black text-slate-400 ml-2">WOP Allocation</label><input type="number" id="m-leave-wop" class="p-4 w-full rounded-2xl border-2 font-bold shadow-inner" placeholder="10"></div>
                             </div>
-                            <div class="flex justify-end gap-3 pt-6 border-t"><button type="button" onclick="state.memberFormVisible=false; renderDirectory()" class="px-8 py-3 text-slate-400 font-bold uppercase text-xs">Cancel</button><button type="submit" class="bg-green-700 text-white px-12 py-3 rounded-2xl font-black uppercase shadow-lg">Confirm & Sync</button></div>
+                            <div class="flex justify-end gap-3 pt-6 border-t"><button type="button" onclick="state.memberFormVisible=false; renderDirectory()" class="px-8 py-3 text-slate-400 font-bold uppercase text-xs">Cancel</button><button type="submit" class="bg-green-700 text-white px-12 py-3 rounded-2xl font-black uppercase shadow-lg active:scale-95 transition-all">Save Identity</button></div>
                         </form>
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 font-sans">
-                        ${state.employees.map(emp => `
-                            <div class="bg-white p-8 rounded-[2.5rem] border shadow-sm flex items-center gap-6 relative group hover:border-green-300 transition-all">
-                                <div class="h-14 w-14 rounded-2xl bg-green-50 text-green-700 flex items-center justify-center font-black text-2xl uppercase">${getInitial(emp.name)}</div>
-                                <div class="flex-1 overflow-hidden"> 
-                                    <h4 class="font-black uppercase truncate leading-none text-slate-800 text-sm">${emp.name}</h4>
-                                    <p class="text-[9px] font-bold text-slate-400 uppercase mt-2">ID: ${emp.id}</p>
-                                </div>
-                                <div class="opacity-0 group-hover:opacity-100 flex gap-2 absolute right-6 transition-all">
-                                    <button onclick="editMember('${emp.id}')" class="p-2.5 bg-white border shadow-xl rounded-xl text-blue-500 hover:scale-110 transition-all"><i data-lucide="pencil" size="14"></i></button>
-                                    <button onclick="deleteMember('${emp.id}')" class="p-2.5 bg-white border shadow-xl rounded-xl text-red-500 hover:scale-110 transition-all"><i data-lucide="trash-2" size="14"></i></button>
-                                </div>
-                            </div>
-                        `).join('')}
+                        ${state.employees.map(emp => `<div class="bg-white p-8 rounded-[2.5rem] border shadow-sm flex items-center gap-6 relative group hover:border-green-300 transition-all"><div class="h-14 w-14 rounded-2xl bg-green-50 text-green-700 flex items-center justify-center font-black text-2xl uppercase">${getInitial(emp.name)}</div><div class="flex-1 overflow-hidden"><h4 class="font-black uppercase truncate leading-none text-slate-800 text-sm">${emp.name}</h4><p class="text-[9px] font-bold text-slate-400 uppercase mt-2">ID: ${emp.id}</p></div><div class="opacity-0 group-hover:opacity-100 flex gap-2 absolute right-6 transition-all"><button onclick="editMember('${emp.id}')" class="p-2.5 bg-white border shadow-xl rounded-xl text-blue-500 hover:scale-110 transition-all"><i data-lucide="pencil" size="14"></i></button><button onclick="deleteMember('${emp.id}')" class="p-2.5 bg-white border shadow-xl rounded-xl text-red-500 hover:scale-110 transition-all"><i data-lucide="trash-2" size="14"></i></button></div></div>`).join('')}
                     </div>
                 </div>
             `;
@@ -702,7 +678,7 @@
             document.getElementById('member-form')?.addEventListener('submit', handleMemberSubmit);
         }
 
-        // --- LEAVES MODULE ---
+        // --- LEAVES ---
         function renderLeaves() {
             const list = (state.leaves || []).filter(l => l.start_date.startsWith(state.selectedLeaveMonth));
             const container = document.getElementById('view-container');
@@ -720,7 +696,7 @@
                                     <input type="date" id="l-date" class="w-full p-4 rounded-2xl border-2 font-bold bg-slate-50 shadow-inner" required>
                                     <input type="number" id="l-days" class="w-full p-4 rounded-2xl border-2 font-bold bg-slate-50 shadow-inner" placeholder="Days" required>
                                 </div>
-                                <textarea id="l-reason" class="w-full p-4 rounded-2xl border-2 border-bold bg-slate-50 h-32 shadow-inner" placeholder="Description for HR..." required></textarea>
+                                <textarea id="l-reason" class="w-full p-4 rounded-2xl border-2 border-bold bg-slate-50 h-32 shadow-inner font-bold" placeholder="Reason..." required></textarea>
                                 <button type="submit" class="w-full py-5 bg-green-700 text-white font-black rounded-3xl shadow-xl hover:bg-green-800 transition-all uppercase tracking-widest active:scale-95">Confirm Request</button>
                             </form>
                         </div>
@@ -746,25 +722,16 @@
             hideLoading();
         }
 
-        // --- LOANS ---
+        // --- LOANS MODULE ---
         function renderLoans() {
             const container = document.getElementById('view-container');
             const isAdmin = state.user.role === 'admin';
             const userLoans = state.loans.filter(l => isAdmin || String(l.employee_id) === String(state.user.id));
             container.innerHTML = `
                 <div class="animate-fade-in space-y-8 text-slate-900 font-sans">
-                    <div class="flex justify-between items-center border-b pb-6 border-slate-100"><h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase leading-none">Loan Portal</h2><button onclick="applyLoanPrompt()" class="bg-green-700 text-white px-8 py-3 rounded-2xl font-black uppercase text-xs shadow-xl active:scale-95 hover:bg-green-800 transition-all">Apply for Loan</button></div>
+                    <div class="flex justify-between items-center border-b pb-6 border-slate-100"><h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase leading-none">Loan Portal</h2><button onclick="applyLoanPrompt()" class="bg-green-700 text-white px-8 py-3 rounded-2xl font-black uppercase text-xs shadow-xl active:scale-95 transition-all hover:bg-green-800">Apply for Loan</button></div>
                     <div class="grid gap-6">
-                        ${userLoans.map(loan => `
-                            <div class="bg-white p-8 rounded-[2.5rem] border shadow-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-6 group hover:border-green-300 transition-all">
-                                <div><h4 class="font-black uppercase text-lg text-slate-800">${loan.employee_name}</h4><p class="text-xs text-slate-400 italic">"${loan.reason}"</p></div>
-                                <div class="flex gap-8 text-right">
-                                    <div><p class="text-[10px] uppercase font-black text-slate-400 tracking-widest">Total Grant</p><p class="font-black">Rs. ${cleanNumber(loan.total_amount).toLocaleString()}</p></div>
-                                    <div><p class="text-[10px] uppercase font-black text-slate-400 tracking-widest">Balance</p><p class="font-black text-red-600">Rs. ${(cleanNumber(loan.total_amount) - cleanNumber(loan.paid_amount)).toLocaleString()}</p></div>
-                                    ${Badge({ status: loan.status })}
-                                </div>
-                            </div>
-                        `).join('')}
+                        ${userLoans.map(loan => `<div class="bg-white p-8 rounded-[2.5rem] border shadow-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-6 group hover:border-green-300 transition-all"><div><h4 class="font-black uppercase text-lg text-slate-800">${loan.employee_name}</h4><p class="text-xs text-slate-400 italic">"${loan.reason}"</p></div><div class="flex gap-8 text-right"><div><p class="text-[10px] uppercase font-black text-slate-400 tracking-widest">Total Grant</p><p class="font-black">Rs. ${cleanNumber(loan.total_amount).toLocaleString()}</p></div><div><p class="text-[10px] uppercase font-black text-slate-400 tracking-widest">Balance</p><p class="font-black text-red-600">Rs. ${(cleanNumber(loan.total_amount) - cleanNumber(loan.paid_amount)).toLocaleString()}</p></div>${Badge({ status: loan.status })}</div></div>`).join('')}
                     </div>
                 </div>
             `;
@@ -779,14 +746,14 @@
             if(res.ok) { alert("Matrix Alert: Dispatch Dispatched."); await syncData(); renderLoans(); } else hideLoading();
         }
 
-        // --- DISCUSSION ---
+        // --- DISCUSSION BOARD ---
         function renderDiscussion() {
             const container = document.getElementById('view-container');
             const isAdmin = state.user.role === 'admin';
             container.innerHTML = `
                 <div class="animate-fade-in space-y-8 text-slate-900 font-sans">
-                    <div class="flex justify-between items-center border-b pb-6 border-slate-100"><h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase leading-none">Board</h2>${isAdmin ? `<button onclick="state.boardFormVisible=!state.boardFormVisible; renderDiscussion()" class="bg-green-700 text-white px-10 py-3 rounded-2xl font-black uppercase text-xs shadow-xl active:scale-95 transition-all">New Post</button>` : ''}</div>
-                    ${state.boardFormVisible ? `<div class="bg-green-50/20 border-green-100 border-2 p-10 rounded-[2.5rem] mb-10 shadow-xl animate-slide-up"><form id="notice-form" class="space-y-4"><input type="text" id="n-title" class="w-full p-4 rounded-xl border font-bold" placeholder="Header"><textarea id="n-msg" class="w-full p-4 rounded-xl border h-32 font-medium" placeholder="Content"></textarea><button type="submit" class="w-full py-4 bg-green-700 text-white font-black uppercase rounded-xl shadow-xl">Publish</button></form></div>` : ''}
+                    <div class="flex justify-between items-center border-b pb-6 border-slate-100"><h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase leading-none">Global Board</h2>${isAdmin ? `<button onclick="state.boardFormVisible=!state.boardFormVisible; renderDiscussion()" class="bg-green-700 text-white px-10 py-3 rounded-2xl font-black uppercase text-xs shadow-xl active:scale-95 transition-all">New Post</button>` : ''}</div>
+                    ${state.boardFormVisible ? `<div class="bg-green-50/20 border-green-100 border-2 p-10 rounded-[2.5rem] mb-10 shadow-xl animate-slide-up font-sans"><form id="notice-form" class="space-y-4"><input type="text" id="n-title" class="w-full p-4 rounded-xl border font-bold shadow-inner outline-none" placeholder="Header"><textarea id="n-msg" class="w-full p-4 rounded-xl border h-32 font-medium shadow-inner outline-none" placeholder="Content"></textarea><button type="submit" class="w-full py-4 bg-green-700 text-white font-black uppercase rounded-xl">Publish</button></form></div>` : ''}
                     <div class="space-y-8 max-w-4xl mx-auto">
                         ${state.discussions.map(p => `<div class="bg-white rounded-[2.5rem] border-l-[12px] border-l-green-600 shadow-xl !p-10 relative group hover:border-green-300 transition-all"><div class="flex justify-between items-start mb-4"><h4 class="font-black text-slate-800 text-2xl uppercase leading-tight max-w-2xl">${p.title}</h4><span class="text-[10px] font-black text-slate-300 uppercase tracking-widest">${formatDate(p.date)}</span></div><p class="text-lg text-slate-600 font-medium leading-relaxed mb-8 border-b pb-8">${p.message}</p><div class="flex justify-between items-center"><span class="bg-green-50 text-green-700 font-black text-[10px] px-5 py-2 rounded-xl border border-green-100 uppercase tracking-widest shadow-sm">Verified: ${p.senderName}</span><button class="text-blue-600 font-black text-xs uppercase tracking-widest border-2 border-blue-50 px-8 py-3 rounded-[1.25rem] hover:bg-blue-50 transition-all active:scale-95 shadow-sm">Reply</button></div></div>`).join('')}
                     </div>
@@ -804,8 +771,8 @@
         function renderSettings() {
              document.getElementById('view-container').innerHTML = `
                 <div class="animate-fade-in space-y-8 text-slate-900 font-sans text-center">
-                    <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase leading-none">Security</h2>
-                    <div class="bg-white border p-12 shadow-2xl rounded-[3rem] max-w-xl mx-auto mt-10 relative overflow-hidden shadow-xl"><div class="absolute top-0 right-0 w-32 h-32 bg-red-50 rounded-full blur-3xl -mr-16 -mt-16"></div><div class="space-y-8 relative z-10"><div class="h-20 w-20 bg-slate-900 rounded-3xl flex items-center justify-center text-white mx-auto shadow-2xl mb-8"><i data-lucide="lock" size="40"></i></div><div class="space-y-4"><input type="password" id="s-p1" class="w-full p-4 rounded-2xl border-2 font-black outline-none focus:ring-4 focus:ring-green-50 transition-all bg-slate-50 shadow-inner" placeholder="New Password"></div><button onclick="alert('Access keys synchronized.')" class="w-full py-5 bg-slate-900 text-white font-black uppercase rounded-[2rem] shadow-2xl hover:bg-black transition-all active:scale-95 shadow-slate-200">Sync Matrix Key</button></div></div>
+                    <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase leading-none">Security Matrix</h2>
+                    <div class="bg-white border p-12 shadow-2xl rounded-[3rem] max-w-xl mx-auto mt-10 relative overflow-hidden"><div class="absolute top-0 right-0 w-32 h-32 bg-red-50 rounded-full blur-3xl -mr-16 -mt-16 opacity-30"></div><div class="space-y-8 relative z-10"><div class="h-20 w-20 bg-slate-900 rounded-3xl flex items-center justify-center text-white mx-auto shadow-2xl mb-8"><i data-lucide="lock" size="40"></i></div><div class="space-y-4"><input type="password" id="s-p1" class="w-full p-4 rounded-2xl border-2 font-black outline-none focus:ring-4 focus:ring-green-50 transition-all bg-slate-50 shadow-inner" placeholder="New Password"></div><button onclick="alert('Access keys synchronized.')" class="w-full py-5 bg-slate-900 text-white font-black uppercase rounded-[2rem] shadow-2xl hover:bg-black transition-all active:scale-95 shadow-slate-200">Sync Security Matrix</button></div></div>
                 </div>
             `;
             lucide.createIcons();
@@ -832,7 +799,7 @@
             document.getElementById('m-leave-wop').value = emp.leave_casual || 0; 
         }
         
-        async function deleteMember(id) { if(confirm("Wipe account identity " + id + " from matrix?")) { try { const res = await fetch(`${API_BASE}/employees/${id}`, { method: 'DELETE' }); if(res.ok) { await syncData(); renderDirectory(); } } catch(e) { alert("Fail."); } } }
+        async function deleteMember(id) { if(confirm("Wipe identity " + id + " from matrix?")) { try { const res = await fetch(`${API_BASE}/employees/${id}`, { method: 'DELETE' }); if(res.ok) { await syncData(); renderDirectory(); } } catch(e) { alert("Fail."); } } }
 
         async function login(e) {
             e.preventDefault();
@@ -848,12 +815,11 @@
                     localStorage.setItem('hr_user', JSON.stringify(user));
                     await syncData();
                     
-                    // SMART ROUTING ON LOGIN
+                    // SMART ROUTING
                     if (state.user.role !== 'admin' && state.payrollPostedMonths.length > 0) {
                         const sorted = [...state.payrollPostedMonths].sort((a,b) => b.month_year.localeCompare(a.month_year));
                         state.selectedMonth = sorted[0].month_year;
                     }
-                    
                     showApp();
                 } else { alert("Denied."); hideLoading(); }
             } catch (err) { alert("Matrix Offline."); hideLoading(); }
