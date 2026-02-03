@@ -532,6 +532,7 @@
                             <i data-lucide="lock" size="64" class="text-slate-200"></i>
                             <h2 class="text-xl font-black text-slate-400 uppercase tracking-widest">Sheet Locked</h2>
                             <p class="text-sm text-slate-400">The salary sheet for ${state.selectedMonth} has not been published yet.</p>
+                            <p class="text-[10px] font-black text-slate-300 uppercase tracking-widest mt-4">Tip: Use the picker above to check January.</p>
                         </div>
                     ` : `
                         <div class="overflow-x-auto rounded-[2rem] border bg-white shadow-xl">
@@ -541,10 +542,8 @@
                                         <th class="p-4">ID</th><th class="p-4">Name</th>
                                         <th class="p-4 text-right">Basic</th><th class="p-4 text-right">Invig</th>
                                         <th class="p-4 text-right">T.Pay</th><th class="p-4 text-right">Incr</th>
-                                        <th class="p-4 text-right">Total Add</th><th class="p-4 text-right text-red-500">Ex.Lv</th>
-                                        <th class="p-4 text-right text-red-500">Tax</th><th class="p-4 text-right text-red-500">Loan</th>
                                         <th class="p-4 text-right font-black text-slate-900 uppercase">Net Paid</th>
-                                        ${isAdmin ? `<th class="p-4 text-center">Action</th>` : ''}
+                                        ${isAdmin ? `<th class="p-4 text-center">Edit</th>` : ''}
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-slate-50 font-bold">
@@ -558,10 +557,6 @@
                                                 <td class="p-4 text-right">${cleanNumber(emp.invigilation).toLocaleString()}</td>
                                                 <td class="p-4 text-right">${cleanNumber(emp.t_payment).toLocaleString()}</td>
                                                 <td class="p-4 text-right">${cleanNumber(emp.increment).toLocaleString()}</td>
-                                                <td class="p-4 text-right font-black text-slate-500">${m.totalAddition.toLocaleString()}</td>
-                                                <td class="p-4 text-right text-red-400">-${cleanNumber(emp.extra_leaves_deduction).toLocaleString()}</td>
-                                                <td class="p-4 text-right text-red-400">-${cleanNumber(emp.tax).toLocaleString()}</td>
-                                                <td class="p-4 text-right text-red-400">-${cleanNumber(emp.loan_deduction).toLocaleString()}</td>
                                                 <td class="p-4 text-right font-black text-slate-900">Rs. ${m.netPaid.toLocaleString()}</td>
                                                 ${isAdmin ? `<td class="p-4 text-center"><button onclick="editPayroll('${emp.id}')" class="text-blue-500"><i data-lucide="pencil" size="14"></i></button></td>` : ''}
                                             </tr>
@@ -650,7 +645,7 @@
         }
 
         async function postSalary() {
-            if(!confirm(`Publish salary data for ${state.selectedMonth}?`)) return;
+            if(!confirm(`Publish salary data for ${state.selectedMonth}? This makes it visible to employees.`)) return;
             const res = await fetch(`${API_BASE}/payroll-post`, {
                 method: 'POST',
                 headers: {'Content-Type':'application/json'},
@@ -707,6 +702,7 @@
             document.getElementById('member-form')?.addEventListener('submit', handleMemberSubmit);
         }
 
+        // --- LEAVES MODULE ---
         function renderLeaves() {
             const list = (state.leaves || []).filter(l => l.start_date.startsWith(state.selectedLeaveMonth));
             const container = document.getElementById('view-container');
@@ -750,23 +746,18 @@
             hideLoading();
         }
 
+        // --- LOANS ---
         function renderLoans() {
             const container = document.getElementById('view-container');
             const isAdmin = state.user.role === 'admin';
             const userLoans = state.loans.filter(l => isAdmin || String(l.employee_id) === String(state.user.id));
             container.innerHTML = `
                 <div class="animate-fade-in space-y-8 text-slate-900 font-sans">
-                    <div class="flex justify-between items-center border-b pb-6 border-slate-100">
-                        <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase leading-none">Loan Portal</h2>
-                        <button onclick="applyLoanPrompt()" class="bg-green-700 text-white px-8 py-3 rounded-2xl font-black uppercase text-xs shadow-xl active:scale-95 transition-all hover:bg-green-800">Apply for Loan</button>
-                    </div>
+                    <div class="flex justify-between items-center border-b pb-6 border-slate-100"><h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase leading-none">Loan Portal</h2><button onclick="applyLoanPrompt()" class="bg-green-700 text-white px-8 py-3 rounded-2xl font-black uppercase text-xs shadow-xl active:scale-95 hover:bg-green-800 transition-all">Apply for Loan</button></div>
                     <div class="grid gap-6">
                         ${userLoans.map(loan => `
                             <div class="bg-white p-8 rounded-[2.5rem] border shadow-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-6 group hover:border-green-300 transition-all">
-                                <div>
-                                    <h4 class="font-black uppercase text-lg text-slate-800">${loan.employee_name}</h4>
-                                    <p class="text-xs text-slate-400 italic font-bold">"${loan.reason}"</p>
-                                </div>
+                                <div><h4 class="font-black uppercase text-lg text-slate-800">${loan.employee_name}</h4><p class="text-xs text-slate-400 italic">"${loan.reason}"</p></div>
                                 <div class="flex gap-8 text-right">
                                     <div><p class="text-[10px] uppercase font-black text-slate-400 tracking-widest">Total Grant</p><p class="font-black">Rs. ${cleanNumber(loan.total_amount).toLocaleString()}</p></div>
                                     <div><p class="text-[10px] uppercase font-black text-slate-400 tracking-widest">Balance</p><p class="font-black text-red-600">Rs. ${(cleanNumber(loan.total_amount) - cleanNumber(loan.paid_amount)).toLocaleString()}</p></div>
@@ -782,44 +773,22 @@
 
         async function applyLoanPrompt() {
             const amount = prompt("Enter Loan Amount:"); if (!amount) return;
-            const reason = prompt("Describe the reason for this loan request:"); if (!reason) return;
+            const reason = prompt("Reason for request:"); if (!reason) return;
             showLoading();
             const res = await fetch(`${API_BASE}/loans`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ employeeId: state.user.id, totalAmount: amount, reason: reason }) });
-            if(res.ok) { alert("Matrix Alert: Loan Dispatched via System Mail."); await syncData(); renderLoans(); } else hideLoading();
+            if(res.ok) { alert("Matrix Alert: Dispatch Dispatched."); await syncData(); renderLoans(); } else hideLoading();
         }
 
+        // --- DISCUSSION ---
         function renderDiscussion() {
             const container = document.getElementById('view-container');
             const isAdmin = state.user.role === 'admin';
             container.innerHTML = `
                 <div class="animate-fade-in space-y-8 text-slate-900 font-sans">
-                    <div class="flex justify-between items-center border-b pb-6 border-slate-100">
-                        <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase leading-none">Global Board</h2>
-                        ${isAdmin ? `<button onclick="state.boardFormVisible=!state.boardFormVisible; renderDiscussion()" class="bg-green-700 text-white px-10 py-3 rounded-2xl font-black uppercase text-xs shadow-xl active:scale-95 hover:bg-green-800 transition-all">New Post</button>` : ''}
-                    </div>
-                    ${state.boardFormVisible ? `
-                        <div class="bg-green-50/20 border-green-100 border-2 p-10 rounded-[2.5rem] mb-10 shadow-xl animate-slide-up font-sans">
-                            <form id="notice-form" class="space-y-4">
-                                <input type="text" id="n-title" class="w-full p-4 rounded-xl border font-bold shadow-inner outline-none" placeholder="Header Title">
-                                <textarea id="n-msg" class="w-full p-4 rounded-xl border h-32 font-medium shadow-inner outline-none" placeholder="Detailed content..."></textarea>
-                                <div class="flex justify-end gap-3 pt-2">
-                                    <button type="button" onclick="state.boardFormVisible=false; renderDiscussion()" class="px-6 py-2 text-slate-400 font-bold uppercase text-xs">Discard</button>
-                                    <button type="submit" class="bg-green-700 text-white px-10 py-3 rounded-xl font-black uppercase text-xs shadow-lg shadow-green-100 active:scale-95 transition-all">Publish</button>
-                                </div>
-                            </form>
-                        </div>
-                    ` : ''}
-                    <div class="space-y-8 max-w-4xl mx-auto font-sans">
-                        ${state.discussions.map(p => `
-                            <div class="bg-white rounded-[2.5rem] border-l-[12px] border-l-green-600 shadow-xl !p-10 relative group hover:border-green-300 transition-all">
-                                <div class="flex justify-between items-start mb-4">
-                                    <h4 class="font-black text-slate-800 text-2xl uppercase leading-tight max-w-2xl">${p.title}</h4>
-                                    <span class="text-[10px] font-black text-slate-300 uppercase tracking-widest">${formatDate(p.date)}</span>
-                                </div>
-                                <p class="text-lg text-slate-600 font-medium leading-relaxed mb-8 border-b pb-8">${p.message}</p>
-                                <div class="flex justify-between items-center"><span class="bg-green-50 text-green-700 font-black text-[10px] px-5 py-2 rounded-xl border border-green-100 uppercase tracking-widest shadow-sm">Verified: ${p.senderName}</span><button class="text-blue-600 font-black text-xs uppercase tracking-widest border-2 border-blue-50 px-8 py-3 rounded-[1.25rem] hover:bg-blue-50 transition-all active:scale-95 shadow-sm">Post Response</button></div>
-                            </div>
-                        `).join('')}
+                    <div class="flex justify-between items-center border-b pb-6 border-slate-100"><h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase leading-none">Board</h2>${isAdmin ? `<button onclick="state.boardFormVisible=!state.boardFormVisible; renderDiscussion()" class="bg-green-700 text-white px-10 py-3 rounded-2xl font-black uppercase text-xs shadow-xl active:scale-95 transition-all">New Post</button>` : ''}</div>
+                    ${state.boardFormVisible ? `<div class="bg-green-50/20 border-green-100 border-2 p-10 rounded-[2.5rem] mb-10 shadow-xl animate-slide-up"><form id="notice-form" class="space-y-4"><input type="text" id="n-title" class="w-full p-4 rounded-xl border font-bold" placeholder="Header"><textarea id="n-msg" class="w-full p-4 rounded-xl border h-32 font-medium" placeholder="Content"></textarea><button type="submit" class="w-full py-4 bg-green-700 text-white font-black uppercase rounded-xl shadow-xl">Publish</button></form></div>` : ''}
+                    <div class="space-y-8 max-w-4xl mx-auto">
+                        ${state.discussions.map(p => `<div class="bg-white rounded-[2.5rem] border-l-[12px] border-l-green-600 shadow-xl !p-10 relative group hover:border-green-300 transition-all"><div class="flex justify-between items-start mb-4"><h4 class="font-black text-slate-800 text-2xl uppercase leading-tight max-w-2xl">${p.title}</h4><span class="text-[10px] font-black text-slate-300 uppercase tracking-widest">${formatDate(p.date)}</span></div><p class="text-lg text-slate-600 font-medium leading-relaxed mb-8 border-b pb-8">${p.message}</p><div class="flex justify-between items-center"><span class="bg-green-50 text-green-700 font-black text-[10px] px-5 py-2 rounded-xl border border-green-100 uppercase tracking-widest shadow-sm">Verified: ${p.senderName}</span><button class="text-blue-600 font-black text-xs uppercase tracking-widest border-2 border-blue-50 px-8 py-3 rounded-[1.25rem] hover:bg-blue-50 transition-all active:scale-95 shadow-sm">Reply</button></div></div>`).join('')}
                     </div>
                 </div>
             `;
@@ -836,28 +805,19 @@
              document.getElementById('view-container').innerHTML = `
                 <div class="animate-fade-in space-y-8 text-slate-900 font-sans text-center">
                     <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase leading-none">Security</h2>
-                    <div class="bg-white border p-12 shadow-2xl rounded-[3rem] max-w-xl mx-auto mt-10 relative overflow-hidden shadow-xl">
-                        <div class="absolute top-0 right-0 w-32 h-32 bg-red-50 rounded-full blur-3xl -mr-16 -mt-16 opacity-30"></div>
-                        <div class="space-y-8 relative z-10">
-                            <div class="h-20 w-20 bg-slate-900 rounded-3xl flex items-center justify-center text-white mx-auto shadow-2xl mb-8"><i data-lucide="lock" size="40"></i></div>
-                            <div class="space-y-4"><input type="password" id="s-p1" class="w-full p-4 rounded-2xl border-2 font-black outline-none focus:ring-4 focus:ring-green-50 transition-all bg-slate-50 shadow-inner" placeholder="New Password"></div>
-                            <button onclick="alert('Hub Alert: Security key synchronized.')" class="w-full py-5 bg-slate-900 text-white font-black uppercase rounded-[2rem] shadow-2xl hover:bg-black transition-all active:scale-95 shadow-slate-200">Sync Security Matrix</button>
-                        </div>
-                    </div>
+                    <div class="bg-white border p-12 shadow-2xl rounded-[3rem] max-w-xl mx-auto mt-10 relative overflow-hidden shadow-xl"><div class="absolute top-0 right-0 w-32 h-32 bg-red-50 rounded-full blur-3xl -mr-16 -mt-16"></div><div class="space-y-8 relative z-10"><div class="h-20 w-20 bg-slate-900 rounded-3xl flex items-center justify-center text-white mx-auto shadow-2xl mb-8"><i data-lucide="lock" size="40"></i></div><div class="space-y-4"><input type="password" id="s-p1" class="w-full p-4 rounded-2xl border-2 font-black outline-none focus:ring-4 focus:ring-green-50 transition-all bg-slate-50 shadow-inner" placeholder="New Password"></div><button onclick="alert('Access keys synchronized.')" class="w-full py-5 bg-slate-900 text-white font-black uppercase rounded-[2rem] shadow-2xl hover:bg-black transition-all active:scale-95 shadow-slate-200">Sync Matrix Key</button></div></div>
                 </div>
             `;
             lucide.createIcons();
         }
 
-        /**
-         * CORE ACTIONS
-         */
+        // --- CORE ACTIONS ---
         async function handleMemberSubmit(e) {
             e.preventDefault(); showLoading();
             const payload = { id: document.getElementById('m-id').value, name: document.getElementById('m-name').value, email: document.getElementById('m-email').value, role: document.getElementById('m-role').value, password: document.getElementById('m-id').value, leave_annual: Number(document.getElementById('m-leave-annual').value || 0), leave_casual: Number(document.getElementById('m-leave-wop').value || 0) };
             const method = state.editingMemberId ? 'PUT' : 'POST';
             const url = state.editingMemberId ? `${API_BASE}/employees/${state.editingMemberId}` : `${API_BASE}/employees`;
-            try { const res = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) }); if(res.ok) { state.memberFormVisible = false; await syncData(); renderDirectory(); } } catch(err) { alert("Matrix reported sync failure."); } finally { hideLoading(); }
+            try { const res = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) }); if(res.ok) { state.memberFormVisible = false; await syncData(); renderDirectory(); } } catch(err) { alert("Fail."); } finally { hideLoading(); }
         }
 
         function openAddMember() { state.editingMemberId = null; state.memberFormVisible = true; renderDirectory(); }
@@ -872,14 +832,7 @@
             document.getElementById('m-leave-wop').value = emp.leave_casual || 0; 
         }
         
-        async function deleteMember(id) { 
-            if(confirm("CRITICAL: Wipe account identity " + id + " from system matrix?")) { 
-                try {
-                    const res = await fetch(`${API_BASE}/employees/${id}`, { method: 'DELETE' }); 
-                    if(res.ok) { await syncData(); renderDirectory(); }
-                } catch(e) { alert("Matrix Purge Failure."); }
-            } 
-        }
+        async function deleteMember(id) { if(confirm("Wipe account identity " + id + " from matrix?")) { try { const res = await fetch(`${API_BASE}/employees/${id}`, { method: 'DELETE' }); if(res.ok) { await syncData(); renderDirectory(); } } catch(e) { alert("Fail."); } } }
 
         async function login(e) {
             e.preventDefault();
@@ -894,9 +847,16 @@
                     state.user = user;
                     localStorage.setItem('hr_user', JSON.stringify(user));
                     await syncData();
+                    
+                    // SMART ROUTING ON LOGIN
+                    if (state.user.role !== 'admin' && state.payrollPostedMonths.length > 0) {
+                        const sorted = [...state.payrollPostedMonths].sort((a,b) => b.month_year.localeCompare(a.month_year));
+                        state.selectedMonth = sorted[0].month_year;
+                    }
+                    
                     showApp();
-                } else { alert("Verification Denied: Credential Mismatch."); hideLoading(); }
-            } catch (err) { alert("Connection Error: Matrix reported offline status."); hideLoading(); }
+                } else { alert("Denied."); hideLoading(); }
+            } catch (err) { alert("Matrix Offline."); hideLoading(); }
         }
 
         function logout() { localStorage.removeItem('hr_user'); location.reload(); }
