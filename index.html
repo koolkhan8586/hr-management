@@ -22,7 +22,7 @@
         .animate-slide-up { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
         @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         
-        /* PDF Slip Styles */
+        /* PDF Slip Styles - Hidden in browser */
         #pdf-template { position: absolute; left: -9999px; top: -9999px; width: 800px; padding: 40px; background: white; }
     </style>
 </head>
@@ -84,7 +84,7 @@
             </div>
         </aside>
 
-        <main class="flex-1 lg:ml-64 p-4 md:p-10 pb-24 lg:pb-10 min-h-screen">
+        <main class="flex-1 lg:ml-64 p-4 md:p-10 pb-24 lg:pb-10 min-h-screen shadow-inner border-l border-slate-100">
             <div id="view-container" class="max-w-7xl mx-auto"></div>
         </main>
 
@@ -223,8 +223,12 @@
                     
                     // SMART ROUTING: Default to latest posted month for employees
                     if (state.user.role !== 'admin' && state.payrollPostedMonths.length > 0) {
-                        const sorted = [...state.payrollPostedMonths].sort((a,b) => (b.month_year || b).localeCompare(a.month_year || a));
-                        state.selectedMonth = sorted[0].month_year || sorted[0];
+                        const sorted = [...state.payrollPostedMonths].sort((a,b) => {
+                            const valA = a.month_year || a;
+                            const valB = b.month_year || b;
+                            return String(valB).localeCompare(String(valA));
+                        });
+                        state.selectedMonth = String(sorted[0].month_year || sorted[0]);
                     }
                     showApp();
                 } catch(e) {
@@ -523,16 +527,17 @@
         function renderPayroll() {
             const container = document.getElementById('view-container');
             const isAdmin = state.user.role === 'admin';
-            // Robust check for posted month
+            
+            // NORMALIZED POSTED CHECK
             const isPosted = state.payrollPostedMonths.some(m => {
-                const month = m.month_year || m;
-                return String(month) === String(state.selectedMonth);
+                const val = (m.month_year || m);
+                return String(val).trim() === String(state.selectedMonth).trim();
             });
             
             container.innerHTML = `
                 <div class="animate-fade-in space-y-8">
                     <div class="flex flex-col md:flex-row justify-between items-center gap-6">
-                        <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase font-sans">Salary Matrix</h2>
+                        <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase font-sans">Salary Hub</h2>
                         <div class="flex flex-wrap gap-3 justify-center">
                             <input type="month" id="month-picker" value="${state.selectedMonth}" onchange="state.selectedMonth=this.value; renderPayroll()" class="p-3 border-2 rounded-2xl font-black bg-white shadow-sm outline-none">
                             ${isAdmin ? `
@@ -555,7 +560,7 @@
                             <div class="bg-slate-100 p-8 rounded-full mb-4"><i data-lucide="lock" size="48" class="text-slate-300"></i></div>
                             <h2 class="text-xl font-black text-slate-400 uppercase tracking-widest">Payroll Blocked</h2>
                             <p class="text-sm text-slate-400">Salary visibility for ${state.selectedMonth} is not authorized yet.</p>
-                            <p class="text-[10px] font-black text-slate-300 uppercase tracking-widest mt-4">Tip: Check previous months using the picker above.</p>
+                            <p class="text-[10px] font-black text-slate-300 uppercase tracking-widest mt-4">Tip: Use the picker above to check published months.</p>
                         </div>
                     ` : `
                         <div class="overflow-x-auto rounded-[2rem] border bg-white shadow-xl">
@@ -568,7 +573,7 @@
                                         <th class="p-4 text-right">Total Add</th><th class="p-4 text-right text-red-500">Ex.Lv</th>
                                         <th class="p-4 text-right text-red-500">Tax</th><th class="p-4 text-right text-red-500">Loan</th>
                                         <th class="p-4 text-right font-black text-slate-900 uppercase">Net Paid</th>
-                                        ${isAdmin ? `<th class="p-4 text-center">Action</th>` : ''}
+                                        ${isAdmin ? `<th class="p-4 text-center">Edit</th>` : ''}
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-slate-50 font-bold">
@@ -669,7 +674,7 @@
                                 <input type="text" id="m-name" class="p-4 rounded-2xl border-2 font-bold bg-slate-50 outline-none" placeholder="Full Name" required>
                                 <select id="m-role" class="p-4 rounded-2xl border-2 border-slate-50 font-black text-sm bg-slate-50 outline-none"><option value="employee">Staff Member</option><option value="admin">System Admin</option></select>
                             </div>
-                            <div class="flex justify-end gap-3 pt-6 border-t"><button type="button" onclick="state.memberFormVisible=false; renderDirectory()" class="px-8 py-3 text-slate-400 font-bold uppercase text-xs">Cancel</button><button type="submit" class="bg-green-700 text-white px-12 py-3 rounded-2xl font-black uppercase shadow-lg">Confirm & Sync</button></div>
+                            <div class="flex justify-end gap-3 pt-6 border-t"><button type="button" onclick="state.memberFormVisible=false; renderDirectory()" class="px-8 py-3 text-slate-400 font-bold uppercase text-xs">Cancel</button><button type="submit" class="bg-green-700 text-white px-12 py-3 rounded-2xl font-black uppercase shadow-lg active:scale-95 transition-all">Save Identity</button></div>
                         </form>
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 font-sans">
@@ -725,7 +730,7 @@
 
         async function applyLoanPrompt() {
             const amount = prompt("Enter Loan Amount:"); if (!amount) return;
-            const reason = prompt("Describe the reason for this loan request:"); if (!reason) return;
+            const reason = prompt("Reason for request:"); if (!reason) return;
             showLoading();
             const res = await fetch(`${API_BASE}/loans`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ employeeId: state.user.id, totalAmount: amount, reason: reason }) });
             if(res.ok) { notify("Dispatched."); await syncData(); renderLoans(); } else hideLoading();
@@ -768,7 +773,7 @@
             const payload = { id: document.getElementById('m-id').value, name: document.getElementById('m-name').value, email: document.getElementById('m-email').value, role: document.getElementById('m-role').value, password: document.getElementById('m-id').value, leave_annual: Number(document.getElementById('m-leave-annual').value || 0), leave_casual: Number(document.getElementById('m-leave-wop').value || 0) };
             const method = state.editingMemberId ? 'PUT' : 'POST';
             const url = state.editingMemberId ? `${API_BASE}/employees/${state.editingMemberId}` : `${API_BASE}/employees`;
-            try { const res = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) }); if(res.ok) { state.memberFormVisible = false; await syncData(); renderDirectory(); } } catch(err) { alert("Matrix reported sync failure."); } finally { hideLoading(); }
+            try { const res = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) }); if(res.ok) { state.memberFormVisible = false; await syncData(); renderDirectory(); } } catch(err) { notify("Sync failure."); } finally { hideLoading(); }
         }
 
         function openAddMember() { state.editingMemberId = null; state.memberFormVisible = true; renderDirectory(); }
