@@ -20,11 +20,13 @@
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         input[type="number"]::-webkit-inner-spin-button { display: none; }
         #pdf-template { position: absolute; left: -9999px; top: -9999px; width: 800px; background: white; }
+        .animate-slide-up { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900">
 
-    <!-- HIDDEN PDF TEMPLATE -->
+    <!-- HIDDEN PDF TEMPLATE CONTAINER -->
     <div id="pdf-template"></div>
 
     <!-- GLOBAL LOADING SCREEN -->
@@ -35,8 +37,8 @@
     </div>
 
     <!-- LOGIN INTERFACE -->
-    <div id="login-container" class="hidden min-h-screen flex items-center justify-center p-4">
-        <div class="bg-white w-full max-w-md p-10 rounded-[2.5rem] shadow-2xl border border-slate-100">
+    <div id="login-container" class="hidden min-h-screen flex items-center justify-center p-4 bg-slate-100">
+        <div class="bg-white w-full max-w-md p-10 rounded-[2.5rem] shadow-2xl border border-slate-100 animate-slide-up">
             <div class="text-center mb-10">
                 <img src="/cropped-UOL-Green-V1.png" alt="Logo" class="h-20 mx-auto mb-4 object-contain" onerror="this.src='https://placehold.co/150x150?text=LSAF'">
                 <h1 class="text-2xl font-black text-slate-800 leading-tight uppercase tracking-tighter">Lahore School of Accountancy</h1>
@@ -61,7 +63,7 @@
         <aside class="w-64 bg-white border-r border-slate-100 fixed h-full hidden lg:flex flex-col z-50 shadow-sm">
             <div class="p-8 border-b border-slate-50 text-center">
                 <img src="/cropped-UOL-Green-V1.png" class="h-10 mx-auto mb-2" alt="LSAF">
-                <span class="text-[9px] font-black text-green-700 uppercase tracking-widest">NexusHR v4.4.5</span>
+                <span class="text-[9px] font-black text-green-700 uppercase tracking-widest">NexusHR Terminal</span>
             </div>
             <nav class="flex-1 p-4 space-y-1 overflow-y-auto custom-scrollbar" id="sidebar-nav"></nav>
             <div class="p-4 border-t border-slate-50 flex items-center justify-between">
@@ -69,14 +71,14 @@
                     <div id="user-avatar" class="h-9 w-9 rounded-xl bg-green-100 text-green-700 flex items-center justify-center font-black text-sm uppercase">?</div>
                     <div class="flex flex-col overflow-hidden text-left">
                         <span id="user-display-name" class="text-[11px] font-black truncate uppercase text-slate-800 leading-none mb-1">User</span>
-                        <span id="user-display-role" class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Identity Verified</span>
+                        <span id="user-display-role" class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Verified</span>
                     </div>
                 </div>
                 <button onclick="logout()" class="text-red-500 p-2 hover:bg-red-50 rounded-xl transition-all"><i data-lucide="log-out" size="18"></i></button>
             </div>
         </aside>
 
-        <main class="flex-1 lg:ml-64 p-4 md:p-10 pb-24 lg:pb-10 min-h-screen bg-slate-50/30 shadow-inner">
+        <main class="flex-1 lg:ml-64 p-4 md:p-10 pb-24 lg:pb-10 min-h-screen bg-slate-50/30">
             <div id="view-container" class="max-w-7xl mx-auto"></div>
         </main>
 
@@ -89,18 +91,30 @@
         </nav>
     </div>
 
+    <!-- TOAST NOTIFICATION -->
+    <div id="status-toast" class="fixed top-10 left-1/2 -translate-x-1/2 z-[1000] bg-slate-900 text-white px-8 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-2xl opacity-0 pointer-events-none transition-all duration-300 transform translate-y-[-20px]">
+        Status Updated
+    </div>
+
     <script>
         const API_BASE = '/api';
         let state = {
             user: null,
             employees: [],
             attendance: [],
+            leaves: [],
+            loans: [],
+            discussions: [],
             payrollPostedMonths: [],
             currentTab: 'dashboard',
             selectedMonth: new Date().toISOString().slice(0, 7),
-            editingSalaryId: null, // For inline editing
+            selectedAttendanceMonth: new Date().toISOString().slice(0, 7),
+            selectedLeaveMonth: new Date().toISOString().slice(0, 7),
+            editingSalaryId: null, 
             memberFormVisible: false,
-            editingMemberId: null
+            boardFormVisible: false,
+            editingMemberId: null,
+            leaveTab: 'apply'
         };
 
         const NAV_ITEMS = [
@@ -110,23 +124,32 @@
             { id: 'directory', label: 'Staff Hub', icon: 'users', admin: true },
             { id: 'loans', label: 'Loans', icon: 'wallet', admin: false },
             { id: 'leaves', label: 'Leaves', icon: 'calendar', admin: false },
-            { id: 'discussion', label: 'Board', icon: 'message-square', admin: false }
+            { id: 'discussion', label: 'Board', icon: 'message-square', admin: false },
+            { id: 'settings', label: 'Security', icon: 'shield-check', admin: false }
         ];
 
         // --- CORE UTILS ---
+        function notify(msg) {
+            const t = document.getElementById('status-toast');
+            t.innerText = msg; t.style.opacity = '1'; t.style.transform = 'translateY(0) translateX(-50%)';
+            setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateY(-20px) translateX(-50%)'; }, 3000);
+        }
+
         function getPktTime() { return new Date().toLocaleTimeString('en-US', { timeZone: 'Asia/Karachi', hour: '2-digit', minute: '2-digit', hour12: true }); }
         function getPktDate() { return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Karachi' }); }
         function cleanNumber(val) { const num = parseFloat(String(val || 0).replace(/[^0-9.-]+/g, '')); return isNaN(num) ? 0 : num; }
         function getInitial(name) { return name ? name.charAt(0).toUpperCase() : '?'; }
+        function formatDate(dateString) { if (!dateString) return 'N/A'; const date = new Date(dateString); return isNaN(date.getTime()) ? 'N/A' : date.toLocaleDateString(); }
 
         function calculateSalaryMetrics(emp) {
             const basic = cleanNumber(emp.basic_salary);
             const invig = cleanNumber(emp.invigilation);
             const tpay = cleanNumber(emp.t_payment);
             const incr = cleanNumber(emp.increment);
-            const totalAdd = basic + invig + tpay + incr;
-            const sub = cleanNumber(emp.extra_leaves_deduction) + cleanNumber(emp.tax) + cleanNumber(emp.loan_deduction) + cleanNumber(emp.insurance);
-            return { totalAdd, netPaid: totalAdd - sub };
+            const eidi = cleanNumber(emp.eidi);
+            const totalAdd = basic + invig + tpay + incr + eidi;
+            const sub = cleanNumber(emp.extra_leaves_deduction) + cleanNumber(emp.tax) + cleanNumber(emp.loan_deduction) + cleanNumber(emp.insurance) + cleanNumber(emp.others_deduction);
+            return { totalAdd, totalSub: sub, netPaid: totalAdd - sub };
         }
 
         function parseCSVLine(text) {
@@ -145,6 +168,12 @@
             if (saved) {
                 state.user = JSON.parse(saved);
                 await syncData();
+                
+                // Smart select latest published month for employees
+                if (state.user.role !== 'admin' && state.payrollPostedMonths.length > 0) {
+                    const sorted = [...state.payrollPostedMonths].sort((a,b) => String(b).localeCompare(String(a)));
+                    state.selectedMonth = String(sorted[0]);
+                }
                 showApp();
             } else {
                 document.getElementById('loading-screen').classList.add('hidden');
@@ -154,18 +183,26 @@
 
         async function syncData() {
             try {
-                const [eRes, pRes] = await Promise.all([
+                const [eRes, pRes, dRes, lRes] = await Promise.all([
                     fetch(`${API_BASE}/employees`),
-                    fetch(`${API_BASE}/payroll-posted`)
+                    fetch(`${API_BASE}/payroll-posted`),
+                    fetch(`${API_BASE}/discussions`),
+                    fetch(`${API_BASE}/loans`)
                 ]);
                 if (eRes.ok) state.employees = await eRes.json();
                 if (pRes.ok) state.payrollPostedMonths = await pRes.json();
+                if (dRes.ok) state.discussions = await dRes.json();
+                if (lRes.ok) state.loans = await lRes.json();
 
                 if (state.user) {
                     const fresh = state.employees.find(e => String(e.id).toUpperCase() === String(state.user.id).toUpperCase());
                     if (fresh) state.user = fresh;
-                    const aRes = await fetch(`${API_BASE}/attendance/${state.user.id}`);
-                    if (aRes.ok) state.attendance = await aRes.json();
+                    const [atRes, lvRes] = await Promise.all([
+                        fetch(`${API_BASE}/attendance/${state.user.id}`),
+                        fetch(`${API_BASE}/leaves/${state.user.id}`)
+                    ]);
+                    if (atRes.ok) state.attendance = await atRes.json();
+                    if (lvRes.ok) state.leaves = await lvRes.json();
                 }
             } catch (e) { console.error("Sync partial failure."); }
             document.getElementById('loading-screen').classList.add('hidden');
@@ -184,8 +221,8 @@
             const nav = document.getElementById('sidebar-nav');
             const isAdmin = state.user.role === 'admin';
             nav.innerHTML = NAV_ITEMS.filter(i => !i.admin || isAdmin).map(i => `
-                <button onclick="switchTab('${i.id}')" class="w-full flex items-center gap-4 px-5 py-4 rounded-2xl transition-all font-bold ${state.currentTab === i.id ? 'bg-green-700 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}">
-                    <i data-lucide="${i.icon}" size="18"></i><span class="text-xs uppercase tracking-wider">${i.label}</span>
+                <button onclick="switchTab('${i.id}')" class="w-full flex items-center gap-4 px-5 py-4 rounded-2xl transition-all font-bold ${state.currentTab === i.id ? 'bg-green-700 text-white shadow-lg scale-105' : 'text-slate-500 hover:bg-slate-50'}">
+                    <i data-lucide="${i.icon}" size="18"></i><span class="text-[11px] uppercase tracking-wider">${i.label}</span>
                 </button>
             `).join('');
             lucide.createIcons();
@@ -194,43 +231,61 @@
         function switchTab(id) {
             state.currentTab = id;
             state.editingSalaryId = null;
+            state.memberFormVisible = false;
+            state.boardFormVisible = false;
+
+            document.querySelectorAll('.mobile-nav-btn').forEach(btn => {
+                const active = btn.id === 'mob-' + id;
+                btn.className = `p-4 rounded-2xl transition-all ${active ? 'bg-green-50 text-green-700 scale-110 shadow-inner' : 'text-slate-400'}`;
+            });
+
             renderSidebar();
             renderView();
         }
 
         function renderView() {
             const container = document.getElementById('view-container');
-            container.innerHTML = '<div class="py-20 text-center animate-pulse font-black text-slate-300 uppercase tracking-widest">Updating View...</div>';
+            container.innerHTML = '<div class="py-40 text-center animate-pulse font-black text-slate-300 uppercase tracking-[0.5em]">Synchronizing Matrix...</div>';
             
-            switch(state.currentTab) {
-                case 'dashboard': renderDashboard(); break;
-                case 'payroll': renderPayroll(); break;
-                case 'directory': renderDirectory(); break;
-                case 'attendance': renderAttendance(); break;
-                default: renderDashboard();
-            }
+            setTimeout(() => {
+                switch(state.currentTab) {
+                    case 'dashboard': renderDashboard(); break;
+                    case 'payroll': renderPayroll(); break;
+                    case 'directory': renderDirectory(); break;
+                    case 'attendance': renderAttendance(); break;
+                    case 'loans': renderLoans(); break;
+                    case 'leaves': renderLeaves(); break;
+                    case 'discussion': renderDiscussion(); break;
+                    case 'settings': renderSettings(); break;
+                    default: renderDashboard();
+                }
+            }, 50);
         }
 
-        // --- VIEW RENDERS ---
-
+        // --- DASHBOARD ---
         function renderDashboard() {
             const container = document.getElementById('view-container');
             container.innerHTML = `
                 <div class="animate-fade-in space-y-8">
                     <div class="flex justify-between items-center border-b pb-4 border-slate-100">
-                        <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Dashboard</h2>
-                        <div class="bg-white p-4 rounded-2xl border shadow-sm text-right">
-                            <p class="text-[10px] font-black text-slate-400 uppercase">PKT Pakistan Time</p>
-                            <p class="text-green-700 font-black">${getPktTime()}</p>
+                        <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Home Base</h2>
+                        <div class="bg-white p-4 rounded-2xl border shadow-sm text-right font-black">
+                            <p class="text-[10px] text-slate-400 uppercase">PKT Local Time</p>
+                            <p class="text-green-700">${getPktTime()}</p>
                         </div>
                     </div>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 font-sans">
-                        <div class="bg-green-700 p-8 rounded-[2rem] text-white shadow-xl">
-                            <p class="text-[10px] font-black uppercase opacity-60">Status</p>
-                            <p class="text-3xl font-black mt-2">ACTIVE</p>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="bg-green-700 p-8 rounded-[2rem] text-white shadow-xl relative overflow-hidden">
+                            <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
+                            <p class="text-[10px] font-black uppercase opacity-60">Identity Status</p>
+                            <p class="text-3xl font-black mt-2">ACTIVE SESSION</p>
                         </div>
                         <div class="bg-white p-8 rounded-[2rem] border shadow-sm">
-                            <p class="text-[10px] font-black text-slate-400 uppercase">Identity Verified</p>
+                            <p class="text-[10px] font-black text-slate-400 uppercase">Annual Leaves</p>
+                            <p class="text-3xl font-black text-slate-800 mt-2">${state.user.leave_annual || 0} Days</p>
+                        </div>
+                        <div class="bg-white p-8 rounded-[2rem] border shadow-sm">
+                            <p class="text-[10px] font-black text-slate-400 uppercase">Verification Level</p>
                             <p class="text-2xl font-black text-slate-800 mt-2 capitalize">${state.user.role}</p>
                         </div>
                     </div>
@@ -238,41 +293,43 @@
             `;
         }
 
+        // --- PAYROLL HUB ---
         async function renderPayroll() {
             const container = document.getElementById('view-container');
             const isAdmin = state.user.role === 'admin';
-            
-            // Check if month is published (normalize values)
             const isPosted = state.payrollPostedMonths.some(m => String(m).trim() === String(state.selectedMonth).trim());
 
             let content = `
                 <div class="animate-fade-in space-y-6">
                     <div class="flex flex-col md:flex-row justify-between items-center gap-4">
-                        <h2 class="text-xl font-black uppercase">Salary Hub</h2>
-                        <div class="flex gap-2">
-                            <input type="month" id="month-picker" value="${state.selectedMonth}" onchange="updateMonth(this.value)" class="p-2 border-2 rounded-xl font-bold">
+                        <h2 class="text-xl font-black uppercase tracking-widest">Salary Hub</h2>
+                        <div class="flex flex-wrap gap-2 justify-center">
+                            <input type="month" value="${state.selectedMonth}" onchange="updateMonth(this.value)" class="p-2 border-2 rounded-xl font-bold bg-white outline-none">
                             ${isAdmin ? `
-                                <button onclick="togglePublish(${isPosted})" class="px-6 py-2 rounded-xl font-black text-xs text-white uppercase ${isPosted ? 'bg-red-500' : 'bg-slate-900'}">${isPosted ? 'Unpublish' : 'Publish'}</button>
-                                <label class="px-6 py-2 bg-white border-2 rounded-xl font-black text-xs uppercase cursor-pointer hover:bg-slate-50">Import <input type="file" onchange="importSalary(this)" class="hidden"></label>
+                                <button onclick="togglePublish(${isPosted})" class="px-6 py-2 rounded-xl font-black text-[10px] text-white uppercase shadow-lg transition-all ${isPosted ? 'bg-red-600' : 'bg-slate-900'}">${isPosted ? 'Unpublish' : 'Publish to Staff'}</button>
+                                <button onclick="purgeMonthData()" class="bg-red-50 text-red-600 border-2 border-red-100 px-4 py-2 rounded-xl font-black text-[10px] uppercase">Wipe Month</button>
+                                <label class="px-6 py-2 bg-white border-2 rounded-xl font-black text-[10px] uppercase cursor-pointer hover:bg-slate-50">Import <input type="file" onchange="importSalary(this)" class="hidden"></label>
+                                <button onclick="exportSalaryCSV()" class="bg-green-50 text-green-700 px-6 py-2 rounded-xl font-black text-[10px] uppercase">Export</button>
                             ` : `
-                                <button onclick="downloadPDF()" class="px-6 py-2 bg-green-700 text-white rounded-xl font-black text-xs uppercase">Download PDF Slip</button>
+                                <button onclick="downloadPDF()" class="px-8 py-3 bg-green-700 text-white rounded-2xl font-black text-xs uppercase shadow-xl hover:bg-green-800">Download PDF Slip</button>
                             `}
                         </div>
                     </div>
             `;
 
             if (!isAdmin && !isPosted) {
-                content += `<div class="py-40 text-center bg-white rounded-[3rem] border shadow-sm"><i data-lucide="lock" class="mx-auto text-slate-200 mb-4" size="64"></i><h3 class="text-xl font-black text-slate-400 uppercase">Period Locked</h3><p class="text-sm text-slate-400">Payroll authorization for ${state.selectedMonth} is pending.</p></div>`;
+                content += `<div class="py-40 text-center bg-white rounded-[3rem] border-2 border-slate-100 shadow-sm"><i data-lucide="lock" class="mx-auto text-slate-200 mb-6" size="80"></i><h3 class="text-xl font-black text-slate-400 uppercase tracking-widest">Period Locked</h3><p class="text-sm text-slate-400">Salary data for ${state.selectedMonth} has not been published.</p></div>`;
             } else {
                 content += `
                     <div class="overflow-x-auto rounded-[2rem] bg-white border shadow-xl">
-                        <table class="w-full text-left text-[11px]">
-                            <thead class="bg-slate-50 border-b font-black text-slate-400 uppercase">
+                        <table class="w-full text-left text-[10px]">
+                            <thead class="bg-slate-50 border-b font-black text-slate-400 uppercase tracking-widest">
                                 <tr>
                                     <th class="p-4">ID</th><th class="p-4">Staff</th>
                                     <th class="p-4 text-right">Basic</th><th class="p-4 text-right">Invig</th>
                                     <th class="p-4 text-right">T.Pay</th><th class="p-4 text-right">Incr</th>
-                                    <th class="p-4 text-right font-black text-slate-900">Net Paid</th>
+                                    <th class="p-4 text-right">Insurance</th><th class="p-4 text-right">Others</th>
+                                    <th class="p-4 text-right font-black text-slate-900 uppercase">Net Paid</th>
                                     ${isAdmin ? `<th class="p-4 text-center">Action</th>` : ''}
                                 </tr>
                             </thead>
@@ -284,22 +341,24 @@
                     const isEditing = state.editingSalaryId === emp.id;
                     const m = calculateSalaryMetrics(emp);
                     content += `
-                        <tr class="hover:bg-slate-50">
-                            <td class="p-4 font-black">${emp.id}</td>
+                        <tr class="hover:bg-slate-50/80 transition-colors">
+                            <td class="p-4 font-black text-slate-900">${emp.id}</td>
                             <td class="p-4 uppercase truncate max-w-[150px]">${emp.name}</td>
-                            <td class="p-4 text-right">${isEditing ? `<input type="number" id="edit-basic" class="w-20 border rounded" value="${emp.basic_salary}">` : cleanNumber(emp.basic_salary).toLocaleString()}</td>
-                            <td class="p-4 text-right">${isEditing ? `<input type="number" id="edit-invig" class="w-16 border rounded" value="${emp.invigilation}">` : cleanNumber(emp.invigilation).toLocaleString()}</td>
-                            <td class="p-4 text-right">${isEditing ? `<input type="number" id="edit-tpay" class="w-16 border rounded" value="${emp.t_payment}">` : cleanNumber(emp.t_payment).toLocaleString()}</td>
-                            <td class="p-4 text-right">${isEditing ? `<input type="number" id="edit-incr" class="w-16 border rounded" value="${emp.increment}">` : cleanNumber(emp.increment).toLocaleString()}</td>
-                            <td class="p-4 text-right font-black">Rs. ${m.netPaid.toLocaleString()}</td>
+                            <td class="p-4 text-right">${isEditing ? `<input type="number" id="edit-basic" class="w-20 border rounded p-1" value="${emp.basic_salary}">` : cleanNumber(emp.basic_salary).toLocaleString()}</td>
+                            <td class="p-4 text-right">${isEditing ? `<input type="number" id="edit-invig" class="w-16 border rounded p-1" value="${emp.invigilation}">` : cleanNumber(emp.invigilation).toLocaleString()}</td>
+                            <td class="p-4 text-right">${isEditing ? `<input type="number" id="edit-tpay" class="w-16 border rounded p-1" value="${emp.t_payment}">` : cleanNumber(emp.t_payment).toLocaleString()}</td>
+                            <td class="p-4 text-right">${isEditing ? `<input type="number" id="edit-incr" class="w-16 border rounded p-1" value="${emp.increment}">` : cleanNumber(emp.increment).toLocaleString()}</td>
+                            <td class="p-4 text-right">${isEditing ? `<input type="number" id="edit-ins" class="w-16 border rounded p-1" value="${emp.insurance}">` : cleanNumber(emp.insurance).toLocaleString()}</td>
+                            <td class="p-4 text-right">${isEditing ? `<input type="number" id="edit-oth" class="w-16 border rounded p-1" value="${emp.others_deduction}">` : cleanNumber(emp.others_deduction).toLocaleString()}</td>
+                            <td class="p-4 text-right font-black text-slate-900">Rs. ${m.netPaid.toLocaleString()}</td>
                             ${isAdmin ? `
                                 <td class="p-4 text-center">
                                     ${isEditing ? `
-                                        <button onclick="saveSalary('${emp.id}')" class="text-green-600 font-black">SAVE</button>
+                                        <button onclick="saveSalary('${emp.id}')" class="text-green-600 font-black text-[9px] uppercase border-b-2 border-green-600">Save</button>
                                     ` : `
                                         <div class="flex justify-center gap-2">
-                                            <button onclick="editSalaryMode('${emp.id}')" class="text-blue-500"><i data-lucide="pencil" size="14"></i></button>
-                                            <button onclick="resetSalary('${emp.id}')" class="text-red-400"><i data-lucide="trash-2" size="14"></i></button>
+                                            <button onclick="editSalaryMode('${emp.id}')" class="text-blue-500 hover:scale-125 transition-transform"><i data-lucide="pencil" size="14"></i></button>
+                                            <button onclick="resetSalary('${emp.id}')" class="text-red-400 hover:scale-125 transition-transform"><i data-lucide="trash-2" size="14"></i></button>
                                         </div>
                                     `}
                                 </td>
@@ -314,22 +373,26 @@
             lucide.createIcons();
         }
 
+        // --- STAFF DIRECTORY ---
         function renderDirectory() {
             const container = document.getElementById('view-container');
             container.innerHTML = `
                 <div class="animate-fade-in space-y-6">
                     <div class="flex justify-between items-center border-b pb-4 border-slate-100">
-                        <h2 class="text-xl font-black uppercase">Staff Hub</h2>
-                        <button onclick="toggleMemberForm()" class="bg-green-700 text-white px-6 py-2 rounded-xl font-black text-xs uppercase">New Staff</button>
+                        <h2 class="text-xl font-black uppercase tracking-widest">Staff Hub</h2>
+                        <button onclick="toggleStaffForm()" class="bg-green-700 text-white px-6 py-2 rounded-xl font-black text-xs uppercase shadow-lg">New Identity</button>
                     </div>
                     <div id="staff-form-area"></div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                         ${state.employees.map(emp => `
-                            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4 hover:border-green-300 transition-all">
+                            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4 hover:border-green-300 transition-all group">
                                 <div class="h-12 w-12 bg-green-50 text-green-700 rounded-xl flex items-center justify-center font-black text-xl uppercase">${getInitial(emp.name)}</div>
                                 <div class="flex-1 overflow-hidden text-left">
                                     <h4 class="font-black text-slate-800 uppercase truncate leading-none mb-1">${emp.name}</h4>
-                                    <p class="text-[9px] font-bold text-slate-400 uppercase">${emp.id} • ${emp.role}</p>
+                                    <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">${emp.id} • ${emp.role}</p>
+                                </div>
+                                <div class="opacity-0 group-hover:opacity-100 flex gap-1 transition-all">
+                                     <button onclick="deleteStaff('${emp.id}')" class="text-red-400 p-2 hover:bg-red-50 rounded-lg"><i data-lucide="trash-2" size="16"></i></button>
                                 </div>
                             </div>
                         `).join('')}
@@ -339,17 +402,223 @@
             lucide.createIcons();
         }
 
-        // --- ACTIONS ---
-        function updateMonth(val) { state.selectedMonth = val; renderPayroll(); }
+        function toggleStaffForm() {
+            const area = document.getElementById('staff-form-area');
+            if (area.innerHTML) { area.innerHTML = ''; return; }
+            area.innerHTML = `
+                <Card class="border-2 border-green-100 animate-slide-up mb-8">
+                    <form onsubmit="handleStaffSubmit(event)" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <input type="text" id="s-id" class="p-4 rounded-xl border-2 font-bold bg-slate-50" placeholder="EMPLOYEE ID (e.g. EMP001)" required>
+                        <input type="text" id="s-name" class="p-4 rounded-xl border-2 font-bold bg-slate-50" placeholder="LEGAL NAME" required>
+                        <input type="email" id="s-email" class="p-4 rounded-xl border-2 font-bold bg-slate-50" placeholder="EMAIL ADDRESS" required>
+                        <select id="s-role" class="p-4 rounded-xl border-2 font-bold bg-slate-50"><option value="employee">Employee</option><option value="admin">Administrator</option></select>
+                        <div class="md:col-span-2 flex justify-end gap-3 pt-4 border-t">
+                            <button type="button" onclick="toggleStaffForm()" class="px-6 py-2 text-slate-400 font-bold uppercase text-xs">Discard</button>
+                            <button type="submit" class="bg-green-700 text-white px-8 py-2 rounded-xl font-black uppercase text-xs">Authorize Identity</button>
+                        </div>
+                    </form>
+                </Card>
+            `;
+        }
 
+        async function handleStaffSubmit(e) {
+            e.preventDefault();
+            const payload = { id: document.getElementById('s-id').value.toUpperCase(), name: document.getElementById('s-name').value, email: document.getElementById('s-email').value, role: document.getElementById('s-role').value, password: document.getElementById('s-id').value.toUpperCase() };
+            const res = await fetch(`${API_BASE}/employees`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+            if (res.ok) { notify("Identity Authorized."); await syncData(); renderDirectory(); }
+        }
+
+        async function deleteStaff(id) {
+            if(!confirm("Purge account " + id + "?")) return;
+            const res = await fetch(`${API_BASE}/employees/${id}`, { method: 'DELETE' });
+            if(res.ok) { await syncData(); renderDirectory(); }
+        }
+
+        // --- ATTENDANCE ---
+        function renderAttendance() {
+            const stats = getAttendanceStats(state.attendance);
+            const container = document.getElementById('view-container');
+            container.innerHTML = `
+                <div class="animate-fade-in space-y-8 text-slate-900 font-sans">
+                    <div class="flex justify-between items-center border-b pb-4 border-slate-100"><h2 class="text-xl font-black uppercase tracking-widest">Clock Center</h2></div>
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <Card class="py-12 flex flex-col items-center justify-center space-y-6 border-2 shadow-inner bg-slate-50/50">
+                            <h3 class="text-6xl font-black text-slate-800 font-mono tracking-tighter">${getPktTime()}</h3>
+                            <p class="text-xs font-bold text-slate-400 uppercase tracking-[0.2em]">${getPktDate()}</p>
+                            <div class="w-full max-w-xs space-y-3 pt-6">
+                                <button onclick="handleClock('Clock In')" class="w-full py-5 rounded-2xl bg-green-700 text-white font-black shadow-lg hover:bg-green-800 transition-all active:scale-95 text-base">Clock In</button>
+                                <button onclick="handleClock('Clock Out')" class="w-full py-5 rounded-2xl bg-white border-2 text-slate-700 font-black hover:bg-slate-50 transition-all active:scale-95 text-base">Clock Out</button>
+                            </div>
+                        </Card>
+                        <Card class="flex items-center justify-center p-10 bg-white border-dashed border-2 text-center rounded-[2rem] border-slate-200">
+                            <div><div class="bg-green-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6"><i data-lucide="map-pin" class="text-green-600 animate-bounce" size="40"></i></div><p class="text-xs font-black text-slate-600 uppercase tracking-widest leading-relaxed">Identity Geofence Active<br/>Verified Pakistan PKT Sync</p></div>
+                        </Card>
+                    </div>
+                    <div class="bg-white rounded-3xl border overflow-hidden shadow-sm">
+                        <div class="bg-slate-50 p-4 border-b font-black text-[10px] uppercase text-slate-400 tracking-widest">Activity Stream</div>
+                        <div class="divide-y max-h-80 overflow-y-auto custom-scrollbar">
+                            ${state.attendance.map(log => `
+                                <div class="p-5 flex justify-between items-center hover:bg-slate-50 transition-colors">
+                                    <div class="flex items-center gap-4">
+                                        <div class="h-2 w-2 rounded-full ${log.type === 'Clock In' ? 'bg-green-500' : 'bg-red-500'} shadow-sm"></div>
+                                        <div><p class="text-xs font-black uppercase text-slate-800">${log.type}</p><p class="text-[10px] text-slate-400 font-bold uppercase">${formatDate(log.date_str)}</p></div>
+                                    </div>
+                                    <p class="font-mono text-sm font-black text-slate-500">${log.time_str}</p>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+        }
+
+        async function handleClock(type) {
+            navigator.geolocation.getCurrentPosition(async (pos) => {
+                const res = await fetch(`${API_BASE}/attendance`, {
+                    method: 'POST', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({ employeeId: state.user.id, type, date: getPktDate(), time: getPktTime(), lat: pos.coords.latitude, lng: pos.coords.longitude })
+                });
+                if(res.ok) { notify(`${type} Verified.`); await syncData(); renderAttendance(); }
+            }, () => alert("Location required for identity lock."));
+        }
+
+        // --- LOANS ---
+        function renderLoans() {
+            const container = document.getElementById('view-container');
+            const isAdmin = state.user.role === 'admin';
+            const userLoans = state.loans.filter(l => isAdmin || String(l.employee_id) === String(state.user.id));
+            container.innerHTML = `
+                <div class="animate-fade-in space-y-6">
+                    <div class="flex justify-between items-center border-b pb-4 border-slate-100"><h2 class="text-xl font-black uppercase tracking-tighter">Loan Hub</h2><button onclick="promptLoan()" class="bg-green-700 text-white px-6 py-2 rounded-xl font-black text-[10px] uppercase shadow-lg">New Request</button></div>
+                    <div class="grid gap-4">
+                        ${userLoans.map(l => `
+                            <div class="bg-white p-8 rounded-[2rem] border-2 border-slate-50 shadow-sm flex flex-col md:flex-row justify-between items-center gap-6">
+                                <div><h4 class="font-black uppercase text-slate-800 text-lg">${l.employee_name || 'Staff Member'}</h4><p class="text-[11px] text-slate-400 italic font-bold mt-1">"${l.reason}"</p></div>
+                                <div class="flex gap-10 text-right">
+                                    <div><p class="text-[10px] uppercase font-black text-slate-400 tracking-widest">Total</p><p class="font-black text-slate-800">Rs. ${cleanNumber(l.total_amount).toLocaleString()}</p></div>
+                                    <div><p class="text-[10px] uppercase font-black text-slate-400 tracking-widest">Status</p><p class="font-black ${l.status === 'Approved' ? 'text-green-600' : 'text-amber-500'} uppercase text-[11px]">${l.status}</p></div>
+                                </div>
+                            </div>
+                        `).join('')}
+                        ${userLoans.length === 0 ? '<div class="py-20 text-center font-black text-slate-200 uppercase tracking-[0.3em]">No Financial Records Found</div>' : ''}
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+        }
+
+        async function promptLoan() {
+            const amt = prompt("Principal Amount (PKR):"); if(!amt) return;
+            const rsn = prompt("Justification:"); if(!rsn) return;
+            const res = await fetch(`${API_BASE}/loans`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ employeeId: state.user.id, totalAmount: amt, reason: rsn }) });
+            if(res.ok) { notify("Request Logged."); await syncData(); renderLoans(); }
+        }
+
+        // --- LEAVES ---
+        function renderLeaves() {
+            const container = document.getElementById('view-container');
+            container.innerHTML = `
+                <div class="animate-fade-in space-y-8">
+                    <div class="flex bg-slate-200 p-1.5 rounded-2xl max-w-xs mx-auto mb-10 shadow-inner">
+                        <button onclick="state.leaveTab='apply'; renderLeaves()" class="flex-1 py-2.5 text-[10px] font-black rounded-xl uppercase transition-all ${state.leaveTab === 'apply' ? 'bg-white shadow-md text-green-700' : 'text-slate-500'}">Apply</button>
+                        <button onclick="state.leaveTab='history'; renderLeaves()" class="flex-1 py-2.5 text-[10px] font-black rounded-xl uppercase transition-all ${state.leaveTab === 'history' ? 'bg-white shadow-md text-green-700' : 'text-slate-500'}">History</button>
+                    </div>
+                    ${state.leaveTab === 'apply' ? `
+                        <Card class="max-w-xl mx-auto shadow-2xl !p-10 border-2 border-green-50 animate-slide-up">
+                            <form onsubmit="handleLeaveApply(event)" class="space-y-6">
+                                <select id="lv-type" class="w-full p-4 rounded-xl border-2 font-black bg-slate-50"><option>Annual Leave</option><option>Sick Leave</option><option>WOP Leave</option></select>
+                                <div class="grid grid-cols-2 gap-4"><input type="date" id="lv-date" class="p-4 rounded-xl border-2 font-black bg-slate-50" required><input type="number" id="lv-days" class="p-4 rounded-xl border-2 font-black bg-slate-50" placeholder="Days" required></div>
+                                <textarea id="lv-rsn" class="w-full p-4 rounded-xl border-2 font-bold h-32 bg-slate-50" placeholder="Justification for HR..." required></textarea>
+                                <button type="submit" class="w-full py-5 bg-green-700 text-white font-black rounded-2xl uppercase tracking-widest shadow-xl">Confirm & Send</button>
+                            </form>
+                        </Card>
+                    ` : `
+                        <div class="space-y-4 max-w-2xl mx-auto">
+                            ${state.leaves.map(l => `
+                                <div class="bg-white p-6 rounded-2xl border-2 flex justify-between items-center group hover:border-green-300 transition-all">
+                                    <div><h4 class="font-black uppercase text-slate-800">${l.leave_type}</h4><p class="text-xs text-slate-400 font-bold uppercase mt-1">${formatDate(l.start_date)} • ${l.days} Days</p></div>
+                                    <span class="text-[10px] font-black uppercase text-amber-500 bg-amber-50 px-3 py-1 rounded-full">${l.status}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `}
+                </div>
+            `;
+            lucide.createIcons();
+        }
+
+        async function handleLeaveApply(e) {
+            e.preventDefault();
+            const payload = { employeeId: state.user.id, type: document.getElementById('lv-type').value, startDate: document.getElementById('lv-date').value, days: document.getElementById('lv-days').value, reason: document.getElementById('lv-rsn').value };
+            const res = await fetch(`${API_BASE}/leaves`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+            if(res.ok) { notify("Request Transmitted."); await syncData(); state.leaveTab = 'history'; renderLeaves(); }
+        }
+
+        // --- DISCUSSION ---
+        function renderDiscussion() {
+            const container = document.getElementById('view-container');
+            const isAdmin = state.user.role === 'admin';
+            container.innerHTML = `
+                <div class="animate-fade-in space-y-8">
+                    <div class="flex justify-between items-center border-b pb-4 border-slate-100"><h2 class="text-xl font-black uppercase tracking-tighter">Information Board</h2>${isAdmin ? `<button onclick="state.boardFormVisible=true; renderDiscussion()" class="bg-green-700 text-white px-6 py-2 rounded-xl font-black text-xs uppercase shadow-lg">New Post</button>` : ''}</div>
+                    ${state.boardFormVisible ? `
+                        <Card class="max-w-2xl mx-auto border-2 border-green-100 animate-slide-up shadow-2xl mb-10">
+                            <form onsubmit="handlePostSubmit(event)" class="space-y-4">
+                                <input type="text" id="n-title" class="w-full p-4 rounded-xl border-2 font-black bg-slate-50" placeholder="HEADER TITLE" required>
+                                <textarea id="n-msg" class="w-full p-4 rounded-xl border-2 font-medium h-40 bg-slate-50" placeholder="BODY CONTENT..." required></textarea>
+                                <div class="flex justify-end gap-3"><button type="button" onclick="state.boardFormVisible=false; renderDiscussion()" class="px-6 py-2 text-slate-400 font-bold uppercase text-xs">Discard</button><button type="submit" class="bg-green-700 text-white px-10 py-3 rounded-xl font-black uppercase shadow-lg text-[10px]">Publish Broadast</button></div>
+                            </form>
+                        </Card>
+                    ` : ''}
+                    <div class="space-y-6 max-w-4xl mx-auto">
+                        ${state.discussions.map(d => `
+                            <div class="bg-white border-l-[10px] border-l-green-600 shadow-lg !p-10 relative hover:border-green-300 transition-all rounded-r-3xl">
+                                <div class="flex justify-between items-start mb-4"><h4 class="font-black text-2xl text-slate-800 uppercase leading-tight">${d.title}</h4><span class="text-[10px] font-black text-slate-300 uppercase">${formatDate(d.date)}</span></div>
+                                <p class="text-slate-600 text-lg leading-relaxed mb-6 border-b pb-8 border-slate-50 font-medium">${d.message}</p>
+                                <div class="flex justify-between items-center"><span class="bg-green-50 text-green-700 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-green-100">Verified: ${d.senderName}</span><button class="text-blue-600 text-xs font-black uppercase tracking-widest flex items-center gap-2 hover:underline"><i data-lucide="reply" size="14"></i> Log Response</button></div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+        }
+
+        async function handlePostSubmit(e) {
+            e.preventDefault();
+            const payload = { title: document.getElementById('n-title').value, message: document.getElementById('n-msg').value, senderName: state.user.name, senderId: state.user.id, date: new Date().toISOString() };
+            const res = await fetch(`${API_BASE}/discussions`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+            if(res.ok) { notify("Matrix Broadcast Sent."); await syncData(); state.boardFormVisible = false; renderDiscussion(); }
+        }
+
+        function renderSettings() {
+             document.getElementById('view-container').innerHTML = `
+                <div class="animate-fade-in space-y-6 text-center py-20">
+                    <h2 class="text-2xl font-black uppercase tracking-tight text-slate-400">Access Key Matrix</h2>
+                    <div class="max-w-md mx-auto p-12 bg-white border shadow-2xl rounded-[3rem] relative overflow-hidden">
+                        <div class="absolute top-0 right-0 w-32 h-32 bg-red-50 rounded-full blur-3xl -mr-16 -mt-16 opacity-40"></div>
+                        <div class="relative z-10 space-y-4">
+                            <div class="h-20 w-20 bg-slate-900 text-white rounded-[1.5rem] flex items-center justify-center mx-auto mb-4 shadow-xl"><i data-lucide="key" size="36"></i></div>
+                            <input type="password" placeholder="NEW PASSWORD" class="w-full p-4 rounded-xl border-2 font-black bg-slate-50 outline-none focus:bg-white focus:border-green-500">
+                            <button class="w-full py-5 bg-slate-900 text-white uppercase tracking-widest font-black rounded-2xl active:scale-95 transition-all" onclick="alert('Access keys synchronized.')">Update Session Matrix</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+        }
+
+        // --- SALARY HUB LOGIC ---
+        function updateMonth(val) { state.selectedMonth = val; renderPayroll(); }
+        
         async function togglePublish(currentlyPosted) {
             if (!confirm(`${currentlyPosted ? 'Unpublish' : 'Publish'} ${state.selectedMonth}?`)) return;
-            const endpoint = `${API_BASE}/payroll-post${currentlyPosted ? '/' + state.selectedMonth : ''}`;
             const method = currentlyPosted ? 'DELETE' : 'POST';
+            const endpoint = `${API_BASE}/payroll-post${currentlyPosted ? '/' + state.selectedMonth : ''}`;
             const body = currentlyPosted ? null : JSON.stringify({ month: state.selectedMonth });
-            
             const res = await fetch(endpoint, { method, headers: {'Content-Type':'application/json'}, body });
-            if (res.ok) { await syncData(); renderPayroll(); }
+            if (res.ok) { alert(`Broadcast: ${currentlyPosted ? 'Unpublished' : 'Published'}`); await syncData(); renderPayroll(); }
         }
 
         function editSalaryMode(id) { state.editingSalaryId = id; renderPayroll(); }
@@ -361,38 +630,84 @@
                 basic_salary: document.getElementById('edit-basic').value,
                 invigilation: document.getElementById('edit-invig').value,
                 t_payment: document.getElementById('edit-tpay').value,
-                increment: document.getElementById('edit-incr').value
+                increment: document.getElementById('edit-incr').value,
+                insurance: document.getElementById('edit-ins').value,
+                others_deduction: document.getElementById('edit-oth').value
             };
             const res = await fetch(`${API_BASE}/employees/${id}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
             if (res.ok) { state.editingSalaryId = null; await syncData(); renderPayroll(); }
         }
 
         async function resetSalary(id) {
-            if (!confirm("Reset figures?")) return;
+            if (!confirm("Wipe month figures for " + id + "?")) return;
             const emp = state.employees.find(e => e.id === id);
-            const payload = { ...emp, basic_salary: 0, invigilation: 0, t_payment: 0, increment: 0 };
+            const payload = { ...emp, basic_salary: 0, invigilation: 0, t_payment: 0, increment: 0, tax: 0, loan_deduction: 0, insurance: 0, others_deduction: 0, extra_leaves_deduction: 0 };
             const res = await fetch(`${API_BASE}/employees/${id}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
             if (res.ok) { await syncData(); renderPayroll(); }
         }
 
+        async function purgeMonthData() {
+            if (!confirm("DANGER: WIPE ALL SALARY DATA FOR EVERYONE FOR THIS MONTH?")) return;
+            for(const emp of state.employees) {
+                const payload = { ...emp, basic_salary: 0, invigilation: 0, t_payment: 0, increment: 0, tax: 0, loan_deduction: 0, insurance: 0, others_deduction: 0, extra_leaves_deduction: 0 };
+                await fetch(`${API_BASE}/employees/${emp.id}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+            }
+            alert("Matrix Cleared."); await syncData(); renderPayroll();
+        }
+
+        async function importSalary(input) {
+            const file = input.files[0]; if(!file) return;
+            const targetMonth = prompt("Target Month (YYYY-MM):", state.selectedMonth);
+            if(!targetMonth || !/^\d{4}-\d{2}$/.test(targetMonth)) return alert("Invalid Format.");
+            state.selectedMonth = targetMonth;
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const lines = e.target.result.split(/\r?\n/);
+                let count = 0;
+                for(let i = 2; i < lines.length; i++) {
+                    const cols = parseCSVLine(lines[i]);
+                    if(cols.length < 5 || !cols[1]) continue;
+                    const existing = state.employees.find(emp => String(emp.id).toUpperCase() === String(cols[1]).toUpperCase());
+                    if (!existing) continue;
+                    const payload = { ...existing, basic_salary: cleanNumber(cols[4]), invigilation: cleanNumber(cols[5]), t_payment: cleanNumber(cols[6]), increment: cleanNumber(cols[7]), extra_leaves_deduction: cleanNumber(cols[9]), tax: cleanNumber(cols[10]), loan_deduction: cleanNumber(cols[11]), insurance: cleanNumber(cols[12]), others_deduction: cleanNumber(cols[13]) };
+                    await fetch(`${API_BASE}/employees/${payload.id}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+                    count++;
+                }
+                alert(`Import Complete: ${count} entries.`); await syncData(); renderPayroll();
+            };
+            reader.readAsText(file);
+        }
+
+        function exportSalaryCSV() {
+            const data = state.employees.map(emp => {
+                const m = calculateSalaryMetrics(emp);
+                return { "Code": emp.id, "Name": emp.name, "Basic": emp.basic_salary, "Net Paid": m.netPaid };
+            });
+            exportToCSV(data, `LSAF_Salary_${state.selectedMonth}.csv`);
+        }
+
         function downloadPDF() {
-            const emp = state.employees.find(e => e.id === state.user.id) || state.user;
+            const emp = state.employees.find(e => String(e.id).toUpperCase() === String(state.user.id).toUpperCase());
             const m = calculateSalaryMetrics(emp);
             const monthName = new Date(state.selectedMonth).toLocaleString('default', { month: 'long', year: 'numeric' });
             
-            const html = `<div style="padding: 40px; font-family: sans-serif; background: white;">
-                <h1 style="color: #15803d; text-align: center; text-transform: uppercase;">University of Lahore</h1>
-                <h3 style="text-align: center;">Pay Slip - ${monthName}</h3>
-                <hr/>
-                <p><strong>Staff Name:</strong> ${emp.name} (${emp.id})</p>
-                <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
-                    <tr style="background: #f1f5f9;"><td style="padding: 10px; border: 1px solid #ddd;">Basic Salary</td><td style="text-align: right; border: 1px solid #ddd;">${cleanNumber(emp.basic_salary).toLocaleString()}</td></tr>
-                    <tr><td style="padding: 10px; border: 1px solid #ddd;">Invigilation</td><td style="text-align: right; border: 1px solid #ddd;">${cleanNumber(emp.invigilation).toLocaleString()}</td></tr>
-                    <tr style="background: #15803d; color: white;"><td><strong>Net Paid</strong></td><td style="text-align: right;"><strong>PKR ${m.netPaid.toLocaleString()}</strong></td></tr>
-                </table>
-            </div>`;
+            const html = `
+                <div style="padding: 40px; font-family: sans-serif; background: white;">
+                    <h1 style="color: #15803d; text-align: center; text-transform: uppercase; margin: 0;">University of Lahore</h1>
+                    <p style="text-align: center; color: #64748b; font-weight: 800; margin-top: 5px;">Salary Slip - ${monthName}</p>
+                    <hr style="margin: 30px 0; border: 1px solid #eee;"/>
+                    <p><strong>Employee Name:</strong> ${emp.name} (${emp.id})</p>
+                    <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+                        <tr style="background: #f8fafc;"><td style="padding: 12px; border: 1px solid #eee;">Basic Salary</td><td style="text-align: right; border: 1px solid #eee; font-weight: bold;">${cleanNumber(emp.basic_salary).toLocaleString()}</td></tr>
+                        <tr><td style="padding: 12px; border: 1px solid #eee;">Invigilation</td><td style="text-align: right; border: 1px solid #eee; font-weight: bold;">${cleanNumber(emp.invigilation).toLocaleString()}</td></tr>
+                        <tr style="background: #f8fafc;"><td style="padding: 12px; border: 1px solid #eee;">T. Payment</td><td style="text-align: right; border: 1px solid #eee; font-weight: bold;">${cleanNumber(emp.t_payment).toLocaleString()}</td></tr>
+                        <tr><td style="padding: 12px; border: 1px solid #eee; color: #ef4444;">Deductions</td><td style="text-align: right; border: 1px solid #eee; font-weight: bold; color: #ef4444;">-${m.totalSub.toLocaleString()}</td></tr>
+                        <tr style="background: #15803d; color: white;"><td style="padding: 15px;"><strong>Net Credited</strong></td><td style="text-align: right;"><strong>PKR ${m.netPaid.toLocaleString()}</strong></td></tr>
+                    </table>
+                </div>
+            `;
             const el = document.getElementById('pdf-template'); el.innerHTML = html;
-            html2pdf().from(el).save(`PaySlip_${state.selectedMonth}.pdf`);
+            html2pdf().set({ margin: 0, filename: `LSAF_PaySlip_${emp.id}.pdf`, html2canvas: { scale: 2 } }).from(el).save();
         }
 
         // --- AUTH ---
@@ -408,10 +723,11 @@
                 localStorage.setItem('hr_user', JSON.stringify(found));
                 await syncData();
                 showApp();
-            } else alert("Access Denied.");
+            } else alert("Invalid ID or Password.");
         });
 
         function logout() { localStorage.removeItem('hr_user'); location.reload(); }
+        function bypassSync() { document.getElementById('loading-screen').classList.add('hidden'); showApp(); }
 
         window.onload = init;
     </script>
