@@ -33,7 +33,7 @@
     <!-- GLOBAL LOADING SCREEN -->
     <div id="loading-screen" class="fixed inset-0 bg-white z-[999] flex flex-col items-center justify-center">
         <div class="loader w-16 h-16 border-4 border-slate-100 border-t-green-700 rounded-full mb-4"></div>
-        <p class="text-slate-400 font-black uppercase tracking-[0.3em] text-sm animate-pulse">Syncing LSAF HR Core</p>
+        <p class="text-slate-400 font-black uppercase tracking-[0.3em] text-sm animate-pulse">Synchronizing LSAF Matrix</p>
         <button id="skip-sync-btn" onclick="bypassSync()" class="hidden mt-8 text-[10px] font-black uppercase text-slate-300 border-b border-slate-200 tracking-widest hover:text-slate-500 transition-colors">Bypass Sync</button>
     </div>
 
@@ -223,8 +223,8 @@
                     
                     // SMART ROUTING: Default to latest posted month for employees
                     if (state.user.role !== 'admin' && state.payrollPostedMonths.length > 0) {
-                        const sorted = [...state.payrollPostedMonths].sort((a,b) => b.month_year.localeCompare(a.month_year));
-                        state.selectedMonth = sorted[0].month_year;
+                        const sorted = [...state.payrollPostedMonths].sort((a,b) => (b.month_year || b).localeCompare(a.month_year || a));
+                        state.selectedMonth = sorted[0].month_year || sorted[0];
                     }
                     showApp();
                 } catch(e) {
@@ -328,7 +328,7 @@
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 font-sans">
                         <div class="bg-green-700 p-8 rounded-[2rem] text-white shadow-xl">
-                            <p class="text-[10px] font-black uppercase opacity-60">Status</p>
+                            <p class="text-[10px] font-black uppercase opacity-60">Identity Status</p>
                             <p class="text-3xl font-black mt-2">ACTIVE</p>
                         </div>
                         <div class="bg-white p-8 rounded-[2rem] border shadow-sm">
@@ -360,6 +360,7 @@
         function renderAttendance() { 
             const filtered = (state.attendance || []).filter(log => log.date_str.startsWith(state.selectedAttendanceMonth));
             const stats = getAttendanceStats(filtered);
+            const isAdmin = state.user.role === 'admin';
             const container = document.getElementById('view-container');
             container.innerHTML = `
                 <div class="animate-fade-in space-y-8 text-slate-900 font-sans">
@@ -510,10 +511,23 @@
             if(res.ok) { state.editingSalaryId = null; await syncData(); renderPayroll(); } else hideLoading();
         }
 
+        async function deleteIndividualSalary(id) {
+            if(!confirm("Reset salary data for employee " + id + "?")) return;
+            showLoading();
+            const emp = state.employees.find(e => String(e.id) === String(id));
+            const payload = { ...emp, basic_salary: 0, invigilation: 0, t_payment: 0, increment: 0, extra_leaves_deduction: 0, tax: 0, loan_deduction: 0, insurance: 0, others_deduction: 0 };
+            await fetch(`${API_BASE}/employees/${id}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+            await syncData(); renderPayroll();
+        }
+
         function renderPayroll() {
             const container = document.getElementById('view-container');
             const isAdmin = state.user.role === 'admin';
-            const isPosted = state.payrollPostedMonths.some(m => (m.month_year || m) === state.selectedMonth);
+            // Robust check for posted month
+            const isPosted = state.payrollPostedMonths.some(m => {
+                const month = m.month_year || m;
+                return String(month) === String(state.selectedMonth);
+            });
             
             container.innerHTML = `
                 <div class="animate-fade-in space-y-8">
@@ -522,14 +536,14 @@
                         <div class="flex flex-wrap gap-3 justify-center">
                             <input type="month" id="month-picker" value="${state.selectedMonth}" onchange="state.selectedMonth=this.value; renderPayroll()" class="p-3 border-2 rounded-2xl font-black bg-white shadow-sm outline-none">
                             ${isAdmin ? `
-                                <button onclick="${isPosted ? 'unpostSalary()' : 'postSalary()'}" class="${isPosted ? 'bg-red-600' : 'bg-slate-900'} text-white px-6 py-3 rounded-2xl font-black text-[10px] uppercase shadow-xl">
+                                <button onclick="${isPosted ? 'unpostSalary()' : 'postSalary()'}" class="${isPosted ? 'bg-red-600' : 'bg-slate-900'} text-white px-6 py-3 rounded-2xl font-black text-[10px] uppercase shadow-xl transition-all">
                                     ${isPosted ? 'UNPUBLISH' : 'PUBLISH DATA'}
                                 </button>
-                                <button onclick="purgeSalaryData()" class="bg-red-50 text-red-600 border-2 border-red-100 px-6 py-3 rounded-2xl font-black text-[10px] uppercase">WIPE DATA</button>
-                                <label class="bg-white border-2 px-6 py-3 rounded-2xl font-black text-[10px] uppercase cursor-pointer shadow-sm">IMPORT CSV<input type="file" onchange="importSalaryCSV(this)" class="hidden"></label>
-                                <button onclick="exportSalaryCSV()" class="bg-green-50 text-green-700 px-6 py-3 rounded-2xl font-black text-[10px] uppercase">EXPORT</button>
+                                <button onclick="purgeSalaryData()" class="bg-red-50 text-red-600 border-2 border-red-100 px-6 py-3 rounded-2xl font-black text-[10px] uppercase hover:bg-red-100 transition-all">WIPE DATA</button>
+                                <label class="bg-white border-2 px-6 py-3 rounded-2xl font-black text-[10px] uppercase cursor-pointer shadow-sm hover:bg-slate-50 transition-all">IMPORT CSV<input type="file" onchange="importSalaryCSV(this)" class="hidden"></label>
+                                <button onclick="exportSalaryCSV()" class="bg-green-50 text-green-700 px-6 py-3 rounded-2xl font-black text-[10px] uppercase hover:bg-green-100 transition-all">EXPORT</button>
                             ` : `
-                                <button onclick="downloadSalarySlipPDF('${state.user.id}')" class="bg-green-700 text-white px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl flex items-center gap-2">
+                                <button onclick="downloadSalarySlipPDF('${state.user.id}')" class="bg-green-700 text-white px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl flex items-center gap-2 hover:bg-green-800 transition-all">
                                     <i data-lucide="file-text" size="14"></i> Download PDF Slip
                                 </button>
                             `}
@@ -541,7 +555,7 @@
                             <div class="bg-slate-100 p-8 rounded-full mb-4"><i data-lucide="lock" size="48" class="text-slate-300"></i></div>
                             <h2 class="text-xl font-black text-slate-400 uppercase tracking-widest">Payroll Blocked</h2>
                             <p class="text-sm text-slate-400">Salary visibility for ${state.selectedMonth} is not authorized yet.</p>
-                            <p class="text-[10px] font-black text-slate-300 uppercase mt-4">Tip: Check previous months using the picker above.</p>
+                            <p class="text-[10px] font-black text-slate-300 uppercase tracking-widest mt-4">Tip: Check previous months using the picker above.</p>
                         </div>
                     ` : `
                         <div class="overflow-x-auto rounded-[2rem] border bg-white shadow-xl">
@@ -551,8 +565,10 @@
                                         <th class="p-4">ID</th><th class="p-4">Name</th>
                                         <th class="p-4 text-right">Basic</th><th class="p-4 text-right">Invig</th>
                                         <th class="p-4 text-right">T.Pay</th><th class="p-4 text-right">Incr</th>
+                                        <th class="p-4 text-right">Total Add</th><th class="p-4 text-right text-red-500">Ex.Lv</th>
+                                        <th class="p-4 text-right text-red-500">Tax</th><th class="p-4 text-right text-red-500">Loan</th>
                                         <th class="p-4 text-right font-black text-slate-900 uppercase">Net Paid</th>
-                                        ${isAdmin ? `<th class="p-4 text-center">Edit</th>` : ''}
+                                        ${isAdmin ? `<th class="p-4 text-center">Action</th>` : ''}
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-slate-50 font-bold">
@@ -568,14 +584,21 @@
                                                 <td class="p-4 text-right">${isEditing ? `<input type="number" class="w-16 p-1 border rounded" value="${target.invigilation}" onchange="state.tempSalaryForm.invigilation=this.value">` : cleanNumber(emp.invigilation).toLocaleString()}</td>
                                                 <td class="p-4 text-right">${isEditing ? `<input type="number" class="w-16 p-1 border rounded" value="${target.t_payment}" onchange="state.tempSalaryForm.t_payment=this.value">` : cleanNumber(emp.t_payment).toLocaleString()}</td>
                                                 <td class="p-4 text-right">${isEditing ? `<input type="number" class="w-16 p-1 border rounded" value="${target.increment}" onchange="state.tempSalaryForm.increment=this.value">` : cleanNumber(emp.increment).toLocaleString()}</td>
+                                                <td class="p-4 text-right font-black text-slate-500">${m.totalAddition.toLocaleString()}</td>
+                                                <td class="p-4 text-right text-red-400">-${cleanNumber(emp.extra_leaves_deduction).toLocaleString()}</td>
+                                                <td class="p-4 text-right text-red-400">-${cleanNumber(emp.tax).toLocaleString()}</td>
+                                                <td class="p-4 text-right text-red-400">-${cleanNumber(emp.loan_deduction).toLocaleString()}</td>
                                                 <td class="p-4 text-right font-black text-slate-900">Rs. ${m.netPaid.toLocaleString()}</td>
                                                 ${isAdmin ? `
                                                     <td class="p-4 text-center">
-                                                        ${isEditing ? `
-                                                            <button onclick="saveSalaryEdit()" class="text-green-600 font-black text-[9px] uppercase underline">Save</button>
-                                                        ` : `
-                                                            <button onclick="startSalaryEdit(${JSON.stringify(emp).replace(/"/g, '&quot;')})" class="text-blue-500 hover:scale-110"><i data-lucide="pencil" size="14"></i></button>
-                                                        `}
+                                                        <div class="flex items-center justify-center gap-2">
+                                                            ${isEditing ? `
+                                                                <button onclick="saveSalaryEdit()" class="text-green-600 font-black text-[9px] uppercase underline">Save</button>
+                                                            ` : `
+                                                                <button onclick='startSalaryEdit(${JSON.stringify(emp).replace(/'/g, "&#39;")})' class="text-blue-500 hover:scale-110"><i data-lucide="pencil" size="14"></i></button>
+                                                                <button onclick="deleteIndividualSalary('${emp.id}')" class="text-red-400 hover:text-red-600 hover:scale-110"><i data-lucide="trash-2" size="14"></i></button>
+                                                            `}
+                                                        </div>
                                                     </td>
                                                 ` : ''}
                                             </tr>
@@ -592,8 +615,15 @@
 
         function downloadSalaryTemplate() {
             const headers = "Sr.No,Code,Name,DOJ,Salary & Wages,Invigilation,T.payment,Increament,Total Addition, Extra Leaves ,Tax,Loan,Insurance 7,others,Total Deduction,Total salary Paid";
-            const row = "1,EMP001,Mr. Example,2025-01-01,60000,0,0,0,60000,0,0,0,0,0,0,60000";
-            exportToCSV([{ h: headers, r: row }], "LSAF_Template.csv");
+            const row = "1,EMP001,Employee Name,2025-01-01,60000,0,0,0,60000,0,0,0,0,0,0,60000";
+            const csvContent = "data:text/csv;charset=utf-8," + "LSAF Salary Import Template\n" + headers + "\n" + row;
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "LSAF_Salary_Template.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
 
         async function importSalaryCSV(input) {
@@ -630,20 +660,20 @@
             const container = document.getElementById('view-container');
             container.innerHTML = `
                 <div class="animate-fade-in space-y-8 text-slate-900 font-sans">
-                    <div class="flex justify-between items-center"><h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase font-sans">Staff Hub</h2><button onclick="openAddMember()" class="bg-green-700 text-white px-10 py-3 rounded-2xl font-black uppercase text-xs shadow-xl transition-all hover:bg-green-800">New Member</button></div>
+                    <div class="flex justify-between items-center"><h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase font-sans">Staff Hub</h2><button onclick="openAddMember()" class="bg-green-700 text-white px-10 py-3 rounded-2xl font-black uppercase text-xs shadow-xl active:scale-95 transition-all hover:bg-green-800">New Member</button></div>
                     <div id="member-form-container" class="${state.memberFormVisible ? '' : 'hidden'} bg-white p-10 rounded-[3rem] border-4 shadow-2xl mb-12 animate-slide-up">
                         <form id="member-form" class="space-y-6">
                             <div class="grid md:grid-cols-2 gap-8 font-sans">
                                 <input type="text" id="m-id" class="p-4 rounded-2xl border-2 font-bold bg-slate-50 outline-none" placeholder="ID" ${state.editingMemberId ? 'disabled' : ''}>
                                 <input type="email" id="m-email" class="p-4 rounded-2xl border-2 font-bold bg-slate-50 outline-none" placeholder="Email Address">
-                                <input type="text" id="m-name" class="p-4 rounded-2xl border-2 font-bold bg-slate-50 outline-none" placeholder="Legal Name" required>
+                                <input type="text" id="m-name" class="p-4 rounded-2xl border-2 font-bold bg-slate-50 outline-none" placeholder="Full Name" required>
                                 <select id="m-role" class="p-4 rounded-2xl border-2 border-slate-50 font-black text-sm bg-slate-50 outline-none"><option value="employee">Staff Member</option><option value="admin">System Admin</option></select>
                             </div>
                             <div class="flex justify-end gap-3 pt-6 border-t"><button type="button" onclick="state.memberFormVisible=false; renderDirectory()" class="px-8 py-3 text-slate-400 font-bold uppercase text-xs">Cancel</button><button type="submit" class="bg-green-700 text-white px-12 py-3 rounded-2xl font-black uppercase shadow-lg">Confirm & Sync</button></div>
                         </form>
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 font-sans">
-                        ${state.employees.map(emp => `<div class="bg-white p-8 rounded-[2.5rem] border shadow-sm flex items-center gap-6 relative group hover:border-green-300 transition-all"><div class="h-14 w-14 rounded-2xl bg-green-50 text-green-700 flex items-center justify-center font-black text-2xl uppercase">${getInitial(emp.name)}</div><div class="flex-1 overflow-hidden"><h4 class="font-black uppercase truncate leading-none text-slate-800 text-sm">${emp.name}</h4><p class="text-[9px] font-bold text-slate-400 uppercase mt-2 tracking-widest">ID: ${emp.id}</p></div><div class="opacity-0 group-hover:opacity-100 flex gap-2 absolute right-6 transition-all"><button onclick="editMember('${emp.id}')" class="p-2.5 bg-white border shadow-xl rounded-xl text-blue-500"><i data-lucide="pencil" size="14"></i></button><button onclick="deleteMember('${emp.id}')" class="p-2.5 bg-white border shadow-xl rounded-xl text-red-500"><i data-lucide="trash-2" size="14"></i></button></div></div>`).join('')}
+                        ${state.employees.map(emp => `<div class="bg-white p-8 rounded-[2.5rem] border shadow-sm flex items-center gap-6 relative group hover:border-green-300 transition-all"><div class="h-14 w-14 rounded-2xl bg-green-50 text-green-700 flex items-center justify-center font-black text-2xl uppercase">${getInitial(emp.name)}</div><div class="flex-1 overflow-hidden"><h4 class="font-black uppercase truncate leading-none text-slate-800 text-sm">${emp.name}</h4><p class="text-[9px] font-bold text-slate-400 uppercase mt-2 tracking-widest">ID: ${emp.id}</p></div><div class="opacity-0 group-hover:opacity-100 flex gap-2 absolute right-6 transition-all"><button onclick="editMember('${emp.id}')" class="p-2.5 bg-white border shadow-xl rounded-xl text-blue-500 hover:scale-110 transition-all"><i data-lucide="pencil" size="14"></i></button><button onclick="deleteMember('${emp.id}')" class="p-2.5 bg-white border shadow-xl rounded-xl text-red-500 hover:scale-110 transition-all"><i data-lucide="trash-2" size="14"></i></button></div></div>`).join('')}
                     </div>
                 </div>
             `;
@@ -684,7 +714,7 @@
             const userLoans = state.loans.filter(l => isAdmin || String(l.employee_id) === String(state.user.id));
             container.innerHTML = `
                 <div class="animate-fade-in space-y-8 text-slate-900 font-sans">
-                    <div class="flex justify-between items-center border-b pb-6 border-slate-100"><h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase leading-none">Loan Portal</h2><button onclick="applyLoanPrompt()" class="bg-green-700 text-white px-8 py-3 rounded-2xl font-black uppercase text-xs shadow-xl hover:bg-green-800 transition-all">Apply for Loan</button></div>
+                    <div class="flex justify-between items-center border-b pb-6 border-slate-100"><h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase leading-none">Loan Portal</h2><button onclick="applyLoanPrompt()" class="bg-green-700 text-white px-8 py-3 rounded-2xl font-black uppercase text-xs shadow-xl active:scale-95 hover:bg-green-800 transition-all">Apply for Loan</button></div>
                     <div class="grid gap-6">
                         ${userLoans.map(loan => `<div class="bg-white p-8 rounded-[2.5rem] border shadow-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-6 group hover:border-green-300 transition-all"><div><h4 class="font-black uppercase text-lg text-slate-800">${loan.employee_name}</h4><p class="text-xs text-slate-400 italic">"${loan.reason}"</p></div><div class="flex gap-8 text-right"><div><p class="text-[10px] uppercase font-black text-slate-400 tracking-widest">Total Grant</p><p class="font-black">Rs. ${cleanNumber(loan.total_amount).toLocaleString()}</p></div><div><p class="text-[10px] uppercase font-black text-slate-400 tracking-widest">Balance</p><p class="font-black text-red-600">Rs. ${(cleanNumber(loan.total_amount) - cleanNumber(loan.paid_amount)).toLocaleString()}</p></div>${Badge({ status: loan.status })}</div></div>`).join('')}
                     </div>
@@ -706,8 +736,8 @@
             const container = document.getElementById('view-container');
             const isAdmin = state.user.role === 'admin';
             container.innerHTML = `
-                <div class="animate-fade-in space-y-8 text-slate-900 font-sans"><div class="flex justify-between items-center border-b pb-6 border-slate-100"><h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase leading-none">Board Hub</h2>${isAdmin ? `<button onclick="state.boardFormVisible=!state.boardFormVisible; renderDiscussion()" class="bg-green-700 text-white px-10 py-3 rounded-2xl font-black uppercase text-xs shadow-xl active:scale-95 transition-all">New Post</button>` : ''}</div>
-                    ${state.boardFormVisible ? `<div class="bg-green-50/20 border-green-100 border-2 p-10 rounded-[2.5rem] mb-10 shadow-xl animate-slide-up font-sans"><form id="notice-form" class="space-y-4"><input type="text" id="n-title" class="w-full p-4 rounded-xl border font-bold shadow-inner outline-none" placeholder="Header"><textarea id="n-msg" class="w-full p-4 rounded-xl border h-32 font-medium shadow-inner outline-none" placeholder="Detailed content..."></textarea><button type="submit" class="bg-green-700 text-white w-full py-4 rounded-xl font-black uppercase shadow-lg">Publish Now</button></form></div>` : ''}
+                <div class="animate-fade-in space-y-8 text-slate-900 font-sans"><div class="flex justify-between items-center border-b pb-6 border-slate-100"><h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase leading-none">Global Board</h2>${isAdmin ? `<button onclick="state.boardFormVisible=!state.boardFormVisible; renderDiscussion()" class="bg-green-700 text-white px-10 py-3 rounded-2xl font-black uppercase text-xs shadow-xl active:scale-95 hover:bg-green-800 transition-all">New Post</button>` : ''}</div>
+                    ${state.boardFormVisible ? `<div class="bg-green-50/20 border-green-100 border-2 p-10 rounded-[2.5rem] mb-10 shadow-xl animate-slide-up font-sans"><form id="notice-form" class="space-y-4"><input type="text" id="n-title" class="w-full p-4 rounded-xl border font-bold shadow-inner outline-none" placeholder="Header"><textarea id="n-msg" class="w-full p-4 rounded-xl border h-32 font-medium shadow-inner outline-none" placeholder="Detailed content..."></textarea><button type="submit" class="bg-green-700 text-white px-10 py-3 rounded-xl font-black uppercase shadow-lg shadow-green-100 active:scale-95 transition-all">Publish</button></form></div>` : ''}
                     <div class="space-y-8 max-w-4xl mx-auto font-sans">
                         ${state.discussions.map(p => `<div class="bg-white rounded-[2.5rem] border-l-[12px] border-l-green-600 shadow-xl !p-10 relative group hover:border-green-300 transition-all"><div class="flex justify-between items-start mb-4"><h4 class="font-black text-slate-800 text-2xl uppercase leading-tight max-w-2xl">${p.title}</h4><span class="text-[10px] font-black text-slate-300 uppercase tracking-widest">${formatDate(p.date)}</span></div><p class="text-lg text-slate-600 font-medium leading-relaxed mb-8 border-b pb-8">${p.message}</p><div class="flex justify-between items-center"><span class="bg-green-50 text-green-700 font-black text-[10px] px-5 py-2 rounded-xl border border-green-100 uppercase tracking-widest shadow-sm">Verified: ${p.senderName}</span><button class="text-blue-600 font-black text-xs uppercase tracking-widest border-2 border-blue-50 px-8 py-3 rounded-[1.25rem] hover:bg-blue-50 transition-all active:scale-95 shadow-sm">Post Response</button></div></div>`).join('')}
                     </div>
@@ -742,18 +772,35 @@
         }
 
         function openAddMember() { state.editingMemberId = null; state.memberFormVisible = true; renderDirectory(); }
-        function editMember(id) { const emp = state.employees.find(e => String(e.id) === String(id)); if(!emp) return; state.editingMemberId = id; state.memberFormVisible = true; renderDirectory(); document.getElementById('m-name').value = emp.name; document.getElementById('m-id').value = emp.id; document.getElementById('m-email').value = emp.email || ''; document.getElementById('m-leave-annual').value = emp.leave_annual || 0; document.getElementById('m-leave-wop').value = emp.leave_casual || 0; }
-        async function deleteMember(id) { if(confirm("Wipe account identity " + id + "?")) { try { const res = await fetch(`${API_BASE}/employees/${id}`, { method: 'DELETE' }); if(res.ok) { await syncData(); renderDirectory(); } } catch(e) { notify("Fail."); } } }
+        function editMember(id) { 
+            const emp = state.employees.find(e => String(e.id) === String(id)); 
+            if(!emp) return; 
+            state.editingMemberId = id; state.memberFormVisible = true; renderDirectory(); 
+            document.getElementById('m-name').value = emp.name; 
+            document.getElementById('m-id').value = emp.id; 
+            document.getElementById('m-email').value = emp.email || ''; 
+            document.getElementById('m-leave-annual').value = emp.leave_annual || 0; 
+            document.getElementById('m-leave-wop').value = emp.leave_casual || 0; 
+        }
+        
+        async function deleteMember(id) { 
+            if(confirm("CRITICAL: Wipe account identity " + id + " from system matrix?")) { 
+                try {
+                    const res = await fetch(`${API_BASE}/employees/${id}`, { method: 'DELETE' }); 
+                    if(res.ok) { await syncData(); renderDirectory(); }
+                } catch(e) { alert("Matrix Purge Failure."); }
+            } 
+        }
 
         async function login(e) {
             e.preventDefault();
-            const id = document.getElementById('login-id').value;
+            const id = document.getElementById('login-id').value.toUpperCase();
             const pass = document.getElementById('login-pass').value;
             showLoading();
             try {
                 const res = await fetch(`${API_BASE}/employees`);
                 const list = await res.json();
-                const user = (Array.isArray(list) ? list : []).find(e => String(e.id).toUpperCase() === String(id).toUpperCase() && String(e.password) === String(pass));
+                const user = (Array.isArray(list) ? list : []).find(e => String(e.id).toUpperCase() === id && String(e.password) === String(pass));
                 if (user) {
                     state.user = user;
                     localStorage.setItem('hr_user', JSON.stringify(user));
@@ -764,8 +811,8 @@
                         state.selectedMonth = sorted[0].month_year || sorted[0];
                     }
                     showApp();
-                } else { notify("Access Denied."); hideLoading(); }
-            } catch (err) { notify("Matrix Offline."); hideLoading(); }
+                } else { alert("Verification Denied: Credential Mismatch."); hideLoading(); }
+            } catch (err) { alert("Connection Error: Matrix reported offline status."); hideLoading(); }
         }
 
         function logout() { localStorage.removeItem('hr_user'); location.reload(); }
