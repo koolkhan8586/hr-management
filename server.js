@@ -2,41 +2,6 @@
  * LSAF-HR MANAGEMENT SYSTEM - BACKEND SERVER
  * Port: 5050
  * Features: Staff Hub, PKT Attendance, Payroll Posting, Loan Management
- * * DATABASE SCHEMA REQUIREMENTS:
- * * CREATE TABLE IF NOT EXISTS employees (
- * id VARCHAR(50) PRIMARY KEY,
- * name VARCHAR(255),
- * role ENUM('admin', 'employee') DEFAULT 'employee',
- * email VARCHAR(255),
- * password VARCHAR(255),
- * leave_annual INT DEFAULT 14,
- * leave_casual INT DEFAULT 10,
- * basic_salary DECIMAL(15,2) DEFAULT 0,
- * invigilation DECIMAL(15,2) DEFAULT 0,
- * t_payment DECIMAL(15,2) DEFAULT 0,
- * increment DECIMAL(15,2) DEFAULT 0,
- * eidi DECIMAL(15,2) DEFAULT 0,
- * extra_leaves_deduction DECIMAL(15,2) DEFAULT 0,
- * tax DECIMAL(15,2) DEFAULT 0,
- * loan_deduction DECIMAL(15,2) DEFAULT 0,
- * insurance DECIMAL(15,2) DEFAULT 0,
- * others_deduction DECIMAL(15,2) DEFAULT 0
- * );
- * * CREATE TABLE IF NOT EXISTS payroll_posts (
- * id INT AUTO_INCREMENT PRIMARY KEY,
- * month_year VARCHAR(10) UNIQUE, -- Format: YYYY-MM
- * posted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
- * );
- * * CREATE TABLE IF NOT EXISTS attendance (
- * id INT AUTO_INCREMENT PRIMARY KEY,
- * employee_id VARCHAR(50),
- * type VARCHAR(20),
- * date_str DATE,
- * time_str VARCHAR(20),
- * latitude DECIMAL(10,8),
- * longitude DECIMAL(11,8),
- * FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE
- * );
  */
 
 require('dotenv').config();
@@ -59,6 +24,19 @@ const db = mysql.createPool({
     queueLimit: 0
 });
 
+// --- DATABASE AUTO-INITIALIZATION ---
+// This ensures that the required tables exist so the "Refused" error doesn't occur.
+db.query(`
+    CREATE TABLE IF NOT EXISTS payroll_posts (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        month_year VARCHAR(10) UNIQUE,
+        posted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+`, (err) => {
+    if (err) console.error("Database Init Error (payroll_posts):", err.message);
+    else console.log("Database Sync: payroll_posts table ready.");
+});
+
 // --- PAYROLL POSTING ENDPOINTS ---
 
 // Get all months that have been authorized for employee viewing
@@ -70,19 +48,27 @@ app.get('/api/payroll-posted', (req, res) => {
     });
 });
 
-// Authorize a specific month
+// Authorize a specific month (Publish)
 app.post('/api/payroll-post', (req, res) => {
     const { month } = req.body;
+    if (!month) return res.status(400).json({ error: "Month is required" });
+    
     db.query('INSERT IGNORE INTO payroll_posts (month_year) VALUES (?)', [month], (err) => {
-        if (err) return res.status(500).json({ error: err.message });
+        if (err) {
+            console.error("Publish Error:", err.message);
+            return res.status(500).json({ error: err.message });
+        }
         res.json({ success: true, message: `Month ${month} published successfully.` });
     });
 });
 
-// Remove authorization for a month
+// Remove authorization for a month (Unpublish)
 app.delete('/api/payroll-post/:month', (req, res) => {
     db.query('DELETE FROM payroll_posts WHERE month_year = ?', [req.params.month], (err) => {
-        if (err) return res.status(500).json({ error: err.message });
+        if (err) {
+            console.error("Unpublish Error:", err.message);
+            return res.status(500).json({ error: err.message });
+        }
         res.json({ success: true, message: `Month ${req.params.month} unpublished.` });
     });
 });
@@ -116,7 +102,6 @@ app.put('/api/employees/:id', (req, res) => {
         'leave_annual', 'leave_casual'
     ];
     
-    // Build update query dynamically based on provided fields
     const updates = [];
     const values = [];
     
