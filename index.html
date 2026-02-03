@@ -44,7 +44,7 @@
             <div class="text-center mb-10">
                 <img src="/cropped-UOL-Green-V1.png" alt="Logo" class="h-20 mx-auto mb-4 object-contain" onerror="this.src='https://placehold.co/150x150?text=LSAF'">
                 <h1 class="text-2xl font-black text-slate-800 leading-tight uppercase tracking-tighter">Lahore School of Accountancy</h1>
-                <p class="text-slate-400 text-xs font-bold mt-2 uppercase tracking-widest">Administrative Hub v4.5.1</p>
+                <p class="text-slate-400 text-xs font-bold mt-2 uppercase tracking-widest">Administrative Hub v4.5.2</p>
             </div>
             <form id="login-form" class="space-y-5">
                 <div class="space-y-1">
@@ -275,7 +275,7 @@
                         <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase font-sans">Home Base</h2>
                         <div class="bg-white p-4 rounded-2xl border shadow-sm text-right font-black">
                             <p class="text-[10px] text-slate-400 uppercase">Pakistan Time (PKT)</p>
-                            <p class="text-green-700">${getPktTime()}</p>
+                            <p class="text-green-700 font-black">${getPktTime()}</p>
                         </div>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 font-sans">
@@ -313,7 +313,7 @@
                     <div class="flex flex-col md:flex-row justify-between items-center gap-4">
                         <h2 class="text-xl font-black uppercase tracking-widest text-slate-800">Salary Hub</h2>
                         <div class="flex flex-wrap gap-2 justify-center">
-                            <input type="month" value="${state.selectedMonth}" onchange="updateMonth(this.value)" class="p-2 border-2 rounded-xl font-bold bg-white outline-none focus:border-green-500">
+                            <input type="month" value="${state.selectedMonth}" onchange="updateMonth(this.value)" class="p-2 border-2 rounded-xl font-black bg-white outline-none focus:border-green-500">
                             ${isAdmin ? `
                                 <button onclick="togglePublish(${isPosted})" class="px-6 py-2 rounded-xl font-black text-[10px] text-white uppercase shadow-lg transition-all ${isPosted ? 'bg-red-600' : 'bg-slate-900'}">${isPosted ? 'Unpublish Period' : 'Publish to Staff'}</button>
                                 <button onclick="purgeMonthData()" class="bg-red-50 text-red-600 border-2 border-red-100 px-4 py-2 rounded-xl font-black text-[10px] uppercase hover:bg-red-100 transition-all">Wipe Month</button>
@@ -337,8 +337,7 @@
                                     <th class="p-4">ID</th><th class="p-4">Staff</th>
                                     <th class="p-4 text-right">Basic</th><th class="p-4 text-right">Invig</th>
                                     <th class="p-4 text-right">T.Pay</th><th class="p-4 text-right">Incr</th>
-                                    <th class="p-4 text-right">Insurance</th><th class="p-4 text-right">Others</th>
-                                    <th class="p-4 text-right font-black text-slate-900 uppercase">Net Paid</th>
+                                    <th class="p-4 text-right">Insurance</th><th class="p-4 text-right font-black text-slate-900 uppercase">Net Paid</th>
                                     ${isAdmin ? `<th class="p-4 text-center">Action</th>` : ''}
                                 </tr>
                             </thead>
@@ -358,7 +357,6 @@
                             <td class="p-4 text-right">${isEditing ? `<input type="number" id="edit-tpay" class="w-16 border rounded p-1" value="${emp.t_payment}">` : cleanNumber(emp.t_payment).toLocaleString()}</td>
                             <td class="p-4 text-right">${isEditing ? `<input type="number" id="edit-incr" class="w-16 border rounded p-1" value="${emp.increment}">` : cleanNumber(emp.increment).toLocaleString()}</td>
                             <td class="p-4 text-right font-mono text-slate-500">${isEditing ? `<input type="number" id="edit-ins" class="w-16 border rounded p-1" value="${emp.insurance}">` : cleanNumber(emp.insurance).toLocaleString()}</td>
-                            <td class="p-4 text-right font-mono text-slate-500">${isEditing ? `<input type="number" id="edit-oth" class="w-16 border rounded p-1" value="${emp.others_deduction}">` : cleanNumber(emp.others_deduction).toLocaleString()}</td>
                             <td class="p-4 text-right font-black text-slate-900">Rs. ${m.netPaid.toLocaleString()}</td>
                             ${isAdmin ? `
                                 <td class="p-4 text-center">
@@ -388,36 +386,58 @@
             const m = calculateSalaryMetrics(emp);
             const monthName = new Date(state.selectedMonth + "-01").toLocaleString('default', { month: 'long', year: 'numeric' });
             
-            // Construct the PDF slip strictly as a string
+            // Construct the PDF slip with detailed deductions and logo
             const html = `
-                <div style="padding: 40px; font-family: sans-serif; background: white; border: 1px solid #eee; width: 720px; margin: 0 auto;">
+                <div style="padding: 40px; font-family: 'Plus Jakarta Sans', sans-serif; background: white; border: 1px solid #eee; width: 720px; margin: 0 auto; color: #1e293b;">
                     <div style="text-align: center; border-bottom: 4px solid #15803d; padding-bottom: 20px; margin-bottom: 30px;">
+                        <img src="${LOGO_URL}" style="height: 60px; margin-bottom: 10px;" alt="Logo" onerror="this.style.display='none'">
                         <h1 style="margin: 0; color: #15803d; text-transform: uppercase; font-size: 26px; font-weight: 900;">The University of Lahore</h1>
                         <p style="margin: 5px 0; font-weight: 800; color: #64748b; text-transform: uppercase; font-size: 11px; letter-spacing: 3px;">City Campus Lahore</p>
                         <div style="display: inline-block; background: #f1f5f9; padding: 10px 30px; border-radius: 50px; margin-top: 15px;">
-                            <h2 style="margin: 0; text-transform: uppercase; font-size: 14px; font-weight: 900; color: #1e293b;">Official Salary Slip - ${monthName}</h2>
+                            <h2 style="margin: 0; text-transform: uppercase; font-size: 13px; font-weight: 900; color: #1e293b;">Salary Slip for ${monthName}</h2>
                         </div>
                     </div>
                     <div style="display: flex; justify-content: space-between; margin-bottom: 40px; font-size: 14px;">
                         <div style="width: 50%;">
-                            <p style="margin: 4px 0;"><strong>Staff Name:</strong> <span style="text-transform: uppercase;">${emp.name}</span></p>
-                            <p style="margin: 4px 0;"><strong>Employee ID:</strong> ${emp.id}</p>
+                            <p style="margin: 4px 0;"><strong>Staff Name:</strong> <span style="text-transform: uppercase; font-weight: 800;">${emp.name}</span></p>
+                            <p style="margin: 4px 0;"><strong>Employee ID:</strong> <span style="font-family: monospace;">${emp.id}</span></p>
                         </div>
                         <div style="text-align: right; width: 50%;">
                             <p style="margin: 4px 0;"><strong>Printed On:</strong> ${getPktDate()}</p>
-                            <p style="margin: 4px 0;"><strong>Identity Verified:</strong> PKT-MATRIX</p>
+                            <p style="margin: 4px 0; color: #15803d; font-weight: 800;"><strong>Identity Verified: LSAF-HR</strong></p>
                         </div>
                     </div>
-                    <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
-                        <tr style="background: #f8fafc;"><td style="padding: 15px; border: 1px solid #eee;">Basic Salary</td><td style="text-align: right; border: 1px solid #eee; font-weight: bold;">${cleanNumber(emp.basic_salary).toLocaleString()}</td></tr>
-                        <tr><td style="padding: 15px; border: 1px solid #eee;">Invigilation</td><td style="text-align: right; border: 1px solid #eee; font-weight: bold;">${cleanNumber(emp.invigilation).toLocaleString()}</td></tr>
-                        <tr style="background: #f8fafc;"><td style="padding: 15px; border: 1px solid #eee;">T. Payment</td><td style="text-align: right; border: 1px solid #eee; font-weight: bold;">${cleanNumber(emp.t_payment).toLocaleString()}</td></tr>
-                        <tr><td style="padding: 15px; border: 1px solid #eee;">Increment</td><td style="text-align: right; border: 1px solid #eee; font-weight: bold;">${cleanNumber(emp.increment).toLocaleString()}</td></tr>
-                        <tr style="color: #ef4444;"><td style="padding: 15px; border: 1px solid #eee;">Total Deductions</td><td style="text-align: right; border: 1px solid #eee; font-weight: bold;">-${m.totalSub.toLocaleString()}</td></tr>
-                        <tr style="background: #15803d; color: white;"><td style="padding: 20px; font-size: 18px;"><strong>Net PKR Disbursed</strong></td><td style="text-align: right; font-size: 18px;"><strong>${m.netPaid.toLocaleString()}</strong></td></tr>
-                    </table>
-                    <div style="margin-top: 100px; text-align: center; border-top: 1px solid #eee; padding-top: 20px;">
-                        <p style="font-size: 10px; color: #64748b; font-weight: bold;">Computer Generated Receipt • Validated via LSAF NexusHR CORE Matrix</p>
+                    
+                    <div style="display: flex; gap: 20px;">
+                        <div style="flex: 1;">
+                            <h3 style="background: #f8fafc; padding: 10px; font-size: 12px; text-transform: uppercase; border-left: 5px solid #15803d; font-weight: 900; margin-bottom: 10px;">Earnings</h3>
+                            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                                <tr><td style="padding: 10px 5px; border-bottom: 1px solid #f1f5f9;">Basic Salary</td><td style="text-align: right; font-weight: bold;">${cleanNumber(emp.basic_salary).toLocaleString()}</td></tr>
+                                <tr><td style="padding: 10px 5px; border-bottom: 1px solid #f1f5f9;">Invigilation</td><td style="text-align: right; font-weight: bold;">${cleanNumber(emp.invigilation).toLocaleString()}</td></tr>
+                                <tr><td style="padding: 10px 5px; border-bottom: 1px solid #f1f5f9;">T. Payment</td><td style="text-align: right; font-weight: bold;">${cleanNumber(emp.t_payment).toLocaleString()}</td></tr>
+                                <tr><td style="padding: 10px 5px; border-bottom: 1px solid #f1f5f9;">Increment</td><td style="text-align: right; font-weight: bold;">${cleanNumber(emp.increment).toLocaleString()}</td></tr>
+                                <tr style="background: #fdfdfd; font-weight: 900;"><td style="padding: 15px 5px;">Gross Total</td><td style="text-align: right;">${m.totalAdd.toLocaleString()}</td></tr>
+                            </table>
+                        </div>
+                        <div style="flex: 1;">
+                            <h3 style="background: #fff1f2; padding: 10px; font-size: 12px; text-transform: uppercase; border-left: 5px solid #ef4444; font-weight: 900; margin-bottom: 10px;">Deductions</h3>
+                            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                                <tr><td style="padding: 10px 5px; border-bottom: 1px solid #f1f5f9;">Extra Leaves</td><td style="text-align: right; color: #ef4444;">-${cleanNumber(emp.extra_leaves_deduction).toLocaleString()}</td></tr>
+                                <tr><td style="padding: 10px 5px; border-bottom: 1px solid #f1f5f9;">Tax</td><td style="text-align: right; color: #ef4444;">-${cleanNumber(emp.tax).toLocaleString()}</td></tr>
+                                <tr><td style="padding: 10px 5px; border-bottom: 1px solid #f1f5f9;">Loan Recovery</td><td style="text-align: right; color: #ef4444;">-${cleanNumber(emp.loan_deduction).toLocaleString()}</td></tr>
+                                <tr><td style="padding: 10px 5px; border-bottom: 1px solid #f1f5f9;">Insurance</td><td style="text-align: right; color: #ef4444;">-${cleanNumber(emp.insurance).toLocaleString()}</td></tr>
+                                <tr><td style="padding: 10px 5px; border-bottom: 1px solid #f1f5f9;">Others</td><td style="text-align: right; color: #ef4444;">-${cleanNumber(emp.others_deduction).toLocaleString()}</td></tr>
+                                <tr style="font-weight: 900; color: #ef4444;"><td style="padding: 15px 5px;">Total Deductions</td><td style="text-align: right;">-${m.totalSub.toLocaleString()}</td></tr>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 60px; padding: 30px; background: #15803d; color: white; border-radius: 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 10px 20px rgba(21,128,61,0.2);">
+                        <h2 style="margin: 0; font-size: 18px; text-transform: uppercase; font-weight: 800;">Net PKR Disbursed</h2>
+                        <h1 style="margin: 0; font-size: 36px; font-weight: 900; letter-spacing: -1px;">Rs. ${m.netPaid.toLocaleString()}</h1>
+                    </div>
+                    <div style="margin-top: 80px; text-align: center; border-top: 1px solid #eee; padding-top: 20px;">
+                        <p style="font-size: 10px; color: #64748b; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">Computer Generated Receipt • Validated via LSAF NexusHR CORE Matrix</p>
                     </div>
                 </div>
             `;
@@ -430,7 +450,7 @@
                 jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' } 
             };
             
-            // Pass the string directly to html2pdf. This avoids DOM visibility issues.
+            // Pass the string directly to html2pdf for stable rendering
             html2pdf().set(opt).from(html).save();
         }
 
@@ -486,8 +506,8 @@
         function renderDirectory() {
             const container = document.getElementById('view-container');
             container.innerHTML = `
-                <div class="animate-fade-in space-y-6">
-                    <div class="flex justify-between items-center border-b pb-4 border-slate-100 font-sans"><h2 class="text-xl font-black uppercase tracking-widest text-slate-800">Staff Hub</h2><button onclick="toggleStaffForm()" class="bg-green-700 text-white px-6 py-2 rounded-xl font-black text-[10px] uppercase shadow-lg">New Staff</button></div>
+                <div class="animate-fade-in space-y-6 font-sans">
+                    <div class="flex justify-between items-center border-b pb-4 border-slate-100"><h2 class="text-xl font-black uppercase tracking-widest text-slate-800">Staff Hub</h2><button onclick="toggleStaffForm()" class="bg-green-700 text-white px-6 py-2 rounded-xl font-black text-[10px] uppercase shadow-lg">New Staff</button></div>
                     <div id="staff-form-area"></div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                         ${state.employees.map(emp => `
@@ -539,7 +559,7 @@
             const list = (state.loans || []).filter(l => isAdmin || String(l.employee_id).toUpperCase() === String(state.user.id).toUpperCase());
             container.innerHTML = `
                 <div class="animate-fade-in space-y-6 font-sans">
-                    <div class="flex justify-between items-center border-b pb-4 border-slate-100 font-sans text-slate-800"><h2 class="text-xl font-black uppercase tracking-widest">Finance Portal / Loans</h2><button onclick="promptLoan()" class="bg-green-700 text-white px-6 py-2 rounded-xl font-black text-[10px] uppercase shadow-lg">New Application</button></div>
+                    <div class="flex justify-between items-center border-b pb-4 border-slate-100 font-sans text-slate-800"><h2 class="text-xl font-black uppercase tracking-widest text-slate-800">Finance Portal / Loans</h2><button onclick="promptLoan()" class="bg-green-700 text-white px-6 py-2 rounded-xl font-black text-[10px] uppercase shadow-lg">New Application</button></div>
                     <div class="grid gap-4">
                         ${list.map(l => `
                             <div class="bg-white p-8 rounded-[2rem] border-2 border-slate-50 shadow-sm flex flex-col md:flex-row justify-between items-center gap-6">
@@ -550,7 +570,6 @@
                                 </div>
                             </div>
                         `).join('')}
-                        ${list.length === 0 ? '<div class="py-40 text-center font-black text-slate-200 uppercase tracking-[0.3em]">Ledger Clear</div>' : ''}
                     </div>
                 </div>
             `;
@@ -583,7 +602,7 @@
                         </div>
                     ` : `
                         <div class="space-y-4 max-w-2xl mx-auto">
-                            ${(state.leaves || []).map(l => `<div class="bg-white p-6 rounded-2xl border-2 flex justify-between items-center hover:border-green-300 transition-all group text-left"><div><h4 class="font-black uppercase text-slate-800 group-hover:text-green-700 transition-colors text-lg">${l.leave_type}</h4><p class="text-xs text-slate-400 font-bold uppercase mt-1 tracking-tighter">${formatDate(l.start_date)} • ${l.days} Days</p><p class="text-[11px] text-slate-500 italic mt-3 leading-relaxed">"${l.reason}"</p></div><span class="text-[10px] font-black uppercase text-amber-500 bg-amber-50 px-3 py-1 rounded-full border border-amber-100">${l.status}</span></div>`).join('')}
+                            ${(state.leaves || []).map(l => `<div class="bg-white p-6 rounded-2xl border-2 flex justify-between items-center hover:border-green-300 transition-all group text-left"><div><h4 class="font-black uppercase text-slate-800 group-hover:text-green-700 transition-colors text-lg">${l.leave_type}</h4><p class="text-xs text-slate-400 font-bold uppercase mt-1 tracking-tighter">${formatDate(l.start_date)} • ${l.days} Days</p></div><span class="text-[10px] font-black uppercase text-amber-500 bg-amber-50 px-3 py-1 rounded-full border border-amber-100">${l.status}</span></div>`).join('')}
                         </div>
                     `}
                 </div>
@@ -649,29 +668,6 @@
                 return { "Code": emp.id, "Name": emp.name, "Basic Salary": emp.basic_salary, "Net PKR Disbursed": m.netPaid };
             });
             exportToCSV(data, `LSAF_Salary_Ledger_${state.selectedMonth}.csv`);
-        }
-
-        async function importSalary(input) {
-            const file = input.files[0]; if(!file) return;
-            const targetMonth = prompt("Target Month for Ledger Import (YYYY-MM):", state.selectedMonth);
-            if(!targetMonth || !/^\d{4}-\d{2}$/.test(targetMonth)) return alert("Invalid Format. Use YYYY-MM.");
-            state.selectedMonth = targetMonth;
-            const reader = new FileReader();
-            reader.onload = async (e) => {
-                const lines = e.target.result.split(/\r?\n/);
-                let count = 0;
-                for(let i = 2; i < lines.length; i++) {
-                    const cols = parseCSVLine(lines[i]);
-                    if(cols.length < 5 || !cols[1]) continue;
-                    const existing = state.employees.find(emp => String(emp.id).toUpperCase() === String(cols[1]).toUpperCase());
-                    if (!existing) continue;
-                    const payload = { ...existing, basic_salary: cleanNumber(cols[4]), invigilation: cleanNumber(cols[5]), t_payment: cleanNumber(cols[6]), increment: cleanNumber(cols[7]), extra_leaves_deduction: cleanNumber(cols[9]), tax: cleanNumber(cols[10]), loan_deduction: cleanNumber(cols[11]), insurance: cleanNumber(cols[12]), others_deduction: cleanNumber(cols[13]) };
-                    await fetch(`${API_BASE}/employees/${payload.id}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
-                    count++;
-                }
-                alert(`Matrix Import: ${count} entries synchronized.`); await syncData(); renderPayroll();
-            };
-            reader.readAsText(file);
         }
 
         // --- AUTH ---
