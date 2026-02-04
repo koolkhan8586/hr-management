@@ -1,8 +1,8 @@
 /**
- * LSAFHR MANAGEMENT SYSTEM - COMPLETE BACKEND
+ * LSAFHR MANAGEMENT SYSTEM - COMPLETE BACKEND (Robust Version)
  * Port: 5050
  * Database: hr_management
- * Features: Staff Hub, Attendance Sync, Payroll Management, Loan & Leave Tracking
+ * Features: Auto-table creation, Staff Hub, Attendance Sync, Payroll, Loans & Leaves
  */
 
 const express = require('express');
@@ -13,41 +13,111 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Database Connection
+// Database Connection Configuration
 const db = mysql.createPool({
     host: 'localhost',
     user: 'root',
-    password: '', // Enter your MySQL root password if set
+    password: '', // Enter your MySQL root password here
     database: 'hr_management',
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0
 });
 
-// --- DATABASE AUTO-MIGRATION ---
-// Ensures the database has all necessary columns for the LSAFHR features
-const initDB = () => {
+/**
+ * --- DATABASE INITIALIZATION ---
+ * Automatically creates tables and adds missing columns on startup.
+ */
+const initSystem = async () => {
+    console.log("LSAFHR: Initializing Core Matrix...");
+
+    const tables = [
+        `CREATE TABLE IF NOT EXISTS employees (
+            id VARCHAR(50) PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            email VARCHAR(255),
+            password VARCHAR(255),
+            role VARCHAR(50) DEFAULT 'employee',
+            basic_salary DECIMAL(15,2) DEFAULT 0,
+            invigilation DECIMAL(15,2) DEFAULT 0,
+            t_payment DECIMAL(15,2) DEFAULT 0,
+            increment DECIMAL(15,2) DEFAULT 0,
+            extra_leaves_deduction DECIMAL(15,2) DEFAULT 0,
+            tax DECIMAL(15,2) DEFAULT 0,
+            loan_deduction DECIMAL(15,2) DEFAULT 0,
+            insurance DECIMAL(15,2) DEFAULT 0,
+            others_deduction DECIMAL(15,2) DEFAULT 0,
+            leave_annual INT DEFAULT 14,
+            leave_casual INT DEFAULT 10,
+            loan_opening_balance DECIMAL(15,2) DEFAULT 0,
+            eidi DECIMAL(15,2) DEFAULT 0
+        )`,
+        `CREATE TABLE IF NOT EXISTS attendance (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            employee_id VARCHAR(50),
+            type VARCHAR(20),
+            date_str DATE,
+            time_str VARCHAR(20),
+            latitude VARCHAR(50),
+            longitude VARCHAR(50)
+        )`,
+        `CREATE TABLE IF NOT EXISTS payroll_posts (
+            month_year VARCHAR(10) PRIMARY KEY
+        )`,
+        `CREATE TABLE IF NOT EXISTS loans (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            employee_id VARCHAR(50),
+            total_amount DECIMAL(15,2),
+            paid_amount DECIMAL(15,2) DEFAULT 0,
+            reason TEXT,
+            status VARCHAR(20) DEFAULT 'Pending',
+            date_granted TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`,
+        `CREATE TABLE IF NOT EXISTS leaves (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            employee_id VARCHAR(50),
+            leave_type VARCHAR(50),
+            start_date DATE,
+            days INT,
+            reason TEXT,
+            status VARCHAR(20) DEFAULT 'Pending'
+        )`,
+        `CREATE TABLE IF NOT EXISTS discussions (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            title VARCHAR(255),
+            message TEXT,
+            senderName VARCHAR(255),
+            senderId VARCHAR(50),
+            date DATETIME
+        )`
+    ];
+
+    // Execute table creations
+    for (let sql of tables) {
+        await db.promise().query(sql).catch(err => console.error("Table Init Error:", err.message));
+    }
+
+    // Secondary Migration: Add columns that might be missing in older LSAFHR versions
     const migrations = [
         `ALTER TABLE employees ADD COLUMN IF NOT EXISTS loan_opening_balance DECIMAL(15,2) DEFAULT 0`,
-        `ALTER TABLE employees ADD COLUMN IF NOT EXISTS password VARCHAR(255)`,
+        `ALTER TABLE employees ADD COLUMN IF NOT EXISTS eidi DECIMAL(15,2) DEFAULT 0`,
         `ALTER TABLE employees ADD COLUMN IF NOT EXISTS leave_annual INT DEFAULT 14`,
-        `ALTER TABLE employees ADD COLUMN IF NOT EXISTS leave_casual INT DEFAULT 10`,
-        `ALTER TABLE employees ADD COLUMN IF NOT EXISTS eidi DECIMAL(15,2) DEFAULT 0`
+        `ALTER TABLE employees ADD COLUMN IF NOT EXISTS leave_casual INT DEFAULT 10`
     ];
-    
-    migrations.forEach(sql => {
-        db.query(sql, (err) => {
-            if (err) console.log("LSAFHR Migration Note: Field already verified or exists.");
-        });
-    });
-    console.log("-------------------------------------------");
-    console.log("LSAFHR Database Matrix: Schema Synchronized");
-    console.log("-------------------------------------------");
+
+    for (let sql of migrations) {
+        // We use a try-catch because ADD COLUMN IF NOT EXISTS isn't supported in all MySQL versions
+        try { await db.promise().query(sql); } catch (e) { /* Likely column exists */ }
+    }
+
+    console.log("LSAFHR Backend: Database Synchronized and Tables Verified.");
 };
-initDB();
 
-// --- STAFF HUB / EMPLOYEE ROUTES ---
+initSystem();
 
+// --- API ROUTES ---
+
+// Employees
 app.get('/api/employees', (req, res) => {
     db.query('SELECT * FROM employees ORDER BY id ASC', (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -64,7 +134,6 @@ app.post('/api/employees', (req, res) => {
 
 app.put('/api/employees/:id', (req, res) => {
     const data = req.body;
-    // Every possible column that can be updated via Staff Hub or Salary Hub
     const fields = [
         'name', 'role', 'email', 'password', 'basic_salary', 'invigilation', 
         't_payment', 'increment', 'extra_leaves_deduction', 'tax', 
@@ -79,7 +148,7 @@ app.put('/api/employees/:id', (req, res) => {
             values.push(data[f]);
         }
     });
-    if (updates.length === 0) return res.json({ success: true, message: "No changes detected." });
+    if (updates.length === 0) return res.json({ success: true });
     db.query(`UPDATE employees SET ${updates.join(', ')} WHERE id = ?`, [...values, req.params.id], (err) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json({ success: true });
@@ -93,8 +162,7 @@ app.delete('/api/employees/:id', (req, res) => {
     });
 });
 
-// --- ATTENDANCE & LOGS ---
-
+// Attendance
 app.get('/api/attendance/:id', (req, res) => {
     db.query('SELECT * FROM attendance WHERE employee_id = ? ORDER BY date_str DESC, time_str DESC', [req.params.id], (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -111,8 +179,7 @@ app.post('/api/attendance', (req, res) => {
     });
 });
 
-// --- PAYROLL POSTING CONTROL ---
-
+// Payroll Posting
 app.get('/api/payroll-posted', (req, res) => {
     db.query('SELECT month_year FROM payroll_posts', (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -134,8 +201,7 @@ app.delete('/api/payroll-post/:month', (req, res) => {
     });
 });
 
-// --- LOANS & LEAVES ---
-
+// Loans & Leaves
 app.get('/api/loans', (req, res) => {
     db.query('SELECT l.*, e.name as employee_name FROM loans l JOIN employees e ON l.employee_id = e.id ORDER BY l.id DESC', (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -145,7 +211,7 @@ app.get('/api/loans', (req, res) => {
 
 app.post('/api/loans', (req, res) => {
     const { employeeId, totalAmount, reason } = req.body;
-    db.query('INSERT INTO loans (employee_id, total_amount, reason, status, date_granted) VALUES (?, ?, ?, "Pending", NOW())', 
+    db.query('INSERT INTO loans (employee_id, total_amount, reason, status) VALUES (?, ?, ?, "Pending")', 
     [employeeId, totalAmount, reason], (err) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json({ success: true });
@@ -182,8 +248,7 @@ app.put('/api/leaves/:id', (req, res) => {
     });
 });
 
-// --- DISCUSSIONS BOARD ---
-
+// Discussions
 app.get('/api/discussions', (req, res) => {
     db.query('SELECT * FROM discussions ORDER BY id DESC', (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -200,8 +265,9 @@ app.post('/api/discussions', (req, res) => {
     });
 });
 
-// SERVER PORT
+// Start Server
 const PORT = 5050;
 app.listen(PORT, () => {
     console.log(`LSAFHR Backend Operational on Port ${PORT}`);
+    console.log(`Endpoint: http://localhost:${PORT}/api`);
 });
