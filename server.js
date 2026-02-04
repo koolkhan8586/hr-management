@@ -26,15 +26,13 @@ const db = mysql.createPool({
 
 // --- DATABASE AUTO-MIGRATION & INIT ---
 const initDB = () => {
-    // Ensure Loan Opening Balance column exists
+    // Ensure Schema supports all modern LSAFHR features
     db.query(`ALTER TABLE employees ADD COLUMN IF NOT EXISTS loan_opening_balance DECIMAL(15,2) DEFAULT 0`, (err) => {
         if (!err) console.log("LSAFHR: loan_opening_balance column verified.");
     });
-    // Ensure Password column exists
     db.query(`ALTER TABLE employees ADD COLUMN IF NOT EXISTS password VARCHAR(255)`, (err) => {
         if (!err) console.log("LSAFHR: password column verified.");
     });
-    // Ensure Leave balance columns exist
     db.query(`ALTER TABLE employees ADD COLUMN IF NOT EXISTS leave_annual INT DEFAULT 14`, (err) => {
         if (!err) console.log("LSAFHR: leave_annual column verified.");
     });
