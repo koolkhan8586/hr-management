@@ -17,7 +17,7 @@ app.use(express.json());
 const db = mysql.createPool({
     host: 'localhost',
     user: 'root',
-    password: '', // Enter your MySQL root password here
+    password: '', // Enter your MySQL root password here if set
     database: 'hr_management',
     waitForConnections: true,
     connectionLimit: 10,
@@ -30,6 +30,16 @@ const db = mysql.createPool({
  */
 const initSystem = async () => {
     console.log("LSAFHR: Initializing Core Matrix...");
+
+    // Test connection
+    try {
+        await db.promise().query("SELECT 1");
+        console.log("LSAFHR: Database Connection Verified.");
+    } catch (err) {
+        console.error("CRITICAL: Database connection failed! Check your credentials.");
+        console.error(err.message);
+        return;
+    }
 
     const tables = [
         `CREATE TABLE IF NOT EXISTS employees (
@@ -102,12 +112,16 @@ const initSystem = async () => {
         `ALTER TABLE employees ADD COLUMN IF NOT EXISTS loan_opening_balance DECIMAL(15,2) DEFAULT 0`,
         `ALTER TABLE employees ADD COLUMN IF NOT EXISTS eidi DECIMAL(15,2) DEFAULT 0`,
         `ALTER TABLE employees ADD COLUMN IF NOT EXISTS leave_annual INT DEFAULT 14`,
-        `ALTER TABLE employees ADD COLUMN IF NOT EXISTS leave_casual INT DEFAULT 10`
+        `ALTER TABLE employees ADD COLUMN IF NOT EXISTS leave_casual INT DEFAULT 10`,
+        `ALTER TABLE employees ADD COLUMN IF NOT EXISTS password VARCHAR(255)`
     ];
 
     for (let sql of migrations) {
-        // We use a try-catch because ADD COLUMN IF NOT EXISTS isn't supported in all MySQL versions
-        try { await db.promise().query(sql); } catch (e) { /* Likely column exists */ }
+        try { 
+            await db.promise().query(sql); 
+        } catch (e) { 
+            // Silent catch for versions that don't support 'IF NOT EXISTS' in ALTER
+        }
     }
 
     console.log("LSAFHR Backend: Database Synchronized and Tables Verified.");
@@ -117,47 +131,58 @@ initSystem();
 
 // --- API ROUTES ---
 
-// Employees
+// Employees - GET all
 app.get('/api/employees', (req, res) => {
     db.query('SELECT * FROM employees ORDER BY id ASC', (err, results) => {
-        if (err) return res.status(500).json({ error: err.message });
+        if (err) return res.status(500).json({ error: "Fetch error: " + err.message });
         res.json(results);
     });
 });
 
+// Employees - CREATE
 app.post('/api/employees', (req, res) => {
     db.query('INSERT INTO employees SET ?', req.body, (err) => {
-        if (err) return res.status(500).json({ error: err.message });
+        if (err) return res.status(500).json({ error: "Create error: " + err.message });
         res.json({ success: true });
     });
 });
 
+// Employees - UPDATE (Used for Staff Hub editing and Salary Hub saving/wiping)
 app.put('/api/employees/:id', (req, res) => {
     const data = req.body;
+    const id = req.params.id;
+
     const fields = [
         'name', 'role', 'email', 'password', 'basic_salary', 'invigilation', 
         't_payment', 'increment', 'extra_leaves_deduction', 'tax', 
         'loan_deduction', 'insurance', 'others_deduction', 
         'leave_annual', 'leave_casual', 'loan_opening_balance', 'eidi'
     ];
+    
     const updates = [];
     const values = [];
+    
     fields.forEach(f => {
         if (data[f] !== undefined) {
             updates.push(`${f} = ?`);
             values.push(data[f]);
         }
     });
-    if (updates.length === 0) return res.json({ success: true });
-    db.query(`UPDATE employees SET ${updates.join(', ')} WHERE id = ?`, [...values, req.params.id], (err) => {
-        if (err) return res.status(500).json({ error: err.message });
+
+    if (updates.length === 0) return res.json({ success: true, message: "No data changed." });
+
+    db.query(`UPDATE employees SET ${updates.join(', ')} WHERE id = ?`, [...values, id], (err, results) => {
+        if (err) return res.status(500).json({ error: "Update error: " + err.message });
+        if (results.affectedRows === 0) return res.status(404).json({ error: "Employee not found." });
         res.json({ success: true });
     });
 });
 
+// Employees - DELETE
 app.delete('/api/employees/:id', (req, res) => {
-    db.query('DELETE FROM employees WHERE id = ?', [req.params.id], (err) => {
-        if (err) return res.status(500).json({ error: err.message });
+    db.query('DELETE FROM employees WHERE id = ?', [req.params.id], (err, results) => {
+        if (err) return res.status(500).json({ error: "Delete error: " + err.message });
+        if (results.affectedRows === 0) return res.status(404).json({ error: "Employee not found." });
         res.json({ success: true });
     });
 });
@@ -179,7 +204,7 @@ app.post('/api/attendance', (req, res) => {
     });
 });
 
-// Payroll Posting
+// Payroll Posting Control
 app.get('/api/payroll-posted', (req, res) => {
     db.query('SELECT month_year FROM payroll_posts', (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -248,7 +273,7 @@ app.put('/api/leaves/:id', (req, res) => {
     });
 });
 
-// Discussions
+// Discussions Board
 app.get('/api/discussions', (req, res) => {
     db.query('SELECT * FROM discussions ORDER BY id DESC', (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -269,5 +294,6 @@ app.post('/api/discussions', (req, res) => {
 const PORT = 5050;
 app.listen(PORT, () => {
     console.log(`LSAFHR Backend Operational on Port ${PORT}`);
-    console.log(`Endpoint: http://localhost:${PORT}/api`);
+    console.log(`API Hub: http://localhost:${PORT}/api`);
+    console.log(`-------------------------------------------`);
 });
