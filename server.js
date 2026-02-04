@@ -25,16 +25,31 @@ const db = mysql.createPool({
 });
 
 // --- DATABASE AUTO-INITIALIZATION ---
-db.query(`
-    CREATE TABLE IF NOT EXISTS payroll_posts (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        month_year VARCHAR(10) UNIQUE,
-        posted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-`, (err) => {
-    if (err) console.error("Database Init Error (payroll_posts):", err.message);
-    else console.log("Database Sync: payroll_posts table ready.");
-});
+const initDB = () => {
+    // Migration: Ensure necessary columns exist for LSAFHR features
+    const migrations = [
+        `ALTER TABLE employees ADD COLUMN IF NOT EXISTS loan_opening_balance DECIMAL(15,2) DEFAULT 0`,
+        `ALTER TABLE employees ADD COLUMN IF NOT EXISTS eidi DECIMAL(15,2) DEFAULT 0`
+    ];
+
+    migrations.forEach(sql => {
+        db.query(sql, (err) => {
+            if (err) console.log("Migration check complete.");
+        });
+    });
+
+    db.query(`
+        CREATE TABLE IF NOT EXISTS payroll_posts (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            month_year VARCHAR(10) UNIQUE,
+            posted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    `, (err) => {
+        if (err) console.error("Database Init Error (payroll_posts):", err.message);
+        else console.log("Database Sync: LSAFHR Tables ready.");
+    });
+};
+initDB();
 
 // --- PAYROLL POSTING ENDPOINTS ---
 
@@ -50,20 +65,14 @@ app.post('/api/payroll-post', (req, res) => {
     if (!month) return res.status(400).json({ error: "Month is required" });
     
     db.query('INSERT IGNORE INTO payroll_posts (month_year) VALUES (?)', [month], (err) => {
-        if (err) {
-            console.error("Publish Error:", err.message);
-            return res.status(500).json({ error: err.message });
-        }
-        res.json({ success: true, message: `Month ${month} published successfully.` });
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ success: true, message: `Month ${month} published.` });
     });
 });
 
 app.delete('/api/payroll-post/:month', (req, res) => {
     db.query('DELETE FROM payroll_posts WHERE month_year = ?', [req.params.month], (err) => {
-        if (err) {
-            console.error("Unpublish Error:", err.message);
-            return res.status(500).json({ error: err.message });
-        }
+        if (err) return res.status(500).json({ error: err.message });
         res.json({ success: true, message: `Month ${req.params.month} unpublished.` });
     });
 });
@@ -71,15 +80,14 @@ app.delete('/api/payroll-post/:month', (req, res) => {
 // --- EMPLOYEE HUB ROUTES ---
 
 app.get('/api/employees', (req, res) => {
-    db.query('SELECT * FROM employees', (err, results) => {
+    db.query('SELECT * FROM employees ORDER BY id ASC', (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json(results);
     });
 });
 
 app.post('/api/employees', (req, res) => {
-    const data = req.body;
-    db.query('INSERT INTO employees SET ?', data, (err) => {
+    db.query('INSERT INTO employees SET ?', req.body, (err) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json({ success: true });
     });
@@ -91,7 +99,7 @@ app.put('/api/employees/:id', (req, res) => {
         'name', 'role', 'email', 'password', 
         'basic_salary', 'invigilation', 't_payment', 'increment', 'eidi',
         'extra_leaves_deduction', 'tax', 'loan_deduction', 'insurance', 'others_deduction',
-        'leave_annual', 'leave_casual'
+        'leave_annual', 'leave_casual', 'loan_opening_balance'
     ];
     
     const updates = [];
@@ -104,7 +112,7 @@ app.put('/api/employees/:id', (req, res) => {
         }
     });
 
-    if (updates.length === 0) return res.json({ message: "No fields to update" });
+    if (updates.length === 0) return res.json({ message: "No fields updated" });
 
     db.query(`UPDATE employees SET ${updates.join(', ')} WHERE id = ?`, [...values, req.params.id], (err) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -122,37 +130,14 @@ app.delete('/api/employees/:id', (req, res) => {
 // --- ATTENDANCE ROUTES ---
 
 app.get('/api/attendance/:id', (req, res) => {
-    db.query('SELECT * FROM attendance WHERE employee_id = ? ORDER BY date_str DESC, time_str DESC', [req.params.id], (err, results) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json(results);
-    });
-});
-
-app.get('/api/attendance', (req, res) => {
-    const query = `
-        SELECT a.*, e.name as employee_name 
-        FROM attendance a 
-        JOIN employees e ON a.employee_id = e.id 
-        ORDER BY a.date_str DESC
-    `;
-    db.query(query, (err, results) => {
+    db.query('SELECT * FROM attendance WHERE employee_id = ? ORDER BY date_str DESC', [req.params.id], (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json(results);
     });
 });
 
 app.post('/api/attendance', (req, res) => {
-    const { employeeId, type, date, time, lat, lng } = req.body;
-    db.query('INSERT INTO attendance (employee_id, type, date_str, time_str, latitude, longitude) VALUES (?, ?, ?, ?, ?, ?)', 
-    [employeeId, type, date, time, lat, lng], (err) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({ success: true });
-    });
-});
-
-app.put('/api/attendance/:id', (req, res) => {
-    const { type, time_str } = req.body;
-    db.query('UPDATE attendance SET type = ?, time_str = ? WHERE id = ?', [type, time_str, req.params.id], (err) => {
+    db.query('INSERT INTO attendance SET ?', req.body, (err) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json({ success: true });
     });
@@ -192,11 +177,7 @@ app.post('/api/discussions', (req, res) => {
     });
 });
 
-// SERVER START
 const PORT = 5050;
 app.listen(PORT, () => {
-    console.log(`-------------------------------------------`);
-    console.log(`LSAF NexusHR Backend Active on Port ${PORT}`);
-    console.log(`PKT Timezone Synchronization: Active`);
-    console.log(`-------------------------------------------`);
+    console.log(`LSAFHR Backend Operational on Port ${PORT}`);
 });
