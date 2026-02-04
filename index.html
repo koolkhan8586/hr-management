@@ -37,7 +37,7 @@
             <div class="text-center mb-10">
                 <img src="UOL-Green-V1.png" alt="Logo" class="h-20 mx-auto mb-4 object-contain" onerror="this.src='https://placehold.co/150x150?text=LSAFHR'">
                 <h1 class="text-2xl font-black text-slate-800 leading-tight uppercase tracking-widest">Lahore School of Accountancy</h1>
-                <p class="text-slate-400 text-xs font-bold mt-2 uppercase tracking-widest">Administrative Hub v4.9.0</p>
+                <p class="text-slate-400 text-xs font-bold mt-2 uppercase tracking-widest">Administrative Hub v4.9.5</p>
             </div>
             <form id="login-form" class="space-y-5">
                 <div class="space-y-1 text-left">
@@ -92,7 +92,11 @@
     </div>
 
     <script>
-        const API_BASE = '/api';
+        // Automatic API detection to prevent "Data not showing" if backend is on port 5050
+        const API_BASE = window.location.hostname === 'localhost' || window.location.hostname.includes('127.0.0.1') 
+            ? 'http://localhost:5050/api' 
+            : '/api';
+
         let state = {
             user: null,
             employees: [],
@@ -162,8 +166,9 @@
             const headers = Object.keys(data[0]).join(',');
             const rows = data.map(row => Object.values(row).map(val => '"' + String(val || '').replace(/"/g, '""') + '"').join(','));
             const csvContent = "data:text/csv;charset=utf-8," + [headers, ...rows].join('\n');
+            const encodedUri = encodeURI(csvContent);
             const link = document.createElement("a");
-            link.setAttribute("href", encodeURI(csvContent));
+            link.setAttribute("href", encodedUri);
             link.setAttribute("download", filename);
             document.body.appendChild(link);
             link.click();
@@ -209,7 +214,7 @@
                         if (allLvRes.ok) state.allLeaves = await allLvRes.json();
                     }
                 }
-            } catch (e) { console.error("Sync partial failure."); }
+            } catch (e) { console.error("LSAFHR Sync Failure:", e); }
             document.getElementById('loading-screen').classList.add('hidden');
         }
 
@@ -247,7 +252,7 @@
             const container = document.getElementById('view-container');
             container.innerHTML = '<div class="py-40 text-center animate-pulse font-black text-slate-300 uppercase tracking-[0.5em]">Establishing Connection...</div>';
             
-            try {
+            setTimeout(() => {
                 switch(state.currentTab) {
                     case 'dashboard': renderDashboard(); break;
                     case 'payroll': renderPayroll(); break;
@@ -259,21 +264,17 @@
                     case 'settings': renderSettings(); break;
                     default: renderDashboard();
                 }
-            } catch (err) {
-                console.error("Render Error:", err);
-                container.innerHTML = '<p class="py-20 text-center font-bold text-red-400">Render Execution Halted. Check Logs.</p>';
-            }
-            lucide.createIcons();
+                lucide.createIcons();
+            }, 10);
         }
 
-        // --- VIEWS ---
-
+        // --- DASHBOARD ---
         function renderDashboard() {
             const container = document.getElementById('view-container');
             container.innerHTML = `
                 <div class="animate-fade-in space-y-8 font-sans text-left">
                     <div class="flex justify-between items-center border-b pb-4 border-slate-100">
-                        <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Identity Base</h2>
+                        <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">Home Base</h2>
                         <div class="bg-white p-4 rounded-2xl border shadow-sm text-right font-black">
                             <p class="text-[10px] text-slate-400 uppercase">Pakistan Time (PKT)</p>
                             <p class="text-green-700 font-black">${getPktTime()}</p>
@@ -306,7 +307,7 @@
             let content = `
                 <div class="animate-fade-in space-y-6 font-sans text-left text-slate-800">
                     <div class="flex flex-col md:flex-row justify-between items-center gap-4 border-b pb-4 border-slate-100">
-                        <h2 class="text-xl font-black uppercase tracking-widest text-slate-800">Salary Hub</h2>
+                        <h2 class="text-xl font-black uppercase tracking-widest text-slate-800 font-sans">Salary Hub</h2>
                         <div class="flex flex-wrap gap-2 justify-center">
                             <input type="month" value="${state.selectedMonth}" onchange="updateMonth(this.value)" class="p-2 border-2 rounded-xl font-black bg-white outline-none focus:border-green-500">
                             ${isAdmin ? `
@@ -329,7 +330,7 @@
                         <table class="w-full text-left text-[10px]">
                             <thead class="bg-slate-50 border-b font-black text-slate-400 uppercase tracking-widest">
                                 <tr>
-                                    <th class="p-4">ID</th><th class="p-4">Staff Name</th>
+                                    <th class="p-4 text-left">ID</th><th class="p-4 text-left">Staff Name</th>
                                     <th class="p-4 text-right">Basic</th><th class="p-4 text-right">Invig</th>
                                     <th class="p-4 text-right">T.Pay</th><th class="p-4 text-right">Incr</th>
                                     <th class="p-4 text-right">Tax</th><th class="p-4 text-right">Loan</th>
@@ -341,15 +342,14 @@
                             <tbody class="divide-y font-bold">
                 `;
 
-                const list = isAdmin ? (state.employees || []) : [state.employees.find(e => e.id === state.user.id) || state.user];
+                const list = isAdmin ? state.employees : [state.employees.find(e => e.id === state.user.id) || state.user];
                 list.forEach(emp => {
-                    if (!emp) return;
                     const isEditing = state.editingSalaryId === emp.id;
-                    const m = calculateSalaryMetrics(emp);
+                    const m = calculateSalaryMetrics(isEditing ? emp : emp);
                     content += `
                         <tr class="hover:bg-slate-50/80 transition-colors">
-                            <td class="p-4 font-black text-slate-900">${emp.id}</td>
-                            <td class="p-4 uppercase truncate max-w-[120px] font-sans">${emp.name}</td>
+                            <td class="p-4 font-black text-slate-900 text-left">${emp.id}</td>
+                            <td class="p-4 uppercase truncate max-w-[120px] font-sans text-left">${emp.name}</td>
                             <td class="p-4 text-right">${isEditing ? `<input type="number" id="edit-basic" class="w-16 border rounded p-1" value="${emp.basic_salary}">` : cleanNumber(emp.basic_salary).toLocaleString()}</td>
                             <td class="p-4 text-right">${isEditing ? `<input type="number" id="edit-invig" class="w-12 border rounded p-1" value="${emp.invigilation}">` : cleanNumber(emp.invigilation).toLocaleString()}</td>
                             <td class="p-4 text-right">${isEditing ? `<input type="number" id="edit-tpay" class="w-12 border rounded p-1" value="${emp.t_payment}">` : cleanNumber(emp.t_payment).toLocaleString()}</td>
@@ -378,13 +378,12 @@
             }
             content += `</div>`;
             container.innerHTML = content;
+            lucide.createIcons();
         }
 
         async function downloadSalaryPDF() {
             const emp = state.employees.find(e => String(e.id).toUpperCase() === String(state.user.id).toUpperCase()) || state.user;
             const m = calculateSalaryMetrics(emp);
-            
-            // Format month manually to ensure "JANUARY 2026" appears
             const parts = state.selectedMonth.split('-');
             const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
             const monthLabel = `${monthNames[parseInt(parts[1]) - 1]} ${parts[0]}`;
@@ -413,17 +412,17 @@
                     
                     <div style="display: flex; gap: 15px; margin-bottom: 15px;">
                         <div style="flex: 1;">
-                            <h3 style="background: #f8fafc; padding: 8px; font-size: 10px; text-transform: uppercase; border-left: 4px solid #15803d; font-weight: 900; margin-bottom: 8px;">Earnings</h3>
+                            <h3 style="background: #f8fafc; padding: 6px; font-size: 10px; text-transform: uppercase; border-left: 4px solid #15803d; font-weight: 900; margin-bottom: 8px;">Earnings</h3>
                             <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
-                                <tr><td style="padding: 8px 5px; border-bottom: 1px solid #f1f5f9;">Basic Salary</td><td style="text-align: right; font-weight: bold;">${cleanNumber(emp.basic_salary).toLocaleString()}</td></tr>
-                                <tr><td style="padding: 8px 5px; border-bottom: 1px solid #f1f5f9;">Invigilation</td><td style="text-align: right; font-weight: bold;">${cleanNumber(emp.invigilation).toLocaleString()}</td></tr>
-                                <tr><td style="padding: 8px 5px; border-bottom: 1px solid #f1f5f9;">T. Payment</td><td style="text-align: right; font-weight: bold;">${cleanNumber(emp.t_payment).toLocaleString()}</td></tr>
-                                <tr><td style="padding: 8px 5px; border-bottom: 1px solid #f1f5f9;">Increment</td><td style="text-align: right; font-weight: bold;">${cleanNumber(emp.increment).toLocaleString()}</td></tr>
+                                <tr><td style="padding: 6px 5px; border-bottom: 1px solid #f1f5f9;">Basic Salary</td><td style="text-align: right; font-weight: bold;">${cleanNumber(emp.basic_salary).toLocaleString()}</td></tr>
+                                <tr><td style="padding: 6px 5px; border-bottom: 1px solid #f1f5f9;">Invigilation</td><td style="text-align: right; font-weight: bold;">${cleanNumber(emp.invigilation).toLocaleString()}</td></tr>
+                                <tr><td style="padding: 6px 5px; border-bottom: 1px solid #f1f5f9;">T. Payment</td><td style="text-align: right; font-weight: bold;">${cleanNumber(emp.t_payment).toLocaleString()}</td></tr>
+                                <tr><td style="padding: 6px 5px; border-bottom: 1px solid #f1f5f9;">Increment</td><td style="text-align: right; font-weight: bold;">${cleanNumber(emp.increment).toLocaleString()}</td></tr>
                                 <tr style="background: #fdfdfd; font-weight: 900; border-top: 2px solid #15803d;"><td style="padding: 10px 5px;">Gross Total</td><td style="text-align: right;">${m.totalAdd.toLocaleString()}</td></tr>
                             </table>
                         </div>
                         <div style="flex: 1;">
-                            <h3 style="background: #fff1f2; padding: 8px; font-size: 10px; text-transform: uppercase; border-left: 4px solid #ef4444; font-weight: 900; margin-bottom: 8px;">Deductions</h3>
+                            <h3 style="background: #fff1f2; padding: 6px; font-size: 10px; text-transform: uppercase; border-left: 4px solid #ef4444; font-weight: 900; margin-bottom: 8px;">Deductions</h3>
                             <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
                                 <tr><td style="padding: 6px 5px; border-bottom: 1px solid #f1f5f9;">Extra Leaves</td><td style="text-align: right; color: #ef4444;">-${cleanNumber(emp.extra_leaves_deduction).toLocaleString()}</td></tr>
                                 <tr><td style="padding: 6px 5px; border-bottom: 1px solid #f1f5f9;">Income Tax</td><td style="text-align: right; color: #ef4444;">-${cleanNumber(emp.tax).toLocaleString()}</td></tr>
@@ -435,13 +434,13 @@
                         </div>
                     </div>
 
-                    <div style="margin-top: 10px; padding: 25px; background: #15803d; color: white; border-radius: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 5px 15px rgba(21,128,61,0.2);">
-                        <h2 style="margin: 0; font-size: 18px; text-transform: uppercase; font-weight: 800;">Net Payable PKR</h2>
-                        <h1 style="margin: 0; font-size: 32px; font-weight: 900; letter-spacing: -1px;">Rs. ${m.netPaid.toLocaleString()}</h1>
+                    <div style="margin-top: 5px; padding: 20px; background: #15803d; color: white; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 5px 15px rgba(21,128,61,0.2);">
+                        <h2 style="margin: 0; font-size: 16px; text-transform: uppercase; font-weight: 800;">Net Amount Transferred</h2>
+                        <h1 style="margin: 0; font-size: 28px; font-weight: 900; letter-spacing: -1px;">Rs. ${m.netPaid.toLocaleString()}</h1>
                     </div>
                     
                     <div style="margin-top: 80px; text-align: center; border-top: 1px solid #eee; padding-top: 15px;">
-                        <p style="font-size: 9px; color: #64748b; font-weight: bold; text-transform: uppercase;">Computer Generated Slip • LSAF NexusHR CORE Matrix Verified</p>
+                        <p style="font-size: 9px; color: #64748b; font-weight: bold; text-transform: uppercase;">Computer Generated Slip • LSAFHR Core Matrix Verified</p>
                     </div>
                 </div>
             `;
@@ -459,7 +458,7 @@
                     <div class="flex flex-col md:flex-row justify-between items-center gap-4 border-b pb-4 border-slate-100">
                         <h2 class="text-xl font-black uppercase tracking-widest text-slate-800 font-sans text-left">Staff Hub</h2>
                         <div class="flex gap-2">
-                             <label class="bg-white border-2 px-6 py-2 rounded-xl font-black text-[10px] uppercase cursor-pointer hover:bg-slate-50 transition-all">Import Staff <input type="file" onchange="importStaffCSV(this)" class="hidden"></label>
+                             <label class="bg-white border-2 px-6 py-2 rounded-xl font-black text-[10px] uppercase cursor-pointer hover:bg-slate-50 transition-all">Import CSV <input type="file" onchange="importStaffCSV(this)" class="hidden"></label>
                              <button onclick="exportStaffCSV()" class="bg-green-50 text-green-700 border-2 border-green-100 px-6 py-2 rounded-xl font-black text-[10px] uppercase">Export Staff</button>
                              <button onclick="toggleStaffForm()" class="bg-green-700 text-white px-6 py-2 rounded-xl font-black text-[10px] uppercase shadow-lg">New Identity</button>
                         </div>
@@ -471,8 +470,8 @@
                             <div class="grid gap-4">
                                 ${pendingLeaves.map(l => `
                                     <div class="bg-white p-6 rounded-2xl flex justify-between items-center shadow-sm">
-                                        <div class="text-left font-sans"><p class="font-black text-sm uppercase text-slate-800">${l.employee_name || l.employee_id}</p><p class="text-[10px] font-bold text-slate-400 uppercase font-sans">${l.leave_type} • ${l.days} Days</p></div>
-                                        <div class="flex gap-2 font-sans"><button onclick="updateLeaveStatus(${l.id}, 'Approved')" class="bg-green-700 text-white px-4 py-2 rounded-xl font-black text-[10px] uppercase font-sans">Approve</button><button onclick="updateLeaveStatus(${l.id}, 'Rejected')" class="bg-red-50 text-red-600 px-4 py-2 rounded-xl font-black text-[10px] uppercase font-sans">Reject</button></div>
+                                        <div class="text-left font-sans text-slate-800"><p class="font-black text-sm uppercase">${l.employee_name || l.employee_id}</p><p class="text-[10px] font-bold text-slate-400 uppercase">${l.leave_type} • ${l.days} Days</p></div>
+                                        <div class="flex gap-2 font-sans"><button onclick="updateLeaveStatus(${l.id}, 'Approved')" class="bg-green-700 text-white px-4 py-2 rounded-xl font-black text-[10px] uppercase">Approve</button><button onclick="updateLeaveStatus(${l.id}, 'Rejected')" class="bg-red-50 text-red-600 px-4 py-2 rounded-xl font-black text-[10px] uppercase">Reject</button></div>
                                     </div>
                                 `).join('')}
                             </div>
@@ -504,14 +503,14 @@
             area.innerHTML = `
                 <div class="bg-white p-8 rounded-[2rem] border-2 border-green-100 animate-slide-up mb-8 shadow-xl text-left font-sans">
                     <form onsubmit="handleStaffSubmit(event)" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 font-sans">
-                        <div class="text-left font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans">Staff ID</label><input type="text" id="s-id" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 uppercase font-sans" value="${emp ? emp.id : ''}" ${emp ? 'readonly' : 'required'}></div>
-                        <div class="text-left font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans">Name</label><input type="text" id="s-name" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 font-sans" value="${emp ? emp.name : ''}" required></div>
-                        <div class="text-left font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans">Email</label><input type="email" id="s-email" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 font-sans" value="${emp ? emp.email : ''}" required></div>
-                        <div class="text-left font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans">Identity Key (Password)</label><input type="text" id="s-pass" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 font-sans" placeholder="••••••••" value="${emp ? emp.password : ''}" required></div>
-                        <div class="text-left font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans">Role</label><select id="s-role" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 font-sans"><option value="employee" ${emp?.role==='employee'?'selected':''}>Employee</option><option value="admin" ${emp?.role==='admin'?'selected':''}>Admin</option></select></div>
-                        <div class="text-left font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans">Annual Leaves</label><input type="number" id="s-leave-annual" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 font-sans" value="${emp ? emp.leave_annual : '14'}"></div>
-                        <div class="text-left font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans">Casual Leaves</label><input type="number" id="s-leave-casual" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 font-sans" value="${emp ? emp.leave_casual : '10'}"></div>
-                        <div class="text-left font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans">Opening Debt Balance</label><input type="number" id="s-loan-open" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 font-sans" value="${emp ? (emp.loan_opening_balance || 0) : '0'}"></div>
+                        <div class="text-left font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans text-left block">Staff ID</label><input type="text" id="s-id" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 uppercase font-sans" value="${emp ? emp.id : ''}" ${emp ? 'readonly' : 'required'}></div>
+                        <div class="text-left font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans text-left block">Name</label><input type="text" id="s-name" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 font-sans" value="${emp ? emp.name : ''}" required></div>
+                        <div class="text-left font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans text-left block">Email</label><input type="email" id="s-email" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 font-sans" value="${emp ? emp.email : ''}" required></div>
+                        <div class="text-left font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans text-left block">Identity Key (Password)</label><input type="text" id="s-pass" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 font-sans" placeholder="••••••••" value="${emp ? emp.password : ''}" required></div>
+                        <div class="text-left font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans text-left block">Role</label><select id="s-role" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 font-sans"><option value="employee" ${emp?.role==='employee'?'selected':''}>Employee</option><option value="admin" ${emp?.role==='admin'?'selected':''}>Admin</option></select></div>
+                        <div class="text-left font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans text-left block">Annual Leaves</label><input type="number" id="s-leave-annual" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 font-sans" value="${emp ? emp.leave_annual : '14'}"></div>
+                        <div class="text-left font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans text-left block">Casual Leaves</label><input type="number" id="s-leave-casual" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 font-sans" value="${emp ? emp.leave_casual : '10'}"></div>
+                        <div class="text-left font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans text-left block">Opening Debt Balance</label><input type="number" id="s-loan-open" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 font-sans" value="${emp ? (emp.loan_opening_balance || 0) : '0'}"></div>
                         <div class="md:col-span-2 lg:col-span-4 flex justify-end gap-3 pt-4 border-t font-sans"><button type="button" onclick="toggleStaffForm()" class="px-6 py-2 text-slate-400 font-bold uppercase text-xs font-sans">Cancel</button><button type="submit" class="bg-green-700 text-white px-8 py-4 rounded-xl font-black uppercase text-xs shadow-lg font-sans">${emp ? 'Sync changes' : 'Create Identity'}</button></div>
                     </form>
                 </div>
@@ -519,7 +518,7 @@
         }
 
         function editStaff(id) {
-            const emp = state.employees.find(e => String(e.id) === String(id));
+            const emp = state.employees.find(e => String(e.id).toUpperCase() === String(id).toUpperCase());
             if(emp) toggleStaffForm(emp);
         }
 
@@ -539,15 +538,16 @@
             const url = state.editingMemberId ? `${API_BASE}/employees/${state.editingMemberId}` : `${API_BASE}/employees`;
             
             const res = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
-            if (res.ok) { notify("Identity Synchronized."); await syncData(); renderDirectory(); }
+            if (res.ok) { notify("Identity Matrix Updated."); await syncData(); renderDirectory(); }
         }
 
         async function deleteStaff(id) {
-            if(!confirm(`DANGER: Permanently wipe ${id} from database?`)) return;
+            if(!confirm(`CRITICAL: Purge staff member ${id} permanently?`)) return;
             try {
                 const res = await fetch(`${API_BASE}/employees/${id}`, { method: 'DELETE' });
-                if(res.ok) { notify("Matrix Cleansed."); await syncData(); renderDirectory(); }
-            } catch(e) { alert("Matrix Purge Failure."); }
+                if(res.ok) { notify("Identity Purged."); await syncData(); renderDirectory(); }
+                else alert("Matrix rejected the request.");
+            } catch(e) { alert("Server connectivity lost."); }
         }
 
         // --- HUB ACTIONS ---
@@ -602,7 +602,7 @@
         // --- ATTENDANCE ---
         function renderAttendance() {
             const container = document.getElementById('view-container');
-            container.innerHTML = `<div class="animate-fade-in space-y-8 font-sans"><div class="flex justify-between items-center border-b pb-4 border-slate-100 text-left text-slate-800"><h2 class="text-xl font-black uppercase tracking-widest text-left font-sans">Attendance Hub</h2></div><div class="grid md:grid-cols-2 gap-6"><div class="bg-white rounded-[2.5rem] py-12 flex flex-col items-center justify-center space-y-6 border-2 shadow-inner bg-slate-50/50"><h3 class="text-6xl font-black text-slate-800 font-mono tracking-tighter font-sans">${getPktTime()}</h3><p class="text-xs font-bold text-slate-400 uppercase tracking-[0.2em] font-sans">${getPktDate()}</p><div class="w-full max-w-xs space-y-3 pt-6"><button onclick="handleClock('Clock In')" class="w-full py-5 rounded-2xl bg-green-700 text-white font-black shadow-lg hover:bg-green-800 transition-all active:scale-95 text-base">Clock In</button><button onclick="handleClock('Clock Out')" class="w-full py-5 rounded-2xl bg-white border-2 text-slate-700 font-black hover:bg-slate-50 transition-all active:scale-95 text-base">Clock Out</button></div></div><div class="bg-white flex items-center justify-center p-10 bg-white border-dashed border-2 text-center rounded-[2rem] border-slate-200"><div><div class="bg-green-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6"><i data-lucide="map-pin" class="text-green-600 animate-bounce" size="40"></i></div><p class="text-xs font-black text-slate-600 uppercase tracking-widest leading-relaxed font-sans">Identity Geofence Active<br/>Verified Pakistan PKT Sync</p></div></div></div><div class="bg-white rounded-3xl border overflow-hidden shadow-sm"><div class="bg-slate-50 p-4 border-b font-black text-[10px] uppercase text-slate-400 tracking-widest text-left font-sans">Identity Timeline</div><div class="divide-y max-h-80 overflow-y-auto custom-scrollbar font-sans">${(state.attendance || []).map(log => `<div class="p-5 flex justify-between items-center hover:bg-slate-50 transition-colors text-left"><div class="flex items-center gap-4"><div class="h-2 w-2 rounded-full ${log.type === 'Clock In' ? 'bg-green-500' : 'bg-red-500'}"></div><div><p class="text-xs font-black uppercase text-slate-800 font-sans">${log.type}</p><p class="text-[10px] text-slate-400 font-bold uppercase font-sans">${formatDate(log.date_str)}</p></div></div><p class="font-mono text-sm font-black text-slate-500 font-sans">${log.time_str}</p></div>`).join('')}</div></div></div>`;
+            container.innerHTML = `<div class="animate-fade-in space-y-8 font-sans"><div class="flex justify-between items-center border-b pb-4 border-slate-100 text-left text-slate-800"><h2 class="text-xl font-black uppercase tracking-widest text-left font-sans">Attendance Hub</h2></div><div class="grid md:grid-cols-2 gap-6"><div class="bg-white rounded-[2.5rem] py-12 flex flex-col items-center justify-center space-y-6 border-2 shadow-inner bg-slate-50/50"><h3 class="text-6xl font-black text-slate-800 font-mono tracking-tighter font-sans">${getPktTime()}</h3><p class="text-xs font-bold text-slate-400 uppercase tracking-[0.2em] font-sans text-left">${getPktDate()}</p><div class="w-full max-w-xs space-y-3 pt-6"><button onclick="handleClock('Clock In')" class="w-full py-5 rounded-2xl bg-green-700 text-white font-black shadow-lg hover:bg-green-800 transition-all active:scale-95 text-base">Clock In</button><button onclick="handleClock('Clock Out')" class="w-full py-5 rounded-2xl bg-white border-2 text-slate-700 font-black hover:bg-slate-50 transition-all active:scale-95 text-base">Clock Out</button></div></div><div class="bg-white flex items-center justify-center p-10 bg-white border-dashed border-2 text-center rounded-[2rem] border-slate-200"><div><div class="bg-green-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6"><i data-lucide="map-pin" class="text-green-600 animate-bounce" size="40"></i></div><p class="text-xs font-black text-slate-600 uppercase tracking-widest leading-relaxed font-sans">Identity Geofence Active<br/>Verified Pakistan PKT Sync</p></div></div></div><div class="bg-white rounded-3xl border overflow-hidden shadow-sm"><div class="bg-slate-50 p-4 border-b font-black text-[10px] uppercase text-slate-400 tracking-widest text-left font-sans">Identity Timeline</div><div class="divide-y max-h-80 overflow-y-auto custom-scrollbar font-sans">${(state.attendance || []).map(log => `<div class="p-5 flex justify-between items-center hover:bg-slate-50 transition-colors text-left"><div class="flex items-center gap-4"><div class="h-2 w-2 rounded-full ${log.type === 'Clock In' ? 'bg-green-500' : 'bg-red-500'}"></div><div><p class="text-xs font-black uppercase text-slate-800 font-sans">${log.type}</p><p class="text-[10px] text-slate-400 font-bold uppercase font-sans">${formatDate(log.date_str)}</p></div></div><p class="font-mono text-sm font-black text-slate-500 font-sans">${log.time_str}</p></div>`).join('')}</div></div></div>`;
             lucide.createIcons();
         }
 
@@ -617,7 +617,7 @@
             const container = document.getElementById('view-container');
             const isAdmin = state.user && state.user.role && state.user.role.toLowerCase() === 'admin';
             const list = (state.loans || []).filter(l => isAdmin || l.employee_id === state.user.id);
-            container.innerHTML = `<div class="animate-fade-in space-y-6 font-sans"><div class="flex justify-between items-center border-b pb-4 border-slate-100 text-slate-800 text-left"><h2 class="text-xl font-black uppercase tracking-widest text-left font-sans">Loans</h2><button onclick="promptLoan()" class="bg-green-700 text-white px-6 py-2 rounded-xl font-black text-[10px] uppercase shadow-lg">New Request</button></div><div class="grid gap-4">${list.map(l => `<div class="bg-white p-8 rounded-[2rem] border-2 border-slate-50 shadow-sm flex justify-between items-center text-left font-sans"><div class="text-left flex-1"><h4 class="font-black uppercase text-slate-800 text-lg font-sans text-left">${l.employee_name || l.employee_id}</h4><p class="text-[11px] text-slate-400 font-bold mt-1 text-left font-sans">Request Amount: Rs. ${cleanNumber(l.total_amount).toLocaleString()}</p></div><div class="text-right"><div><p class="text-[10px] font-black uppercase text-slate-400">Status</p><span class="text-[10px] font-black uppercase text-amber-500 font-sans">${l.status}</span></div></div></div>`).join('')}</div></div>`;
+            container.innerHTML = `<div class="animate-fade-in space-y-6 font-sans text-left"><div class="flex justify-between items-center border-b pb-4 border-slate-100 text-slate-800 text-left"><h2 class="text-xl font-black uppercase tracking-widest text-left font-sans">Loans</h2><button onclick="promptLoan()" class="bg-green-700 text-white px-6 py-2 rounded-xl font-black text-[10px] uppercase shadow-lg">New Request</button></div><div class="grid gap-4">${list.map(l => `<div class="bg-white p-8 rounded-[2rem] border-2 border-slate-50 shadow-sm flex justify-between items-center text-left font-sans"><div class="text-left flex-1"><h4 class="font-black uppercase text-slate-800 text-lg font-sans text-left">${l.employee_name || l.employee_id}</h4><p class="text-[11px] text-slate-400 font-bold mt-1 text-left font-sans">Amount: Rs. ${cleanNumber(l.total_amount).toLocaleString()}</p></div><div class="text-right"><div><p class="text-[10px] font-black uppercase text-slate-400">Status</p><span class="text-[10px] font-black uppercase text-amber-500 font-sans">${l.status}</span></div></div></div>`).join('')}</div></div>`;
         }
 
         async function promptLoan() {
@@ -629,7 +629,7 @@
 
         function renderLeaves() {
             const container = document.getElementById('view-container');
-            container.innerHTML = `<div class="animate-fade-in space-y-8 font-sans"><div class="flex bg-slate-200 p-1.5 rounded-2xl max-w-xs mx-auto mb-10 shadow-inner font-sans"><button onclick="state.leaveTab='apply'; renderLeaves()" class="flex-1 py-2.5 text-[10px] font-black rounded-xl uppercase transition-all ${state.leaveTab === 'apply' ? 'bg-white text-green-700' : 'text-slate-500'}">Apply</button><button onclick="state.leaveTab='history'; renderLeaves()" class="flex-1 py-2.5 text-[10px] font-black rounded-xl uppercase transition-all ${state.leaveTab === 'history' ? 'bg-white text-green-700' : 'text-slate-500'}">History</button></div>${state.leaveTab === 'apply' ? `<div class="bg-white max-w-xl mx-auto rounded-[3rem] p-12 shadow-2xl border animate-slide-up text-left font-sans"><form onsubmit="handleLeaveApply(event)" class="space-y-6 text-left font-sans"><select id="lv-type" class="w-full p-4 rounded-xl border-2 font-black bg-slate-50 outline-none focus:bg-white focus:border-green-500 font-sans"><option>Annual Leave</option><option>Sick Leave</option><option>WOP Leave</option></select><div class="grid grid-cols-2 gap-4 text-left font-sans font-sans"><input type="date" id="lv-date" class="p-4 rounded-xl border-2 font-black bg-slate-50 outline-none focus:bg-white font-sans" required><input type="number" id="lv-days" class="p-4 rounded-xl border-2 font-black bg-slate-50 outline-none focus:bg-white font-sans" placeholder="Days" required></div><textarea id="lv-rsn" class="w-full p-4 rounded-xl border-2 font-bold h-32 bg-slate-50 outline-none focus:bg-white font-sans" placeholder="Reason..." required></textarea><button type="submit" class="w-full py-5 bg-green-700 text-white font-black rounded-2xl uppercase tracking-widest shadow-xl font-sans">Transmit Application</button></form></div>` : `<div class="space-y-4 max-w-2xl mx-auto text-left font-sans">${(state.leaves || []).map(l => `<div class="bg-white p-6 rounded-2xl border-2 flex justify-between items-center text-left font-sans"><div><h4 class="font-black uppercase text-slate-800 font-sans text-left">${l.leave_type}</h4><p class="text-xs text-slate-400 font-bold uppercase mt-1 text-left font-sans">${formatDate(l.start_date)} • ${l.days} Days</p></div><span class="text-[10px] font-black uppercase text-amber-500 font-sans">${l.status}</span></div>`).join('')}</div>`}</div>`;
+            container.innerHTML = `<div class="animate-fade-in space-y-8 font-sans"><div class="flex bg-slate-200 p-1.5 rounded-2xl max-w-xs mx-auto mb-10 shadow-inner font-sans"><button onclick="state.leaveTab='apply'; renderLeaves()" class="flex-1 py-2.5 text-[10px] font-black rounded-xl uppercase transition-all ${state.leaveTab === 'apply' ? 'bg-white text-green-700' : 'text-slate-500'}">Apply</button><button onclick="state.leaveTab='history'; renderLeaves()" class="flex-1 py-2.5 text-[10px] font-black rounded-xl uppercase transition-all ${state.leaveTab === 'history' ? 'bg-white text-green-700' : 'text-slate-500'}">History</button></div>${state.leaveTab === 'apply' ? `<div class="bg-white max-w-xl mx-auto rounded-[3rem] p-12 shadow-2xl border animate-slide-up text-left font-sans"><form onsubmit="handleLeaveApply(event)" class="space-y-6 text-left font-sans"><select id="lv-type" class="w-full p-4 rounded-xl border-2 font-black bg-slate-50 outline-none focus:bg-white focus:border-green-500 font-sans"><option>Annual Leave</option><option>Sick Leave</option><option>WOP Leave</option></select><div class="grid grid-cols-2 gap-4 text-left font-sans"><input type="date" id="lv-date" class="p-4 rounded-xl border-2 font-black bg-slate-50 outline-none focus:bg-white font-sans" required><input type="number" id="lv-days" class="p-4 rounded-xl border-2 font-black bg-slate-50 outline-none focus:bg-white font-sans" placeholder="Days" required></div><textarea id="lv-rsn" class="w-full p-4 rounded-xl border-2 font-bold h-32 bg-slate-50 outline-none focus:bg-white font-sans" placeholder="Reason..." required></textarea><button type="submit" class="w-full py-5 bg-green-700 text-white font-black rounded-2xl uppercase tracking-widest shadow-xl font-sans">Transmit Identity Application</button></form></div>` : `<div class="space-y-4 max-w-2xl mx-auto text-left font-sans">${(state.leaves || []).map(l => `<div class="bg-white p-6 rounded-2xl border-2 flex justify-between items-center text-left font-sans text-slate-800"><div><h4 class="font-black uppercase font-sans text-left">${l.leave_type}</h4><p class="text-xs text-slate-400 font-bold uppercase mt-1 text-left font-sans">${formatDate(l.start_date)} • ${l.days} Days</p></div><span class="text-[10px] font-black uppercase text-amber-500 font-sans">${l.status}</span></div>`).join('')}</div>`}</div>`;
         }
 
         async function handleLeaveApply(e) {
@@ -642,7 +642,7 @@
         function renderDiscussion() {
             const container = document.getElementById('view-container');
             const isAdmin = state.user && state.user.role && state.user.role.toLowerCase() === 'admin';
-            container.innerHTML = `<div class="animate-fade-in space-y-8 text-left text-slate-800 font-sans"><div class="flex justify-between items-center border-b pb-4"><h2 class="text-xl font-black uppercase tracking-widest font-sans">Information Board</h2>${isAdmin ? `<button onclick="state.boardFormVisible=true; renderDiscussion()" class="bg-green-700 text-white px-6 py-2 rounded-xl font-black text-xs uppercase shadow-lg font-sans">New Broadcast</button>` : ''}</div>${state.boardFormVisible ? `<div class="bg-white p-10 rounded-[3rem] border-2 border-green-100 shadow-2xl mb-10 animate-slide-up text-left font-sans"><form onsubmit="handlePostSubmit(event)" class="space-y-4 font-sans"><input type="text" id="n-title" class="w-full p-4 rounded-xl border-2 font-black bg-slate-50 outline-none font-sans" placeholder="HEADING TITLE" required><textarea id="n-msg" class="w-full p-4 rounded-xl border-2 font-medium h-40 bg-slate-50 outline-none font-sans" placeholder="BODY CONTENT..." required></textarea><div class="flex justify-end gap-3 pt-4 font-sans"><button type="button" onclick="state.boardFormVisible=false; renderDiscussion()" class="px-6 py-2 text-slate-400 font-bold uppercase text-xs font-sans">Discard</button><button type="submit" class="bg-green-700 text-white px-10 py-3 rounded-xl font-black uppercase shadow-lg font-sans">Publish Broadcast</button></div></form></div>` : ''}<div class="space-y-6 max-w-4xl mx-auto font-sans">${(state.discussions || []).map(d => `<div class="bg-white border-l-[12px] border-l-green-600 shadow-lg !p-10 relative rounded-r-3xl transition-all hover:border-green-300 group font-sans"><div class="flex justify-between items-start mb-4 font-sans"><h4 class="font-black text-2xl text-slate-800 uppercase leading-tight group-hover:text-green-700 transition-colors font-sans">${d.title}</h4><span class="text-[10px] font-black text-slate-300 uppercase whitespace-nowrap font-sans">${formatDate(d.date)}</span></div><p class="text-slate-600 text-lg leading-relaxed mb-6 border-b pb-6 border-slate-50 font-medium font-sans text-left">${d.message}</p><div class="flex justify-between items-center font-sans"><span class="bg-green-50 text-green-700 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border border-green-100 shadow-sm font-sans">Verified Broadast Hub</span><button class="text-blue-600 text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:underline font-sans">Log Reply</button></div></div>`).join('')}</div></div>`;
+            container.innerHTML = `<div class="animate-fade-in space-y-8 text-left text-slate-800 font-sans"><div class="flex justify-between items-center border-b pb-4 border-slate-100 font-sans text-slate-800"><h2 class="text-xl font-black uppercase tracking-widest font-sans">Notice Board</h2>${isAdmin ? `<button onclick="state.boardFormVisible=true; renderDiscussion()" class="bg-green-700 text-white px-6 py-2 rounded-xl font-black text-xs uppercase shadow-lg font-sans">New Broadcast</button>` : ''}</div>${state.boardFormVisible ? `<div class="bg-white p-10 rounded-[3rem] border-2 border-green-100 shadow-2xl mb-10 animate-slide-up text-left font-sans"><form onsubmit="handlePostSubmit(event)" class="space-y-4 font-sans"><input type="text" id="n-title" class="w-full p-4 rounded-xl border-2 font-black bg-slate-50 outline-none font-sans" placeholder="HEADING TITLE" required><textarea id="n-msg" class="w-full p-4 rounded-xl border-2 font-medium h-40 bg-slate-50 outline-none font-sans" placeholder="BODY CONTENT..." required></textarea><div class="flex justify-end gap-3 pt-4 font-sans"><button type="button" onclick="state.boardFormVisible=false; renderDiscussion()" class="px-6 py-2 text-slate-400 font-bold uppercase text-xs font-sans">Discard</button><button type="submit" class="bg-green-700 text-white px-10 py-3 rounded-xl font-black uppercase shadow-lg font-sans">Publish Broadcast</button></div></form></div>` : ''}<div class="space-y-6 max-w-4xl mx-auto font-sans">${(state.discussions || []).map(d => `<div class="bg-white border-l-[12px] border-l-green-600 shadow-lg !p-10 relative rounded-r-3xl transition-all hover:border-green-300 group font-sans text-left"><div class="flex justify-between items-start mb-4 font-sans"><h4 class="font-black text-2xl text-slate-800 uppercase leading-tight group-hover:text-green-700 transition-colors font-sans">${d.title}</h4><span class="text-[10px] font-black text-slate-300 uppercase whitespace-nowrap font-sans">${formatDate(d.date)}</span></div><p class="text-slate-600 text-lg leading-relaxed mb-6 border-b pb-6 border-slate-50 font-medium font-sans text-left">${d.message}</p><div class="flex justify-between items-center font-sans"><span class="bg-green-50 text-green-700 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border border-green-100 shadow-sm font-sans">Verified Broadast Hub</span><button class="text-blue-600 text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:underline font-sans">Log Reply</button></div></div>`).join('')}</div></div>`;
         }
 
         async function handlePostSubmit(e) {
@@ -654,8 +654,13 @@
 
         function renderSettings() {
              const container = document.getElementById('view-container');
-             container.innerHTML = `<div class="animate-fade-in space-y-6 text-center py-20 font-sans text-slate-900"><h2 class="text-2xl font-black uppercase tracking-tight text-slate-400 font-sans">System Security</h2><div class="max-w-md mx-auto p-12 bg-white border shadow-2xl rounded-[3rem] relative overflow-hidden text-center font-sans"><div class="absolute top-0 right-0 w-32 h-32 bg-red-50 rounded-full blur-3xl -mr-16 -mt-16 opacity-40"></div><div class="relative z-10 space-y-6 font-sans"><div class="h-20 w-20 bg-slate-900 text-white rounded-[1.5rem] flex items-center justify-center mx-auto shadow-xl font-sans"><i data-lucide="key" size="36"></i></div><input type="password" placeholder="NEW SYSTEM KEY" class="w-full p-4 rounded-xl border-2 font-black bg-slate-50 outline-none focus:bg-white focus:border-green-500 text-center font-sans"><button class="w-full py-5 bg-slate-900 text-white uppercase tracking-widest font-black rounded-2xl active:scale-95 transition-all shadow-xl shadow-slate-200 font-sans" onclick="alert('System Identity Sync Successful.')">Synchronize Key</button></div></div></div>`;
+             container.innerHTML = `<div class="animate-fade-in space-y-6 text-center py-20 font-sans text-slate-900"><h2 class="text-2xl font-black uppercase tracking-tight text-slate-400 font-sans">Identity Security Key</h2><div class="max-w-md mx-auto p-12 bg-white border shadow-2xl rounded-[3rem] relative overflow-hidden text-center font-sans"><div class="absolute top-0 right-0 w-32 h-32 bg-red-50 rounded-full blur-3xl -mr-16 -mt-16 opacity-40"></div><div class="relative z-10 space-y-6 font-sans text-center"><div class="h-20 w-20 bg-slate-900 text-white rounded-[1.5rem] flex items-center justify-center mx-auto shadow-xl font-sans"><i data-lucide="key" size="36"></i></div><input type="password" placeholder="NEW KEY" class="w-full p-4 rounded-xl border-2 font-black bg-slate-50 outline-none focus:bg-white focus:border-green-500 text-center font-sans"><button class="w-full py-5 bg-slate-900 text-white uppercase tracking-widest font-black rounded-2xl active:scale-95 transition-all shadow-xl shadow-slate-200 font-sans" onclick="alert('System Identity Sync Successful.')">Synchronize Key</button></div></div></div>`;
              lucide.createIcons();
+        }
+
+        function logout() { 
+            localStorage.removeItem('hr_user'); 
+            window.location.reload(); 
         }
 
         // --- AUTH ---
@@ -665,25 +670,20 @@
             const pass = document.getElementById('login-pass').value;
             try {
                 const res = await fetch(`${API_BASE}/employees`);
+                if (!res.ok) throw new Error("Connection Error");
                 const list = await res.json();
                 const found = (list || []).find(e => String(e.id).toUpperCase() === id && String(e.password) === pass);
                 if (found) {
                     state.user = found; localStorage.setItem('hr_user', JSON.stringify(found));
                     await syncData(); showApp();
-                } else alert("Verification Failed.");
-            } catch(e) { alert("Matrix Offline."); }
+                } else alert("Verification Failed. Key mismatch.");
+            } catch(e) { alert("Matrix Offline. Check backend on port 5050."); }
         });
-
-        function logout() { 
-            localStorage.removeItem('hr_user'); 
-            location.reload(); 
-        }
 
         async function importSalary(input) {
             const file = input.files[0]; if(!file) return;
             const targetMonth = prompt("Target Month (YYYY-MM):", state.selectedMonth);
             if(!targetMonth || !/^\d{4}-\d{2}$/.test(targetMonth)) return alert("Invalid Format.");
-            state.selectedMonth = targetMonth;
             const reader = new FileReader();
             reader.onload = async (e) => {
                 const lines = e.target.result.split(/\r?\n/);
@@ -702,7 +702,6 @@
             reader.readAsText(file);
         }
 
-        function bypassSync() { document.getElementById('loading-screen').classList.add('hidden'); if(state.user) showApp(); else document.getElementById('login-container').classList.remove('hidden'); }
         window.onload = init;
     </script>
 </body>
