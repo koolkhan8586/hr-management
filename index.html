@@ -6,7 +6,6 @@
     <title>LSAFHR Management System</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-    <!-- PDF Generation Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
@@ -25,19 +24,19 @@
 </head>
 <body class="bg-slate-50 text-slate-900 text-left">
 
-    <!-- GLOBAL LOADING SCREEN -->
+    <!-- LOADING -->
     <div id="loading-screen" class="fixed inset-0 bg-white z-[999] flex flex-col items-center justify-center">
         <div class="loader w-16 h-16 border-4 border-slate-100 border-t-green-700 rounded-full mb-4"></div>
         <p class="text-slate-400 font-black uppercase tracking-[0.3em] text-sm animate-pulse">Establishing LSAFHR Connection</p>
     </div>
 
-    <!-- LOGIN INTERFACE -->
+    <!-- LOGIN -->
     <div id="login-container" class="hidden min-h-screen flex items-center justify-center p-4 bg-slate-100 font-sans">
         <div class="bg-white w-full max-w-md p-10 rounded-[2.5rem] shadow-2xl border border-slate-100 animate-slide-up text-center">
             <div class="text-center mb-10">
                 <img src="UOL-Green-V1.png" alt="Logo" class="h-20 mx-auto mb-4 object-contain" onerror="this.src='https://placehold.co/150x150?text=LSAFHR'">
                 <h1 class="text-2xl font-black text-slate-800 leading-tight uppercase tracking-widest">Lahore School of Accountancy</h1>
-                <p class="text-slate-400 text-xs font-bold mt-2 uppercase tracking-widest">Administrative Hub v4.9.5</p>
+                <p class="text-slate-400 text-xs font-bold mt-2 uppercase tracking-widest">Administrative Hub v5.0.0</p>
             </div>
             <form id="login-form" class="space-y-5">
                 <div class="space-y-1 text-left">
@@ -53,7 +52,7 @@
         </div>
     </div>
 
-    <!-- MAIN APP SHELL -->
+    <!-- MAIN UI -->
     <div id="app-shell" class="hidden min-h-screen flex">
         <aside class="w-64 bg-white border-r border-slate-100 fixed h-full hidden lg:flex flex-col z-50 shadow-sm text-left">
             <div class="p-8 border-b border-slate-50 text-center">
@@ -78,21 +77,21 @@
         </main>
 
         <nav class="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 p-3 flex justify-around shadow-2xl z-50 rounded-t-[2.5rem]">
-            <button onclick="switchTab('dashboard')" class="p-4 rounded-2xl mobile-nav-btn" id="mob-dashboard"><i data-lucide="home"></i></button>
-            <button onclick="switchTab('attendance')" class="p-4 rounded-2xl mobile-nav-btn" id="mob-attendance"><i data-lucide="clock"></i></button>
-            <button onclick="switchTab('payroll')" class="p-4 rounded-2xl mobile-nav-btn" id="mob-payroll"><i data-lucide="dollar-sign"></i></button>
-            <button onclick="switchTab('directory')" class="p-4 rounded-2xl mobile-nav-btn" id="mob-directory"><i data-lucide="users"></i></button>
-            <button onclick="switchTab('discussion')" class="p-4 rounded-2xl mobile-nav-btn" id="mob-discussion"><i data-lucide="message-square"></i></button>
+            <button onclick="switchTab('dashboard')" class="p-4 rounded-2xl text-slate-400 mobile-nav-btn" id="mob-dashboard"><i data-lucide="home"></i></button>
+            <button onclick="switchTab('attendance')" class="p-4 rounded-2xl text-slate-400 mobile-nav-btn" id="mob-attendance"><i data-lucide="clock"></i></button>
+            <button onclick="switchTab('payroll')" class="p-4 rounded-2xl text-slate-400 mobile-nav-btn" id="mob-payroll"><i data-lucide="dollar-sign"></i></button>
+            <button onclick="switchTab('directory')" class="p-4 rounded-2xl text-slate-400 mobile-nav-btn" id="mob-directory"><i data-lucide="users"></i></button>
+            <button onclick="switchTab('discussion')" class="p-4 rounded-2xl text-slate-400 mobile-nav-btn" id="mob-discussion"><i data-lucide="message-square"></i></button>
         </nav>
     </div>
 
-    <!-- TOAST NOTIFICATION -->
+    <!-- TOAST -->
     <div id="status-toast" class="fixed top-10 left-1/2 -translate-x-1/2 z-[1000] bg-slate-900 text-white px-8 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-2xl opacity-0 pointer-events-none transition-all duration-300 transform translate-y-[-20px]">
-        Status Updated
+        Matrix Synchronized
     </div>
 
     <script>
-        // Automatic API detection to prevent "Data not showing" if backend is on port 5050
+        // Automatic API Base detection
         const API_BASE = window.location.hostname === 'localhost' || window.location.hostname.includes('127.0.0.1') 
             ? 'http://localhost:5050/api' 
             : '/api';
@@ -126,7 +125,8 @@
             { id: 'settings', label: 'Security', icon: 'shield-check', admin: false }
         ];
 
-        // --- UTILS ---
+        // --- CORE FUNCTIONS ---
+
         function notify(msg) {
             const t = document.getElementById('status-toast');
             if (!t) return;
@@ -151,31 +151,6 @@
             return { totalAdd, totalSub: sub, netPaid: totalAdd - sub };
         }
 
-        function parseCSVLine(text) {
-            const result = []; let current = ''; let inQuotes = false;
-            for (let i = 0; i < text.length; i++) {
-                if (text[i] === '"') inQuotes = !inQuotes;
-                else if (text[i] === ',' && !inQuotes) { result.push(current.trim()); current = ''; }
-                else current += text[i];
-            }
-            result.push(current.trim()); return result;
-        }
-
-        function exportToCSV(data, filename) {
-            if (!data || !data.length) return;
-            const headers = Object.keys(data[0]).join(',');
-            const rows = data.map(row => Object.values(row).map(val => '"' + String(val || '').replace(/"/g, '""') + '"').join(','));
-            const csvContent = "data:text/csv;charset=utf-8," + [headers, ...rows].join('\n');
-            const encodedUri = encodeURI(csvContent);
-            const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", filename);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-
-        // --- SYSTEM ENGINE ---
         async function init() {
             const saved = localStorage.getItem('hr_user');
             if (saved) {
@@ -214,7 +189,7 @@
                         if (allLvRes.ok) state.allLeaves = await allLvRes.json();
                     }
                 }
-            } catch (e) { console.error("LSAFHR Sync Failure:", e); }
+            } catch (e) { console.error("Sync partial failure."); }
             document.getElementById('loading-screen').classList.add('hidden');
         }
 
@@ -250,7 +225,7 @@
 
         function renderView() {
             const container = document.getElementById('view-container');
-            container.innerHTML = '<div class="py-40 text-center animate-pulse font-black text-slate-300 uppercase tracking-[0.5em]">Establishing Connection...</div>';
+            container.innerHTML = '<div class="py-40 text-center animate-pulse font-black text-slate-300 uppercase tracking-[0.5em]">LSAFHR Synchronizing...</div>';
             
             setTimeout(() => {
                 switch(state.currentTab) {
@@ -262,7 +237,6 @@
                     case 'leaves': renderLeaves(); break;
                     case 'discussion': renderDiscussion(); break;
                     case 'settings': renderSettings(); break;
-                    default: renderDashboard();
                 }
                 lucide.createIcons();
             }, 10);
@@ -291,7 +265,7 @@
                             <p class="text-3xl font-black text-slate-800 mt-2">${state.user.leave_annual || 0} Days</p>
                         </div>
                         <div class="bg-white p-8 rounded-[2rem] border shadow-sm text-left">
-                            <p class="text-[10px] font-black text-slate-400 uppercase">Verification Level</p>
+                            <p class="text-[10px] font-black text-slate-400 uppercase">Identity Level</p>
                             <p class="text-2xl font-black text-slate-800 mt-2 capitalize">${state.user.role}</p>
                         </div>
                     </div>
@@ -299,6 +273,7 @@
             `;
         }
 
+        // --- PAYROLL HUB ---
         async function renderPayroll() {
             const container = document.getElementById('view-container');
             const isAdmin = state.user && state.user.role && state.user.role.toLowerCase() === 'admin';
@@ -307,7 +282,7 @@
             let content = `
                 <div class="animate-fade-in space-y-6 font-sans text-left text-slate-800">
                     <div class="flex flex-col md:flex-row justify-between items-center gap-4 border-b pb-4 border-slate-100">
-                        <h2 class="text-xl font-black uppercase tracking-widest text-slate-800 font-sans">Salary Hub</h2>
+                        <h2 class="text-xl font-black uppercase tracking-widest">Salary Hub</h2>
                         <div class="flex flex-wrap gap-2 justify-center">
                             <input type="month" value="${state.selectedMonth}" onchange="updateMonth(this.value)" class="p-2 border-2 rounded-xl font-black bg-white outline-none focus:border-green-500">
                             ${isAdmin ? `
@@ -344,6 +319,7 @@
 
                 const list = isAdmin ? state.employees : [state.employees.find(e => e.id === state.user.id) || state.user];
                 list.forEach(emp => {
+                    if (!emp) return;
                     const isEditing = state.editingSalaryId === emp.id;
                     const m = calculateSalaryMetrics(isEditing ? emp : emp);
                     content += `
@@ -362,7 +338,7 @@
                             ${isAdmin ? `
                                 <td class="p-4 text-center">
                                     ${isEditing ? `
-                                        <button onclick="saveSalary('${emp.id}')" class="text-green-600 font-black text-[9px] uppercase border-b-2 border-green-600">Save</button>
+                                        <button onclick="saveSalary('${emp.id}')" class="text-green-600 font-black text-[9px] uppercase">Save</button>
                                     ` : `
                                         <div class="flex justify-center gap-2">
                                             <button onclick="editSalaryMode('${emp.id}')" class="text-blue-500 hover:scale-125 transition-transform"><i data-lucide="pencil" size="14"></i></button>
@@ -378,7 +354,6 @@
             }
             content += `</div>`;
             container.innerHTML = content;
-            lucide.createIcons();
         }
 
         async function downloadSalaryPDF() {
@@ -398,7 +373,6 @@
                             <h2 style="margin: 0; text-transform: uppercase; font-size: 13px; font-weight: 900; color: #1e293b;">OFFICIAL SALARY SLIP - ${monthLabel.toUpperCase()}</h2>
                         </div>
                     </div>
-
                     <div style="display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 12px; border-bottom: 1px dashed #cbd5e1; padding-bottom: 10px;">
                         <div style="width: 50%;">
                             <p style="margin: 2px 0;"><strong>Staff Name:</strong> <span style="text-transform: uppercase; font-weight: 800;">${emp.name}</span></p>
@@ -409,7 +383,6 @@
                             <div style="background: #15803d; color: white; display: inline-block; padding: 2px 10px; border-radius: 4px; margin-top: 4px; font-size: 10px; font-weight: 900;">Identity Verified: LSAF-HR</div>
                         </div>
                     </div>
-                    
                     <div style="display: flex; gap: 15px; margin-bottom: 15px;">
                         <div style="flex: 1;">
                             <h3 style="background: #f8fafc; padding: 6px; font-size: 10px; text-transform: uppercase; border-left: 4px solid #15803d; font-weight: 900; margin-bottom: 8px;">Earnings</h3>
@@ -470,8 +443,8 @@
                             <div class="grid gap-4">
                                 ${pendingLeaves.map(l => `
                                     <div class="bg-white p-6 rounded-2xl flex justify-between items-center shadow-sm">
-                                        <div class="text-left font-sans text-slate-800"><p class="font-black text-sm uppercase">${l.employee_name || l.employee_id}</p><p class="text-[10px] font-bold text-slate-400 uppercase">${l.leave_type} • ${l.days} Days</p></div>
-                                        <div class="flex gap-2 font-sans"><button onclick="updateLeaveStatus(${l.id}, 'Approved')" class="bg-green-700 text-white px-4 py-2 rounded-xl font-black text-[10px] uppercase">Approve</button><button onclick="updateLeaveStatus(${l.id}, 'Rejected')" class="bg-red-50 text-red-600 px-4 py-2 rounded-xl font-black text-[10px] uppercase">Reject</button></div>
+                                        <div class="text-left font-sans text-slate-800"><p class="font-black text-sm uppercase">${l.employee_name || l.employee_id}</p><p class="text-[10px] font-bold text-slate-400 uppercase font-sans">${l.leave_type} • ${l.days} Days</p></div>
+                                        <div class="flex gap-2 font-sans"><button onclick="updateLeaveStatus(${l.id}, 'Approved')" class="bg-green-700 text-white px-4 py-2 rounded-xl font-black text-[10px] uppercase font-sans">Approve</button><button onclick="updateLeaveStatus(${l.id}, 'Rejected')" class="bg-red-50 text-red-600 px-4 py-2 rounded-xl font-black text-[10px] uppercase font-sans">Reject</button></div>
                                     </div>
                                 `).join('')}
                             </div>
@@ -479,7 +452,7 @@
                     ` : ''}
 
                     <div id="staff-form-area"></div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 font-sans">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                         ${state.employees.map(emp => `
                             <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4 hover:border-green-300 transition-all group text-left">
                                 <div class="h-12 w-12 bg-green-50 text-green-700 rounded-xl flex items-center justify-center font-black text-xl uppercase">${getInitial(emp.name)}</div>
@@ -503,14 +476,14 @@
             area.innerHTML = `
                 <div class="bg-white p-8 rounded-[2rem] border-2 border-green-100 animate-slide-up mb-8 shadow-xl text-left font-sans">
                     <form onsubmit="handleStaffSubmit(event)" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 font-sans">
-                        <div class="text-left font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans text-left block">Staff ID</label><input type="text" id="s-id" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 uppercase font-sans" value="${emp ? emp.id : ''}" ${emp ? 'readonly' : 'required'}></div>
-                        <div class="text-left font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans text-left block">Name</label><input type="text" id="s-name" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 font-sans" value="${emp ? emp.name : ''}" required></div>
-                        <div class="text-left font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans text-left block">Email</label><input type="email" id="s-email" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 font-sans" value="${emp ? emp.email : ''}" required></div>
-                        <div class="text-left font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans text-left block">Identity Key (Password)</label><input type="text" id="s-pass" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 font-sans" placeholder="••••••••" value="${emp ? emp.password : ''}" required></div>
-                        <div class="text-left font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans text-left block">Role</label><select id="s-role" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 font-sans"><option value="employee" ${emp?.role==='employee'?'selected':''}>Employee</option><option value="admin" ${emp?.role==='admin'?'selected':''}>Admin</option></select></div>
-                        <div class="text-left font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans text-left block">Annual Leaves</label><input type="number" id="s-leave-annual" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 font-sans" value="${emp ? emp.leave_annual : '14'}"></div>
-                        <div class="text-left font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans text-left block">Casual Leaves</label><input type="number" id="s-leave-casual" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 font-sans" value="${emp ? emp.leave_casual : '10'}"></div>
-                        <div class="text-left font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans text-left block">Opening Debt Balance</label><input type="number" id="s-loan-open" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 font-sans" value="${emp ? (emp.loan_opening_balance || 0) : '0'}"></div>
+                        <div class="text-left font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans block text-left">Staff ID</label><input type="text" id="s-id" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 uppercase font-sans text-left" value="${emp ? emp.id : ''}" ${emp ? 'readonly' : 'required'}></div>
+                        <div class="text-left font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans block text-left">Name</label><input type="text" id="s-name" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 font-sans text-left" value="${emp ? emp.name : ''}" required></div>
+                        <div class="text-left font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans block text-left">Email</label><input type="email" id="s-email" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 font-sans text-left" value="${emp ? emp.email : ''}" required></div>
+                        <div class="text-left font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans block text-left">Password</label><input type="text" id="s-pass" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 font-sans text-left" value="${emp ? emp.password : ''}" required></div>
+                        <div class="text-left font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans block text-left">Role</label><select id="s-role" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 font-sans"><option value="employee" ${emp?.role==='employee'?'selected':''}>Employee</option><option value="admin" ${emp?.role==='admin'?'selected':''}>Admin</option></select></div>
+                        <div class="text-left font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans block text-left">Annual Bal</label><input type="number" id="s-leave-annual" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 font-sans" value="${emp ? emp.leave_annual : '14'}"></div>
+                        <div class="text-left font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans block text-left">Casual Bal</label><input type="number" id="s-leave-casual" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 font-sans" value="${emp ? emp.leave_casual : '10'}"></div>
+                        <div class="text-left font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans block text-left">Opening Loan</label><input type="number" id="s-loan-open" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 font-sans" value="${emp ? (emp.loan_opening_balance || 0) : '0'}"></div>
                         <div class="md:col-span-2 lg:col-span-4 flex justify-end gap-3 pt-4 border-t font-sans"><button type="button" onclick="toggleStaffForm()" class="px-6 py-2 text-slate-400 font-bold uppercase text-xs font-sans">Cancel</button><button type="submit" class="bg-green-700 text-white px-8 py-4 rounded-xl font-black uppercase text-xs shadow-lg font-sans">${emp ? 'Sync changes' : 'Create Identity'}</button></div>
                     </form>
                 </div>
@@ -541,13 +514,49 @@
             if (res.ok) { notify("Identity Matrix Updated."); await syncData(); renderDirectory(); }
         }
 
+        async function exportStaffCSV() {
+            const data = state.employees.map(e => ({ ID: e.id, Name: e.name, Email: e.email, Role: e.role, Loan_Balance: e.loan_opening_balance, Annual_Leaves: e.leave_annual, Casual_Leaves: e.leave_casual }));
+            exportToCSV(data, 'LSAFHR_Staff_Roster.csv');
+        }
+
+        async function importStaffCSV(input) {
+            const file = input.files[0]; if(!file) return;
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const lines = e.target.result.split(/\r?\n/);
+                const promises = [];
+                for(let i = 1; i < lines.length; i++) {
+                    const cols = parseCSVLine(lines[i]);
+                    if(!cols[0]) continue;
+                    const payload = { id: cols[0].toUpperCase(), name: cols[1], email: cols[2], role: (cols[3] || 'employee').toLowerCase(), password: cols[4] || cols[0].toUpperCase(), loan_opening_balance: cleanNumber(cols[5]) || 0 };
+                    promises.push(fetch(`${API_BASE}/employees`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) }));
+                }
+                await Promise.all(promises);
+                notify("Roster Sync Complete."); await syncData(); renderDirectory();
+            };
+            reader.readAsText(file);
+        }
+
         async function deleteStaff(id) {
             if(!confirm(`CRITICAL: Purge staff member ${id} permanently?`)) return;
             try {
                 const res = await fetch(`${API_BASE}/employees/${id}`, { method: 'DELETE' });
                 if(res.ok) { notify("Identity Purged."); await syncData(); renderDirectory(); }
-                else alert("Matrix rejected the request.");
-            } catch(e) { alert("Server connectivity lost."); }
+            } catch(e) { alert("Matrix Purge Failure."); }
+        }
+
+        // --- ATTENDANCE ---
+        function renderAttendance() {
+            const container = document.getElementById('view-container');
+            container.innerHTML = `<div class="animate-fade-in space-y-8 font-sans"><div class="flex justify-between items-center border-b pb-4 border-slate-100 text-left text-slate-800"><h2 class="text-xl font-black uppercase tracking-widest text-left font-sans">Attendance Hub</h2></div><div class="grid md:grid-cols-2 gap-6"><div class="bg-white rounded-[2.5rem] py-12 flex flex-col items-center justify-center space-y-6 border-2 shadow-inner bg-slate-50/50"><h3 class="text-6xl font-black text-slate-800 font-mono tracking-tighter font-sans">${getPktTime()}</h3><p class="text-xs font-bold text-slate-400 uppercase tracking-[0.2em] font-sans text-left">${getPktDate()}</p><div class="w-full max-w-xs space-y-3 pt-6"><button onclick="handleClock('Clock In')" class="w-full py-5 rounded-2xl bg-green-700 text-white font-black shadow-lg hover:bg-green-800 transition-all active:scale-95 text-base">Clock In</button><button onclick="handleClock('Clock Out')" class="w-full py-5 rounded-2xl bg-white border-2 text-slate-700 font-black hover:bg-slate-50 transition-all active:scale-95 text-base">Clock Out</button></div></div><div class="bg-white flex items-center justify-center p-10 bg-white border-dashed border-2 text-center rounded-[2rem] border-slate-200"><div><div class="bg-green-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6"><i data-lucide="map-pin" class="text-green-600 animate-bounce" size="40"></i></div><p class="text-xs font-black text-slate-600 uppercase tracking-widest leading-relaxed font-sans">Identity Geofence Active<br/>Verified Pakistan PKT Sync</p></div></div></div><div class="bg-white rounded-3xl border overflow-hidden shadow-sm"><div class="bg-slate-50 p-4 border-b font-black text-[10px] uppercase text-slate-400 tracking-widest text-left font-sans">Identity Timeline</div><div class="divide-y max-h-80 overflow-y-auto custom-scrollbar font-sans">${(state.attendance || []).map(log => `<div class="p-5 flex justify-between items-center hover:bg-slate-50 transition-colors text-left"><div class="flex items-center gap-4"><div class="h-2 w-2 rounded-full ${log.type === 'Clock In' ? 'bg-green-500' : 'bg-red-500'}"></div><div><p class="text-xs font-black uppercase text-slate-800 font-sans">${log.type}</p><p class="text-[10px] text-slate-400 font-bold uppercase font-sans">${formatDate(log.date_str)}</p></div></div><p class="font-mono text-sm font-black text-slate-500 font-sans">${log.time_str}</p></div>`).join('')}</div></div></div>`;
+            lucide.createIcons();
+        }
+
+        async function handleClock(type) {
+            navigator.geolocation.getCurrentPosition(async (pos) => {
+                const res = await fetch(`${API_BASE}/attendance`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ employeeId: state.user.id, type, date: getPktDate(), time: getPktTime(), lat: pos.coords.latitude, lng: pos.coords.longitude }) });
+                if(res.ok) { notify(`${type} Verified.`); await syncData(); renderAttendance(); }
+            }, () => alert("Location Required."));
         }
 
         // --- HUB ACTIONS ---
@@ -559,7 +568,7 @@
             const endpoint = `${API_BASE}/payroll-post${currentlyPosted ? '/' + state.selectedMonth : ''}`;
             const body = currentlyPosted ? null : JSON.stringify({ month: state.selectedMonth });
             const res = await fetch(endpoint, { method, headers: {'Content-Type':'application/json'}, body });
-            if (res.ok) { notify("Matrix Broadcast Updated."); await syncData(); renderPayroll(); }
+            if (res.ok) { notify("Matrix Sync: Status Updated."); await syncData(); renderPayroll(); }
         }
 
         function editSalaryMode(id) { state.editingSalaryId = id; renderPayroll(); }
@@ -590,7 +599,7 @@
         }
 
         async function purgeMonthData() {
-            if (!confirm("DANGER: WIPE ALL SALARY FIELDS FOR ENTIRE STAFF FOR THIS MONTH?")) return;
+            if (!confirm("DANGER: WIPE ALL SALARY FIELDS FOR ENTIRE STAFF?")) return;
             const resets = state.employees.map(emp => {
                 const payload = { ...emp, basic_salary: 0, invigilation: 0, t_payment: 0, increment: 0, tax: 0, loan_deduction: 0, insurance: 0, others_deduction: 0, extra_leaves_deduction: 0 };
                 return fetch(`${API_BASE}/employees/${emp.id}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
@@ -599,25 +608,34 @@
             notify("Monthly Matrix Purged."); await syncData(); renderPayroll();
         }
 
-        // --- ATTENDANCE ---
-        function renderAttendance() {
-            const container = document.getElementById('view-container');
-            container.innerHTML = `<div class="animate-fade-in space-y-8 font-sans"><div class="flex justify-between items-center border-b pb-4 border-slate-100 text-left text-slate-800"><h2 class="text-xl font-black uppercase tracking-widest text-left font-sans">Attendance Hub</h2></div><div class="grid md:grid-cols-2 gap-6"><div class="bg-white rounded-[2.5rem] py-12 flex flex-col items-center justify-center space-y-6 border-2 shadow-inner bg-slate-50/50"><h3 class="text-6xl font-black text-slate-800 font-mono tracking-tighter font-sans">${getPktTime()}</h3><p class="text-xs font-bold text-slate-400 uppercase tracking-[0.2em] font-sans text-left">${getPktDate()}</p><div class="w-full max-w-xs space-y-3 pt-6"><button onclick="handleClock('Clock In')" class="w-full py-5 rounded-2xl bg-green-700 text-white font-black shadow-lg hover:bg-green-800 transition-all active:scale-95 text-base">Clock In</button><button onclick="handleClock('Clock Out')" class="w-full py-5 rounded-2xl bg-white border-2 text-slate-700 font-black hover:bg-slate-50 transition-all active:scale-95 text-base">Clock Out</button></div></div><div class="bg-white flex items-center justify-center p-10 bg-white border-dashed border-2 text-center rounded-[2rem] border-slate-200"><div><div class="bg-green-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6"><i data-lucide="map-pin" class="text-green-600 animate-bounce" size="40"></i></div><p class="text-xs font-black text-slate-600 uppercase tracking-widest leading-relaxed font-sans">Identity Geofence Active<br/>Verified Pakistan PKT Sync</p></div></div></div><div class="bg-white rounded-3xl border overflow-hidden shadow-sm"><div class="bg-slate-50 p-4 border-b font-black text-[10px] uppercase text-slate-400 tracking-widest text-left font-sans">Identity Timeline</div><div class="divide-y max-h-80 overflow-y-auto custom-scrollbar font-sans">${(state.attendance || []).map(log => `<div class="p-5 flex justify-between items-center hover:bg-slate-50 transition-colors text-left"><div class="flex items-center gap-4"><div class="h-2 w-2 rounded-full ${log.type === 'Clock In' ? 'bg-green-500' : 'bg-red-500'}"></div><div><p class="text-xs font-black uppercase text-slate-800 font-sans">${log.type}</p><p class="text-[10px] text-slate-400 font-bold uppercase font-sans">${formatDate(log.date_str)}</p></div></div><p class="font-mono text-sm font-black text-slate-500 font-sans">${log.time_str}</p></div>`).join('')}</div></div></div>`;
-            lucide.createIcons();
+        // --- AUTH ---
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('login-id').value.toUpperCase();
+            const pass = document.getElementById('login-pass').value;
+            try {
+                const res = await fetch(`${API_BASE}/employees`);
+                if (!res.ok) throw new Error("Connection Error");
+                const list = await res.json();
+                const found = (list || []).find(e => String(e.id).toUpperCase() === id && String(e.password) === pass);
+                if (found) {
+                    state.user = found; localStorage.setItem('hr_user', JSON.stringify(found));
+                    await syncData(); showApp();
+                } else alert("Verification Failed. Key mismatch.");
+            } catch(e) { alert("Matrix Offline. Check backend on port 5050."); }
+        });
+
+        function logout() { 
+            localStorage.removeItem('hr_user'); 
+            window.location.reload(); 
         }
 
-        async function handleClock(type) {
-            navigator.geolocation.getCurrentPosition(async (pos) => {
-                const res = await fetch(`${API_BASE}/attendance`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ employeeId: state.user.id, type, date: getPktDate(), time: getPktTime(), lat: pos.coords.latitude, lng: pos.coords.longitude }) });
-                if(res.ok) { notify(`${type} Verified.`); await syncData(); renderAttendance(); }
-            }, () => alert("Location Required."));
-        }
-
+        // --- MISC ---
         function renderLoans() {
             const container = document.getElementById('view-container');
             const isAdmin = state.user && state.user.role && state.user.role.toLowerCase() === 'admin';
             const list = (state.loans || []).filter(l => isAdmin || l.employee_id === state.user.id);
-            container.innerHTML = `<div class="animate-fade-in space-y-6 font-sans text-left"><div class="flex justify-between items-center border-b pb-4 border-slate-100 text-slate-800 text-left"><h2 class="text-xl font-black uppercase tracking-widest text-left font-sans">Loans</h2><button onclick="promptLoan()" class="bg-green-700 text-white px-6 py-2 rounded-xl font-black text-[10px] uppercase shadow-lg">New Request</button></div><div class="grid gap-4">${list.map(l => `<div class="bg-white p-8 rounded-[2rem] border-2 border-slate-50 shadow-sm flex justify-between items-center text-left font-sans"><div class="text-left flex-1"><h4 class="font-black uppercase text-slate-800 text-lg font-sans text-left">${l.employee_name || l.employee_id}</h4><p class="text-[11px] text-slate-400 font-bold mt-1 text-left font-sans">Amount: Rs. ${cleanNumber(l.total_amount).toLocaleString()}</p></div><div class="text-right"><div><p class="text-[10px] font-black uppercase text-slate-400">Status</p><span class="text-[10px] font-black uppercase text-amber-500 font-sans">${l.status}</span></div></div></div>`).join('')}</div></div>`;
+            container.innerHTML = `<div class="animate-fade-in space-y-6 font-sans text-left"><div class="flex justify-between items-center border-b pb-4 border-slate-100 text-slate-800 text-left"><h2 class="text-xl font-black uppercase tracking-widest text-left font-sans">Loans</h2><button onclick="promptLoan()" class="bg-green-700 text-white px-6 py-2 rounded-xl font-black text-[10px] uppercase shadow-lg">New Request</button></div><div class="grid gap-4">${list.map(l => `<div class="bg-white p-8 rounded-[2rem] border-2 border-slate-50 shadow-sm flex justify-between items-center text-left font-sans"><div class="text-left flex-1 font-sans"><h4 class="font-black uppercase text-slate-800 text-lg font-sans text-left">${l.employee_name || l.employee_id}</h4><p class="text-[11px] text-slate-400 font-bold mt-1 text-left font-sans">Amount: Rs. ${cleanNumber(l.total_amount).toLocaleString()}</p></div><div class="text-right font-sans"><div><p class="text-[10px] font-black uppercase text-slate-400 font-sans">Status</p><span class="text-[10px] font-black uppercase text-amber-500 font-sans">${l.status}</span></div></div></div>`).join('')}</div></div>`;
         }
 
         async function promptLoan() {
@@ -654,52 +672,8 @@
 
         function renderSettings() {
              const container = document.getElementById('view-container');
-             container.innerHTML = `<div class="animate-fade-in space-y-6 text-center py-20 font-sans text-slate-900"><h2 class="text-2xl font-black uppercase tracking-tight text-slate-400 font-sans">Identity Security Key</h2><div class="max-w-md mx-auto p-12 bg-white border shadow-2xl rounded-[3rem] relative overflow-hidden text-center font-sans"><div class="absolute top-0 right-0 w-32 h-32 bg-red-50 rounded-full blur-3xl -mr-16 -mt-16 opacity-40"></div><div class="relative z-10 space-y-6 font-sans text-center"><div class="h-20 w-20 bg-slate-900 text-white rounded-[1.5rem] flex items-center justify-center mx-auto shadow-xl font-sans"><i data-lucide="key" size="36"></i></div><input type="password" placeholder="NEW KEY" class="w-full p-4 rounded-xl border-2 font-black bg-slate-50 outline-none focus:bg-white focus:border-green-500 text-center font-sans"><button class="w-full py-5 bg-slate-900 text-white uppercase tracking-widest font-black rounded-2xl active:scale-95 transition-all shadow-xl shadow-slate-200 font-sans" onclick="alert('System Identity Sync Successful.')">Synchronize Key</button></div></div></div>`;
+             container.innerHTML = `<div class="animate-fade-in space-y-6 text-center py-20 font-sans text-slate-900 text-center"><h2 class="text-2xl font-black uppercase tracking-tight text-slate-400 font-sans text-center">Identity Security Key</h2><div class="max-w-md mx-auto p-12 bg-white border shadow-2xl rounded-[3rem] relative overflow-hidden text-center font-sans"><div class="absolute top-0 right-0 w-32 h-32 bg-red-50 rounded-full blur-3xl -mr-16 -mt-16 opacity-40"></div><div class="relative z-10 space-y-6 font-sans text-center"><div class="h-20 w-20 bg-slate-900 text-white rounded-[1.5rem] flex items-center justify-center mx-auto shadow-xl font-sans"><i data-lucide="key" size="36"></i></div><input type="password" placeholder="NEW KEY" class="w-full p-4 rounded-xl border-2 font-black bg-slate-50 outline-none focus:bg-white focus:border-green-500 text-center font-sans"><button class="w-full py-5 bg-slate-900 text-white uppercase tracking-widest font-black rounded-2xl active:scale-95 transition-all shadow-xl shadow-slate-200 font-sans" onclick="alert('System Identity Sync Successful.')">Synchronize Key</button></div></div></div>`;
              lucide.createIcons();
-        }
-
-        function logout() { 
-            localStorage.removeItem('hr_user'); 
-            window.location.reload(); 
-        }
-
-        // --- AUTH ---
-        document.getElementById('login-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const id = document.getElementById('login-id').value.toUpperCase();
-            const pass = document.getElementById('login-pass').value;
-            try {
-                const res = await fetch(`${API_BASE}/employees`);
-                if (!res.ok) throw new Error("Connection Error");
-                const list = await res.json();
-                const found = (list || []).find(e => String(e.id).toUpperCase() === id && String(e.password) === pass);
-                if (found) {
-                    state.user = found; localStorage.setItem('hr_user', JSON.stringify(found));
-                    await syncData(); showApp();
-                } else alert("Verification Failed. Key mismatch.");
-            } catch(e) { alert("Matrix Offline. Check backend on port 5050."); }
-        });
-
-        async function importSalary(input) {
-            const file = input.files[0]; if(!file) return;
-            const targetMonth = prompt("Target Month (YYYY-MM):", state.selectedMonth);
-            if(!targetMonth || !/^\d{4}-\d{2}$/.test(targetMonth)) return alert("Invalid Format.");
-            const reader = new FileReader();
-            reader.onload = async (e) => {
-                const lines = e.target.result.split(/\r?\n/);
-                const promises = [];
-                for(let i = 2; i < lines.length; i++) {
-                    const cols = parseCSVLine(lines[i]);
-                    if(!cols[1]) continue;
-                    const existing = state.employees.find(emp => String(emp.id).toUpperCase() === String(cols[1]).toUpperCase());
-                    if (!existing) continue;
-                    const payload = { ...existing, basic_salary: cleanNumber(cols[4]), invigilation: cleanNumber(cols[5]), t_payment: cleanNumber(cols[6]), increment: cleanNumber(cols[7]), extra_leaves_deduction: cleanNumber(cols[9]), tax: cleanNumber(cols[10]), loan_deduction: cleanNumber(cols[11]), insurance: cleanNumber(cols[12]), others_deduction: cleanNumber(cols[13]) };
-                    promises.push(fetch(`${API_BASE}/employees/${payload.id}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) }));
-                }
-                await Promise.all(promises);
-                notify("Import Success."); await syncData(); renderPayroll();
-            };
-            reader.readAsText(file);
         }
 
         window.onload = init;
