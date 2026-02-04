@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LSAF-HR Management System</title>
+    <title>LSAFHR Management System</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <!-- PDF Generation Library -->
@@ -19,32 +19,26 @@
         .loader { border-top-color: #15803d; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         input[type="number"]::-webkit-inner-spin-button { display: none; }
-        
-        /* PDF Render Zone - Hidden */
         #pdf-render-zone { position: fixed; left: -9999px; top: 0; width: 800px; background: white; z-index: -100; visibility: hidden; }
-
         .animate-slide-up { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
         @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900 text-left">
 
-    <div id="pdf-render-zone"></div>
-
     <!-- GLOBAL LOADING SCREEN -->
     <div id="loading-screen" class="fixed inset-0 bg-white z-[999] flex flex-col items-center justify-center">
         <div class="loader w-16 h-16 border-4 border-slate-100 border-t-green-700 rounded-full mb-4"></div>
-        <p class="text-slate-400 font-black uppercase tracking-[0.3em] text-sm animate-pulse">Establishing LSAF Connection</p>
-        <button id="skip-sync-btn" onclick="bypassSync()" class="hidden mt-8 text-[10px] font-black uppercase text-slate-300 border-b border-slate-200 tracking-widest hover:text-slate-500 transition-colors">Bypass Sync</button>
+        <p class="text-slate-400 font-black uppercase tracking-[0.3em] text-sm animate-pulse">Establishing LSAFHR Connection</p>
     </div>
 
     <!-- LOGIN INTERFACE -->
     <div id="login-container" class="hidden min-h-screen flex items-center justify-center p-4 bg-slate-100 font-sans">
         <div class="bg-white w-full max-w-md p-10 rounded-[2.5rem] shadow-2xl border border-slate-100 animate-slide-up text-center">
             <div class="text-center mb-10">
-                <img src="UOL-Green-V1.png" alt="Logo" class="h-20 mx-auto mb-4 object-contain" onerror="this.src='https://placehold.co/150x150?text=LSAF'">
-                <h1 class="text-2xl font-black text-slate-800 leading-tight uppercase tracking-widest leading-none">Lahore School of Accountancy</h1>
-                <p class="text-slate-400 text-xs font-bold mt-2 uppercase tracking-widest">Administrative Hub v4.8.0</p>
+                <img src="UOL-Green-V1.png" alt="Logo" class="h-20 mx-auto mb-4 object-contain" onerror="this.src='https://placehold.co/150x150?text=LSAFHR'">
+                <h1 class="text-2xl font-black text-slate-800 uppercase tracking-widest leading-none">Lahore School of Accountancy</h1>
+                <p class="text-slate-400 text-xs font-bold mt-2 uppercase tracking-widest">Administrative Hub v4.8.5</p>
             </div>
             <form id="login-form" class="space-y-5">
                 <div class="space-y-1 text-left">
@@ -64,8 +58,8 @@
     <div id="app-shell" class="hidden min-h-screen flex">
         <aside class="w-64 bg-white border-r border-slate-100 fixed h-full hidden lg:flex flex-col z-50 shadow-sm text-left">
             <div class="p-8 border-b border-slate-50 text-center">
-                <img src="UOL-Green-V1.png" class="h-12 mx-auto mb-2 object-contain" alt="LSAF">
-                <span class="text-[9px] font-black text-green-700 uppercase tracking-widest">NexusHR Terminal</span>
+                <img src="UOL-Green-V1.png" class="h-12 mx-auto mb-2 object-contain" alt="LSAFHR">
+                <span class="text-[9px] font-black text-green-700 uppercase tracking-widest">LSAFHR Terminal</span>
             </div>
             <nav class="flex-1 p-4 space-y-1 overflow-y-auto custom-scrollbar" id="sidebar-nav"></nav>
             <div class="p-4 border-t border-slate-50 flex items-center justify-between">
@@ -212,7 +206,7 @@
                     const lvRes = await fetch(`${API_BASE}/leaves/${state.user.id}`);
                     if (lvRes.ok) state.leaves = await lvRes.json();
                     
-                    if (state.user.role === 'admin') {
+                    if (state.user.role.toLowerCase() === 'admin') {
                         const allLvRes = await fetch(`${API_BASE}/leaves`);
                         if (allLvRes.ok) state.allLeaves = await allLvRes.json();
                     }
@@ -230,17 +224,6 @@
             switchTab(state.currentTab);
         }
 
-        function renderSidebar() {
-            const nav = document.getElementById('sidebar-nav');
-            const isAdmin = state.user.role === 'admin';
-            nav.innerHTML = NAV_ITEMS.filter(i => !i.admin || isAdmin).map(i => `
-                <button onclick="switchTab('${i.id}')" class="w-full flex items-center gap-4 px-5 py-4 rounded-2xl transition-all font-bold ${state.currentTab === i.id ? 'bg-green-700 text-white shadow-lg scale-105' : 'text-slate-500 hover:bg-slate-50'}">
-                    <i data-lucide="${i.icon}" size="18"></i><span class="text-[11px] uppercase tracking-wider text-left">${i.label}</span>
-                </button>
-            `).join('');
-            lucide.createIcons();
-        }
-
         function switchTab(id) {
             state.currentTab = id;
             state.editingSalaryId = null;
@@ -255,7 +238,6 @@
             const container = document.getElementById('view-container');
             container.innerHTML = '<div class="py-40 text-center animate-pulse font-black text-slate-300 uppercase tracking-[0.5em]">Establishing Connection...</div>';
             
-            // Immediate rendering
             switch(state.currentTab) {
                 case 'dashboard': renderDashboard(); break;
                 case 'payroll': renderPayroll(); break;
@@ -270,7 +252,8 @@
             lucide.createIcons();
         }
 
-        // --- DASHBOARD ---
+        // --- VIEWS ---
+
         function renderDashboard() {
             const container = document.getElementById('view-container');
             container.innerHTML = `
@@ -293,7 +276,7 @@
                             <p class="text-3xl font-black text-slate-800 mt-2">${state.user.leave_annual || 0} Days</p>
                         </div>
                         <div class="bg-white p-8 rounded-[2rem] border shadow-sm text-left">
-                            <p class="text-[10px] font-black text-slate-400 uppercase">Identity Verified</p>
+                            <p class="text-[10px] font-black text-slate-400 uppercase">Verification Level</p>
                             <p class="text-2xl font-black text-slate-800 mt-2 capitalize">${state.user.role}</p>
                         </div>
                     </div>
@@ -301,21 +284,20 @@
             `;
         }
 
-        // --- PAYROLL HUB ---
         async function renderPayroll() {
             const container = document.getElementById('view-container');
-            const isAdmin = state.user.role === 'admin';
+            const isAdmin = state.user.role.toLowerCase() === 'admin';
             const isPosted = (state.payrollPostedMonths || []).some(m => String(m.month_year || m).trim() === String(state.selectedMonth).trim());
 
             let content = `
                 <div class="animate-fade-in space-y-6 font-sans text-left text-slate-800">
                     <div class="flex flex-col md:flex-row justify-between items-center gap-4 border-b pb-4 border-slate-100">
-                        <h2 class="text-xl font-black uppercase tracking-widest">Salary Hub</h2>
+                        <h2 class="text-xl font-black uppercase tracking-widest text-slate-800 font-sans">Salary Hub</h2>
                         <div class="flex flex-wrap gap-2 justify-center">
                             <input type="month" value="${state.selectedMonth}" onchange="updateMonth(this.value)" class="p-2 border-2 rounded-xl font-black bg-white outline-none focus:border-green-500">
                             ${isAdmin ? `
                                 <button onclick="togglePublish(${isPosted})" class="px-6 py-2 rounded-xl font-black text-[10px] text-white uppercase shadow-lg transition-all ${isPosted ? 'bg-red-600' : 'bg-slate-900'}">${isPosted ? 'Unpublish' : 'Publish'}</button>
-                                <button onclick="purgeMonthData()" class="bg-red-50 text-red-600 border-2 border-red-100 px-4 py-2 rounded-xl font-black text-[10px] uppercase">Wipe Month</button>
+                                <button onclick="purgeMonthData()" class="bg-red-50 text-red-600 border-2 border-red-100 px-4 py-2 rounded-xl font-black text-[10px] uppercase shadow-lg active:scale-95 transition-all">Wipe Month</button>
                                 <label class="px-6 py-2 bg-white border-2 rounded-xl font-black text-[10px] uppercase cursor-pointer hover:bg-slate-50 transition-all">Import CSV <input type="file" onchange="importSalary(this)" class="hidden"></label>
                                 <button onclick="exportSalaryCSV()" class="bg-green-50 text-green-700 px-6 py-2 rounded-xl font-black text-[10px] uppercase">Export</button>
                             ` : `
@@ -337,7 +319,8 @@
                                     <th class="p-4 text-right">Basic</th><th class="p-4 text-right">Invig</th>
                                     <th class="p-4 text-right">T.Pay</th><th class="p-4 text-right">Incr</th>
                                     <th class="p-4 text-right">Tax</th><th class="p-4 text-right">Loan</th>
-                                    <th class="p-4 text-right">Ins.</th><th class="p-4 text-right font-black text-slate-900 uppercase">Net Paid</th>
+                                    <th class="p-4 text-right">Ins.</th><th class="p-4 text-right">Oth.</th>
+                                    <th class="p-4 text-right font-black text-slate-900 uppercase">Net Paid</th>
                                     ${isAdmin ? `<th class="p-4 text-center">Action</th>` : ''}
                                 </tr>
                             </thead>
@@ -346,12 +329,13 @@
 
                 const list = isAdmin ? (state.employees || []) : [state.employees.find(e => e.id === state.user.id) || state.user];
                 list.forEach(emp => {
+                    if (!emp) return;
                     const isEditing = state.editingSalaryId === emp.id;
                     const m = calculateSalaryMetrics(emp);
                     content += `
                         <tr class="hover:bg-slate-50/80 transition-colors">
                             <td class="p-4 font-black text-slate-900">${emp.id}</td>
-                            <td class="p-4 uppercase truncate max-w-[120px] font-sans">${emp.name}</td>
+                            <td class="p-4 uppercase truncate max-w-[120px] font-sans text-left">${emp.name}</td>
                             <td class="p-4 text-right">${isEditing ? `<input type="number" id="edit-basic" class="w-16 border rounded p-1" value="${emp.basic_salary}">` : cleanNumber(emp.basic_salary).toLocaleString()}</td>
                             <td class="p-4 text-right">${isEditing ? `<input type="number" id="edit-invig" class="w-12 border rounded p-1" value="${emp.invigilation}">` : cleanNumber(emp.invigilation).toLocaleString()}</td>
                             <td class="p-4 text-right">${isEditing ? `<input type="number" id="edit-tpay" class="w-12 border rounded p-1" value="${emp.t_payment}">` : cleanNumber(emp.t_payment).toLocaleString()}</td>
@@ -359,6 +343,7 @@
                             <td class="p-4 text-right font-mono text-slate-500">${isEditing ? `<input type="number" id="edit-tax" class="w-12 border rounded p-1" value="${emp.tax}">` : cleanNumber(emp.tax).toLocaleString()}</td>
                             <td class="p-4 text-right font-mono text-slate-500">${isEditing ? `<input type="number" id="edit-loan" class="w-12 border rounded p-1" value="${emp.loan_deduction}">` : cleanNumber(emp.loan_deduction).toLocaleString()}</td>
                             <td class="p-4 text-right font-mono text-slate-500">${isEditing ? `<input type="number" id="edit-ins" class="w-12 border rounded p-1" value="${emp.insurance}">` : cleanNumber(emp.insurance).toLocaleString()}</td>
+                            <td class="p-4 text-right font-mono text-slate-500">${isEditing ? `<input type="number" id="edit-oth" class="w-12 border rounded p-1" value="${emp.others_deduction}">` : cleanNumber(emp.others_deduction).toLocaleString()}</td>
                             <td class="p-4 text-right font-black text-slate-900">Rs. ${m.netPaid.toLocaleString()}</td>
                             ${isAdmin ? `
                                 <td class="p-4 text-center">
@@ -366,8 +351,8 @@
                                         <button onclick="saveSalary('${emp.id}')" class="text-green-600 font-black text-[9px] uppercase border-b-2 border-green-600">Save</button>
                                     ` : `
                                         <div class="flex justify-center gap-2">
-                                            <button onclick="editSalaryMode('${emp.id}')" class="text-blue-500"><i data-lucide="pencil" size="14"></i></button>
-                                            <button onclick="resetIndividualSalary('${emp.id}')" class="text-red-400"><i data-lucide="trash-2" size="14"></i></button>
+                                            <button onclick="editSalaryMode('${emp.id}')" class="text-blue-500 hover:scale-125 transition-transform"><i data-lucide="pencil" size="14"></i></button>
+                                            <button onclick="resetIndividualSalary('${emp.id}')" class="text-red-400 hover:scale-125 transition-transform"><i data-lucide="trash-2" size="14"></i></button>
                                         </div>
                                     `}
                                 </td>
@@ -395,7 +380,7 @@
                         <h1 style="margin: 0; color: #15803d; text-transform: uppercase; font-size: 22px; font-weight: 900;">The University of Lahore</h1>
                         <p style="margin: 2px 0; font-weight: 800; color: #64748b; text-transform: uppercase; font-size: 10px; letter-spacing: 2px;">City Campus Lahore</p>
                         <div style="display: inline-block; background: #f1f5f9; padding: 5px 25px; border-radius: 50px; margin-top: 10px;">
-                            <h2 style="margin: 0; text-transform: uppercase; font-size: 13px; font-weight: 900; color: #1e293b;">OFFICIAL SALARY SLIP - ${monthLabel.toUpperCase()}</h2>
+                            <h2 style="margin: 0; text-transform: uppercase; font-size: 11px; font-weight: 900; color: #1e293b;">Official Salary Slip - ${monthLabel.toUpperCase()}</h2>
                         </div>
                     </div>
 
@@ -412,17 +397,17 @@
                     
                     <div style="display: flex; gap: 15px; margin-bottom: 15px;">
                         <div style="flex: 1;">
-                            <h3 style="background: #f8fafc; padding: 6px; font-size: 10px; text-transform: uppercase; border-left: 4px solid #15803d; font-weight: 900; margin-bottom: 6px;">Earnings</h3>
+                            <h3 style="background: #f8fafc; padding: 8px; font-size: 10px; text-transform: uppercase; border-left: 4px solid #15803d; font-weight: 900; margin-bottom: 8px;">Earnings</h3>
                             <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
-                                <tr><td style="padding: 6px 5px; border-bottom: 1px solid #f1f5f9;">Basic Salary</td><td style="text-align: right; font-weight: bold;">${cleanNumber(emp.basic_salary).toLocaleString()}</td></tr>
-                                <tr><td style="padding: 6px 5px; border-bottom: 1px solid #f1f5f9;">Invigilation</td><td style="text-align: right; font-weight: bold;">${cleanNumber(emp.invigilation).toLocaleString()}</td></tr>
-                                <tr><td style="padding: 6px 5px; border-bottom: 1px solid #f1f5f9;">T. Payment</td><td style="text-align: right; font-weight: bold;">${cleanNumber(emp.t_payment).toLocaleString()}</td></tr>
-                                <tr><td style="padding: 6px 5px; border-bottom: 1px solid #f1f5f9;">Increment</td><td style="text-align: right; font-weight: bold;">${cleanNumber(emp.increment).toLocaleString()}</td></tr>
+                                <tr><td style="padding: 8px 5px; border-bottom: 1px solid #f1f5f9;">Basic Salary</td><td style="text-align: right; font-weight: bold;">${cleanNumber(emp.basic_salary).toLocaleString()}</td></tr>
+                                <tr><td style="padding: 8px 5px; border-bottom: 1px solid #f1f5f9;">Invigilation</td><td style="text-align: right; font-weight: bold;">${cleanNumber(emp.invigilation).toLocaleString()}</td></tr>
+                                <tr><td style="padding: 8px 5px; border-bottom: 1px solid #f1f5f9;">T. Payment</td><td style="text-align: right; font-weight: bold;">${cleanNumber(emp.t_payment).toLocaleString()}</td></tr>
+                                <tr><td style="padding: 8px 5px; border-bottom: 1px solid #f1f5f9;">Increment</td><td style="text-align: right; font-weight: bold;">${cleanNumber(emp.increment).toLocaleString()}</td></tr>
                                 <tr style="background: #fdfdfd; font-weight: 900; border-top: 2px solid #15803d;"><td style="padding: 10px 5px;">Gross Total</td><td style="text-align: right;">${m.totalAdd.toLocaleString()}</td></tr>
                             </table>
                         </div>
                         <div style="flex: 1;">
-                            <h3 style="background: #fff1f2; padding: 6px; font-size: 10px; text-transform: uppercase; border-left: 4px solid #ef4444; font-weight: 900; margin-bottom: 6px;">Deductions</h3>
+                            <h3 style="background: #fff1f2; padding: 8px; font-size: 10px; text-transform: uppercase; border-left: 4px solid #ef4444; font-weight: 900; margin-bottom: 8px;">Deductions</h3>
                             <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
                                 <tr><td style="padding: 6px 5px; border-bottom: 1px solid #f1f5f9;">Extra Leaves</td><td style="text-align: right; color: #ef4444;">-${cleanNumber(emp.extra_leaves_deduction).toLocaleString()}</td></tr>
                                 <tr><td style="padding: 6px 5px; border-bottom: 1px solid #f1f5f9;">Income Tax</td><td style="text-align: right; color: #ef4444;">-${cleanNumber(emp.tax).toLocaleString()}</td></tr>
@@ -434,37 +419,38 @@
                         </div>
                     </div>
 
-                    <div style="margin-top: 5px; padding: 20px; background: #15803d; color: white; border-radius: 12px; display: flex; justify-content: space-between; align-items: center;">
+                    <div style="margin-top: 10px; padding: 20px; background: #15803d; color: white; border-radius: 12px; display: flex; justify-content: space-between; align-items: center;">
                         <h2 style="margin: 0; font-size: 16px; text-transform: uppercase; font-weight: 800;">Net Amount Transferred</h2>
                         <h1 style="margin: 0; font-size: 28px; font-weight: 900; letter-spacing: -1px;">Rs. ${m.netPaid.toLocaleString()}</h1>
                     </div>
                     <div style="margin-top: 60px; text-align: center; border-top: 1px solid #eee; padding-top: 15px;">
-                        <p style="font-size: 9px; color: #64748b; font-weight: bold; text-transform: uppercase;">Computer Generated Slip • LSAF NexusHR Core Matrix Verified</p>
+                        <p style="font-size: 9px; color: #64748b; font-weight: bold; text-transform: uppercase;">Computer Generated Slip • LSAFHR Core Matrix Verified</p>
                     </div>
                 </div>
             `;
-            html2pdf().set({ margin: 0, filename: `PaySlip_${emp.id}_${state.selectedMonth}.pdf`, html2canvas: { scale: 3, useCORS: true } }).from(slipHtml).save();
+            html2pdf().set({ margin: 0, filename: `LSAF_Slip_${emp.id}_${state.selectedMonth}.pdf`, html2canvas: { scale: 3, useCORS: true } }).from(slipHtml).save();
         }
 
-        // --- STAFF HUB ---
+        // --- DIRECTORY ---
         function renderDirectory() {
             const container = document.getElementById('view-container');
+            const isAdmin = state.user.role.toLowerCase() === 'admin';
             const pendingLeaves = (state.allLeaves || []).filter(l => l.status === 'Pending');
 
             container.innerHTML = `
                 <div class="animate-fade-in space-y-6 font-sans text-left text-slate-800">
                     <div class="flex flex-col md:flex-row justify-between items-center gap-4 border-b pb-4 border-slate-100">
-                        <h2 class="text-xl font-black uppercase tracking-widest text-slate-800">Staff Hub</h2>
+                        <h2 class="text-xl font-black uppercase tracking-widest text-slate-800 font-sans">Staff Hub</h2>
                         <div class="flex gap-2">
-                             <label class="bg-white border-2 px-6 py-2 rounded-xl font-black text-[10px] uppercase cursor-pointer hover:bg-slate-50 transition-all">Import CSV <input type="file" onchange="importStaffCSV(this)" class="hidden"></label>
-                             <button onclick="exportStaffCSV()" class="bg-green-50 text-green-700 border-2 border-green-100 px-6 py-2 rounded-xl font-black text-[10px] uppercase">Export Staff</button>
-                             <button onclick="toggleStaffForm()" class="bg-green-700 text-white px-6 py-2 rounded-xl font-black text-[10px] uppercase shadow-lg">New Staff</button>
+                             <label class="bg-white border-2 px-6 py-2 rounded-xl font-black text-[10px] uppercase cursor-pointer hover:bg-slate-50 transition-all">Import Staff <input type="file" onchange="importStaffCSV(this)" class="hidden"></label>
+                             <button onclick="exportStaffCSV()" class="bg-green-50 text-green-700 border-2 border-green-100 px-6 py-2 rounded-xl font-black text-[10px] uppercase hover:bg-green-100 transition-all">Export Staff</button>
+                             <button onclick="toggleStaffForm()" class="bg-green-700 text-white px-6 py-2 rounded-xl font-black text-[10px] uppercase shadow-lg hover:bg-green-800 transition-all">New Staff</button>
                         </div>
                     </div>
 
                     ${pendingLeaves.length > 0 ? `
                         <div class="bg-amber-50 p-8 rounded-[2rem] border-2 border-amber-100 shadow-sm mb-8 text-left">
-                            <h3 class="font-black uppercase text-xs text-amber-600 mb-6 tracking-widest">Awaiting Decisions</h3>
+                            <h3 class="font-black uppercase text-xs text-amber-600 mb-6 tracking-widest text-left">Awaiting Decisions</h3>
                             <div class="grid gap-4">
                                 ${pendingLeaves.map(l => `
                                     <div class="bg-white p-6 rounded-2xl flex justify-between items-center shadow-sm">
@@ -481,7 +467,7 @@
                         ${state.employees.map(emp => `
                             <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4 hover:border-green-300 transition-all group">
                                 <div class="h-12 w-12 bg-green-50 text-green-700 rounded-xl flex items-center justify-center font-black text-xl uppercase">${getInitial(emp.name)}</div>
-                                <div class="flex-1 overflow-hidden text-left"><h4 class="font-black text-slate-800 uppercase truncate leading-none mb-1 font-sans text-sm">${emp.name}</h4><p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">${emp.id} • ${emp.role}</p><p class="text-[9px] font-black text-red-400 uppercase mt-2">Opening Loan: Rs. ${cleanNumber(emp.loan_opening_balance).toLocaleString()}</p></div>
+                                <div class="flex-1 overflow-hidden text-left"><h4 class="font-black text-slate-800 uppercase truncate leading-none mb-1 font-sans text-sm">${emp.name}</h4><p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest font-sans">${emp.id} • ${emp.role}</p><p class="text-[9px] font-black text-red-400 uppercase mt-2">Opening Loan: Rs. ${cleanNumber(emp.loan_opening_balance).toLocaleString()}</p></div>
                                 <div class="opacity-0 group-hover:opacity-100 flex transition-all">
                                     <button onclick="editStaff('${emp.id}')" class="text-blue-500 p-2 hover:bg-blue-50 rounded-lg"><i data-lucide="pencil" size="16"></i></button>
                                     <button onclick="deleteStaff('${emp.id}')" class="text-red-400 p-2 hover:bg-red-50 rounded-lg"><i data-lucide="trash-2" size="16"></i></button>
@@ -496,7 +482,7 @@
 
         async function updateLeaveStatus(id, status) {
             await fetch(`${API_BASE}/leaves/${id}`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ status }) });
-            notify(`Update Confirmed.`); await syncData(); renderDirectory();
+            notify(`Update Sync Successful.`); await syncData(); renderDirectory();
         }
 
         function toggleStaffForm(emp = null) {
@@ -509,12 +495,12 @@
                         <div class="text-left"><label class="text-[10px] font-black uppercase text-slate-400 ml-2">Staff ID</label><input type="text" id="s-id" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 uppercase" value="${emp ? emp.id : ''}" ${emp ? 'readonly' : 'required'}></div>
                         <div class="text-left"><label class="text-[10px] font-black uppercase text-slate-400 ml-2">Name</label><input type="text" id="s-name" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50" value="${emp ? emp.name : ''}" required></div>
                         <div class="text-left"><label class="text-[10px] font-black uppercase text-slate-400 ml-2">Email</label><input type="email" id="s-email" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50" value="${emp ? emp.email : ''}" required></div>
-                        <div class="text-left"><label class="text-[10px] font-black uppercase text-slate-400 ml-2">Identity Key</label><input type="text" id="s-pass" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50" placeholder="••••••••" value="${emp ? emp.password : ''}" required></div>
+                        <div class="text-left"><label class="text-[10px] font-black uppercase text-slate-400 ml-2">Identity Key (Password)</label><input type="text" id="s-pass" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50" placeholder="••••••••" value="${emp ? emp.password : ''}" required></div>
                         <div class="text-left"><label class="text-[10px] font-black uppercase text-slate-400 ml-2">Role</label><select id="s-role" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50"><option value="employee" ${emp?.role==='employee'?'selected':''}>Employee</option><option value="admin" ${emp?.role==='admin'?'selected':''}>Admin</option></select></div>
                         <div class="text-left"><label class="text-[10px] font-black uppercase text-slate-400 ml-2">Annual Bal</label><input type="number" id="s-leave-annual" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50" value="${emp ? emp.leave_annual : '14'}"></div>
                         <div class="text-left"><label class="text-[10px] font-black uppercase text-slate-400 ml-2">Casual Bal</label><input type="number" id="s-leave-casual" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50" value="${emp ? emp.leave_casual : '10'}"></div>
                         <div class="text-left"><label class="text-[10px] font-black uppercase text-slate-400 ml-2">Opening Loan</label><input type="number" id="s-loan-open" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50" value="${emp ? (emp.loan_opening_balance || 0) : '0'}"></div>
-                        <div class="md:col-span-2 lg:col-span-4 flex justify-end gap-3 pt-4 border-t"><button type="button" onclick="toggleStaffForm()" class="px-6 py-2 text-slate-400 font-bold uppercase text-xs">Cancel</button><button type="submit" class="bg-green-700 text-white px-8 py-4 rounded-xl font-black uppercase text-xs shadow-lg">${emp ? 'Sync changes' : 'Create identity'}</button></div>
+                        <div class="md:col-span-2 lg:col-span-4 flex justify-end gap-3 pt-4 border-t"><button type="button" onclick="toggleStaffForm()" class="px-6 py-2 text-slate-400 font-bold uppercase text-xs hover:text-slate-600">Discard</button><button type="submit" class="bg-green-700 text-white px-10 py-4 rounded-xl font-black uppercase text-xs shadow-lg hover:bg-green-800 transition-all">${emp ? 'Sync Changes' : 'Create Identity'}</button></div>
                     </form>
                 </div>
             `;
@@ -544,12 +530,35 @@
             if (res.ok) { notify("Identity Matrix Updated."); await syncData(); renderDirectory(); }
         }
 
+        async function exportStaffCSV() {
+            const data = state.employees.map(e => ({ ID: e.id, Name: e.name, Email: e.email, Role: e.role, Loan_Balance: e.loan_opening_balance, Annual_Leaves: e.leave_annual, Casual_Leaves: e.leave_casual }));
+            exportToCSV(data, 'LSAFHR_Staff_Full_Roster.csv');
+        }
+
+        async function importStaffCSV(input) {
+            const file = input.files[0]; if(!file) return;
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const lines = e.target.result.split(/\r?\n/);
+                const promises = [];
+                for(let i = 1; i < lines.length; i++) {
+                    const cols = parseCSVLine(lines[i]);
+                    if(!cols[0]) continue;
+                    const payload = { id: cols[0].toUpperCase(), name: cols[1], email: cols[2], role: (cols[3] || 'employee').toLowerCase(), password: cols[4] || cols[0].toUpperCase(), loan_opening_balance: cleanNumber(cols[5]) || 0 };
+                    promises.push(fetch(`${API_BASE}/employees`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) }));
+                }
+                await Promise.all(promises);
+                notify("Roster Sync Complete."); await syncData(); renderDirectory();
+            };
+            reader.readAsText(file);
+        }
+
         async function deleteStaff(id) {
-            if(!confirm(`CRITICAL: Purge staff member ${id} and all their linked records permanently?`)) return;
+            if(!confirm(`CRITICAL: Purge staff member ${id} permanently?`)) return;
             try {
                 const res = await fetch(`${API_BASE}/employees/${id}`, { method: 'DELETE' });
-                if(res.ok) { notify("Identity Terminated."); await syncData(); renderDirectory(); }
-            } catch(e) { alert("Purge Failed."); }
+                if(res.ok) { notify("Identity Purged."); await syncData(); renderDirectory(); }
+            } catch(e) { alert("Matrix Purge Failure."); }
         }
 
         // --- HUB ACTIONS ---
@@ -561,7 +570,7 @@
             const endpoint = `${API_BASE}/payroll-post${currentlyPosted ? '/' + state.selectedMonth : ''}`;
             const body = currentlyPosted ? null : JSON.stringify({ month: state.selectedMonth });
             const res = await fetch(endpoint, { method, headers: {'Content-Type':'application/json'}, body });
-            if (res.ok) { notify("Matrix Sync: Status Updated."); await syncData(); renderPayroll(); }
+            if (res.ok) { notify("Broadcast Status Updated."); await syncData(); renderPayroll(); }
         }
 
         function editSalaryMode(id) { state.editingSalaryId = id; renderPayroll(); }
@@ -580,11 +589,11 @@
                 others_deduction: document.getElementById('edit-oth').value
             };
             const res = await fetch(`${API_BASE}/employees/${id}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
-            if (res.ok) { state.editingSalaryId = null; await syncData(); renderPayroll(); notify("Ledger Synced."); }
+            if (res.ok) { state.editingSalaryId = null; await syncData(); renderPayroll(); notify("Ledger Re-calculated."); }
         }
 
         async function resetIndividualSalary(id) {
-            if (!confirm("Wipe month data for staff " + id + "?")) return;
+            if (!confirm("Zero out month for ID " + id + "?")) return;
             const emp = state.employees.find(e => String(e.id) === String(id));
             const payload = { ...emp, basic_salary: 0, invigilation: 0, t_payment: 0, increment: 0, tax: 0, loan_deduction: 0, insurance: 0, others_deduction: 0, extra_leaves_deduction: 0 };
             const res = await fetch(`${API_BASE}/employees/${id}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
@@ -592,7 +601,7 @@
         }
 
         async function purgeMonthData() {
-            if (!confirm("DANGER: WIPE ALL SALARY FIELDS FOR EVERYONE?")) return;
+            if (!confirm("DANGER: WIPE ALL SALARY FIELDS FOR ENTIRE STAFF?")) return;
             const resets = state.employees.map(emp => {
                 const payload = { ...emp, basic_salary: 0, invigilation: 0, t_payment: 0, increment: 0, tax: 0, loan_deduction: 0, insurance: 0, others_deduction: 0, extra_leaves_deduction: 0 };
                 return fetch(`${API_BASE}/employees/${emp.id}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
@@ -601,10 +610,40 @@
             notify("Monthly Matrix Purged."); await syncData(); renderPayroll();
         }
 
-        // --- ATTENDANCE ---
+        async function importSalary(input) {
+            const file = input.files[0]; if(!file) return;
+            const targetMonth = prompt("Target Month (YYYY-MM):", state.selectedMonth);
+            if(!targetMonth || !/^\d{4}-\d{2}$/.test(targetMonth)) return alert("Format: YYYY-MM");
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const lines = e.target.result.split(/\r?\n/);
+                const promises = [];
+                for(let i = 2; i < lines.length; i++) {
+                    const cols = parseCSVLine(lines[i]);
+                    if(!cols[1]) continue;
+                    const existing = state.employees.find(emp => String(emp.id).toUpperCase() === String(cols[1]).toUpperCase());
+                    if (!existing) continue;
+                    const payload = { ...existing, basic_salary: cleanNumber(cols[4]), invigilation: cleanNumber(cols[5]), t_payment: cleanNumber(cols[6]), increment: cleanNumber(cols[7]), extra_leaves_deduction: cleanNumber(cols[9]), tax: cleanNumber(cols[10]), loan_deduction: cleanNumber(cols[11]), insurance: cleanNumber(cols[12]), others_deduction: cleanNumber(cols[13]) };
+                    promises.push(fetch(`${API_BASE}/employees/${payload.id}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) }));
+                }
+                await Promise.all(promises);
+                notify("Import Success."); await syncData(); renderPayroll();
+            };
+            reader.readAsText(file);
+        }
+
+        function exportSalaryCSV() {
+            const data = state.employees.map(emp => {
+                const m = calculateSalaryMetrics(emp);
+                return { Code: emp.id, Name: emp.name, Basic: emp.basic_salary, Net: m.netPaid };
+            });
+            exportToCSV(data, `LSAFHR_Ledger_${state.selectedMonth}.csv`);
+        }
+
+        // --- OTHER MODULES ---
         function renderAttendance() {
             const container = document.getElementById('view-container');
-            container.innerHTML = `<div class="animate-fade-in space-y-8 font-sans"><div class="flex justify-between items-center border-b pb-4 border-slate-100 text-left text-slate-800"><h2 class="text-xl font-black uppercase tracking-widest text-left">Attendance Hub</h2></div><div class="grid md:grid-cols-2 gap-6"><div class="bg-white rounded-[2.5rem] py-12 flex flex-col items-center justify-center space-y-6 border-2 shadow-inner bg-slate-50/50"><h3 class="text-6xl font-black text-slate-800 font-mono tracking-tighter">${getPktTime()}</h3><p class="text-xs font-bold text-slate-400 uppercase tracking-[0.2em]">${getPktDate()}</p><div class="w-full max-w-xs space-y-3 pt-6"><button onclick="handleClock('Clock In')" class="w-full py-5 rounded-2xl bg-green-700 text-white font-black shadow-lg hover:bg-green-800 transition-all active:scale-95 text-base">Clock In</button><button onclick="handleClock('Clock Out')" class="w-full py-5 rounded-2xl bg-white border-2 text-slate-700 font-black hover:bg-slate-50 transition-all active:scale-95 text-base">Clock Out</button></div></div><div class="bg-white flex items-center justify-center p-10 bg-white border-dashed border-2 text-center rounded-[2rem] border-slate-200"><div><div class="bg-green-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6"><i data-lucide="map-pin" class="text-green-600 animate-bounce" size="40"></i></div><p class="text-xs font-black text-slate-600 uppercase tracking-widest leading-relaxed">Identity Geofence Active<br/>Verified Pakistan PKT Sync</p></div></div></div><div class="bg-white rounded-3xl border overflow-hidden shadow-sm"><div class="bg-slate-50 p-4 border-b font-black text-[10px] uppercase text-slate-400 tracking-widest text-left">Identity Timeline</div><div class="divide-y max-h-80 overflow-y-auto custom-scrollbar">${(state.attendance || []).map(log => `<div class="p-5 flex justify-between items-center hover:bg-slate-50 transition-colors text-left"><div class="flex items-center gap-4"><div class="h-2 w-2 rounded-full ${log.type === 'Clock In' ? 'bg-green-500' : 'bg-red-500'}"></div><div><p class="text-xs font-black uppercase text-slate-800 font-sans">${log.type}</p><p class="text-[10px] text-slate-400 font-bold uppercase">${formatDate(log.date_str)}</p></div></div><p class="font-mono text-sm font-black text-slate-500">${log.time_str}</p></div>`).join('')}</div></div></div>`;
+            container.innerHTML = `<div class="animate-fade-in space-y-8 font-sans"><div class="flex justify-between items-center border-b pb-4 border-slate-100 text-left text-slate-800"><h2 class="text-xl font-black uppercase tracking-widest text-left">Attendance</h2></div><div class="grid md:grid-cols-2 gap-6"><div class="bg-white rounded-[2.5rem] py-12 flex flex-col items-center justify-center space-y-6 border-2 shadow-inner bg-slate-50/50"><h3 class="text-6xl font-black text-slate-800 font-mono tracking-tighter">${getPktTime()}</h3><p class="text-xs font-bold text-slate-400 uppercase tracking-[0.2em] font-sans">${getPktDate()}</p><div class="w-full max-w-xs space-y-3 pt-6"><button onclick="handleClock('Clock In')" class="w-full py-5 rounded-2xl bg-green-700 text-white font-black shadow-lg hover:bg-green-800 transition-all active:scale-95 text-base">Clock In</button><button onclick="handleClock('Clock Out')" class="w-full py-5 rounded-2xl bg-white border-2 text-slate-700 font-black hover:bg-slate-50 transition-all active:scale-95 text-base">Clock Out</button></div></div><div class="bg-white flex items-center justify-center p-10 bg-white border-dashed border-2 text-center rounded-[2rem] border-slate-200"><div><div class="bg-green-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6"><i data-lucide="map-pin" class="text-green-600 animate-bounce" size="40"></i></div><p class="text-xs font-black text-slate-600 uppercase tracking-widest leading-relaxed">Identity Geofence Active<br/>Verified Pakistan PKT Sync</p></div></div></div><div class="bg-white rounded-3xl border overflow-hidden shadow-sm"><div class="bg-slate-50 p-4 border-b font-black text-[10px] uppercase text-slate-400 tracking-widest text-left font-sans">Identity Timeline</div><div class="divide-y max-h-80 overflow-y-auto custom-scrollbar font-sans">${(state.attendance || []).map(log => `<div class="p-5 flex justify-between items-center hover:bg-slate-50 transition-colors text-left"><div class="flex items-center gap-4"><div class="h-2 w-2 rounded-full ${log.type === 'Clock In' ? 'bg-green-500' : 'bg-red-500'} shadow-sm"></div><div><p class="text-xs font-black uppercase text-slate-800 font-sans">${log.type}</p><p class="text-[10px] text-slate-400 font-bold uppercase">${formatDate(log.date_str)}</p></div></div><p class="font-mono text-sm font-black text-slate-500">${log.time_str}</p></div>`).join('')}</div></div></div>`;
             lucide.createIcons();
         }
 
@@ -615,24 +654,23 @@
             }, () => alert("Location Required."));
         }
 
-        // --- MISC ---
         function renderLoans() {
             const container = document.getElementById('view-container');
-            const isAdmin = state.user.role === 'admin';
+            const isAdmin = state.user.role.toLowerCase() === 'admin';
             const list = state.loans.filter(l => isAdmin || l.employee_id === state.user.id);
-            container.innerHTML = `<div class="animate-fade-in space-y-6"><div class="flex justify-between items-center border-b pb-4 border-slate-100 text-slate-800 text-left"><h2 class="text-xl font-black uppercase tracking-widest text-left">Loans</h2><button onclick="promptLoan()" class="bg-green-700 text-white px-6 py-2 rounded-xl font-black text-[10px] uppercase shadow-lg">New Application</button></div><div class="grid gap-4">${list.map(l => `<div class="bg-white p-8 rounded-[2rem] border-2 border-slate-50 shadow-sm flex justify-between items-center text-left"><div class="text-left flex-1"><h4 class="font-black uppercase text-slate-800 text-lg font-sans text-left">${l.employee_name || l.employee_id}</h4><p class="text-[11px] text-slate-400 font-bold mt-1 text-left">Opening Bal: Rs. ${cleanNumber(state.employees.find(e=>e.id===l.employee_id)?.loan_opening_balance).toLocaleString()}</p></div><div class="text-right"><div><p class="text-[10px] font-black uppercase text-slate-400">Total Request</p><p class="font-black text-slate-800 text-lg">Rs. ${cleanNumber(l.total_amount).toLocaleString()}</p></div><span class="text-[10px] font-black uppercase text-amber-500">${l.status}</span></div></div>`).join('')}</div></div>`;
+            container.innerHTML = `<div class="animate-fade-in space-y-6"><div class="flex justify-between items-center border-b pb-4 border-slate-100 text-slate-800 text-left"><h2 class="text-xl font-black uppercase tracking-widest text-left font-sans">Loans</h2><button onclick="promptLoan()" class="bg-green-700 text-white px-6 py-2 rounded-xl font-black text-[10px] uppercase shadow-lg">New Application</button></div><div class="grid gap-4">${list.map(l => `<div class="bg-white p-8 rounded-[2rem] border-2 border-slate-50 shadow-sm flex justify-between items-center text-left"><div class="text-left flex-1"><h4 class="font-black uppercase text-slate-800 text-lg font-sans text-left">${l.employee_name || l.employee_id}</h4><p class="text-[11px] text-slate-400 font-bold mt-1 text-left font-sans">Request Amount: Rs. ${cleanNumber(l.total_amount).toLocaleString()}</p></div><div class="text-right"><div><p class="text-[10px] font-black uppercase text-slate-400">Status</p><span class="text-[10px] font-black uppercase text-amber-500 font-sans">${l.status}</span></div></div></div>`).join('')}</div></div>`;
         }
 
         async function promptLoan() {
             const amt = prompt("Amount PKR:"); if(!amt) return;
             const rsn = prompt("Reason:"); if(!rsn) return;
             await fetch(`${API_BASE}/loans`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ employeeId: state.user.id, totalAmount: amt, reason: rsn }) });
-            notify("Sync Successful."); await syncData(); renderLoans();
+            notify("Identity Synchronized."); await syncData(); renderLoans();
         }
 
         function renderLeaves() {
             const container = document.getElementById('view-container');
-            container.innerHTML = `<div class="animate-fade-in space-y-8"><div class="flex bg-slate-200 p-1.5 rounded-2xl max-w-xs mx-auto mb-10 shadow-inner"><button onclick="state.leaveTab='apply'; renderLeaves()" class="flex-1 py-2.5 text-[10px] font-black rounded-xl uppercase transition-all ${state.leaveTab === 'apply' ? 'bg-white shadow-md text-green-700' : 'text-slate-500'}">Apply</button><button onclick="state.leaveTab='history'; renderLeaves()" class="flex-1 py-2.5 text-[10px] font-black rounded-xl uppercase transition-all ${state.leaveTab === 'history' ? 'bg-white shadow-md text-green-700' : 'text-slate-500'}">History</button></div>${state.leaveTab === 'apply' ? `<div class="bg-white max-w-xl mx-auto rounded-[3rem] p-12 shadow-2xl border animate-slide-up text-left"><form onsubmit="handleLeaveApply(event)" class="space-y-6 text-left"><select id="lv-type" class="w-full p-4 rounded-xl border-2 font-black bg-slate-50"><option>Annual Leave</option><option>Sick Leave</option><option>WOP Leave</option></select><div class="grid grid-cols-2 gap-4 text-left"><input type="date" id="lv-date" class="p-4 rounded-xl border-2 font-black bg-slate-50" required><input type="number" id="lv-days" class="p-4 rounded-xl border-2 font-black bg-slate-50" placeholder="Days" required></div><textarea id="lv-rsn" class="w-full p-4 rounded-xl border-2 font-bold h-32 bg-slate-50" placeholder="Reason..." required></textarea><button type="submit" class="w-full py-5 bg-green-700 text-white font-black rounded-2xl uppercase tracking-widest shadow-xl">Transmit Identity Application</button></form></div>` : `<div class="space-y-4 max-w-2xl mx-auto text-left">${state.leaves.map(l => `<div class="bg-white p-6 rounded-2xl border-2 flex justify-between items-center text-left"><div><h4 class="font-black uppercase text-slate-800 font-sans text-left">${l.leave_type}</h4><p class="text-xs text-slate-400 font-bold uppercase mt-1 text-left">${formatDate(l.start_date)} • ${l.days} Days</p></div><span class="text-[10px] font-black uppercase text-amber-500">${l.status}</span></div>`).join('')}</div>`}</div>`;
+            container.innerHTML = `<div class="animate-fade-in space-y-8 font-sans"><div class="flex bg-slate-200 p-1.5 rounded-2xl max-w-xs mx-auto mb-10 shadow-inner"><button onclick="state.leaveTab='apply'; renderLeaves()" class="flex-1 py-2.5 text-[10px] font-black rounded-xl uppercase transition-all ${state.leaveTab === 'apply' ? 'bg-white shadow-md text-green-700' : 'text-slate-500'}">Apply</button><button onclick="state.leaveTab='history'; renderLeaves()" class="flex-1 py-2.5 text-[10px] font-black rounded-xl uppercase transition-all ${state.leaveTab === 'history' ? 'bg-white shadow-md text-green-700' : 'text-slate-500'}">History</button></div>${state.leaveTab === 'apply' ? `<div class="bg-white max-w-xl mx-auto rounded-[3rem] p-12 shadow-2xl border border-slate-50 animate-slide-up text-left"><form onsubmit="handleLeaveApply(event)" class="space-y-6 text-left"><select id="lv-type" class="w-full p-4 rounded-xl border-2 font-black bg-slate-50 outline-none focus:bg-white focus:border-green-500"><option>Annual Leave</option><option>Sick Leave</option><option>WOP Leave</option></select><div class="grid grid-cols-2 gap-4 text-left font-sans"><input type="date" id="lv-date" class="p-4 rounded-xl border-2 font-black bg-slate-50 outline-none focus:bg-white" required><input type="number" id="lv-days" class="p-4 rounded-xl border-2 font-black bg-slate-50 outline-none focus:bg-white" placeholder="Days" required></div><textarea id="lv-rsn" class="w-full p-4 rounded-xl border-2 font-bold h-32 bg-slate-50 outline-none focus:bg-white" placeholder="Reason..." required></textarea><button type="submit" class="w-full py-5 bg-green-700 text-white font-black rounded-2xl uppercase tracking-widest shadow-xl">Transmit Application</button></form></div>` : `<div class="space-y-4 max-w-2xl mx-auto text-left font-sans">${state.leaves.map(l => `<div class="bg-white p-6 rounded-2xl border-2 flex justify-between items-center text-left"><div><h4 class="font-black uppercase text-slate-800 font-sans text-left">${l.leave_type}</h4><p class="text-xs text-slate-400 font-bold uppercase mt-1 text-left">${formatDate(l.start_date)} • ${l.days} Days</p></div><span class="text-[10px] font-black uppercase text-amber-500">${l.status}</span></div>`).join('')}</div>`}</div>`;
         }
 
         async function handleLeaveApply(e) {
@@ -644,8 +682,8 @@
 
         function renderDiscussion() {
             const container = document.getElementById('view-container');
-            const isAdmin = state.user.role === 'admin';
-            container.innerHTML = `<div class="animate-fade-in space-y-8 text-left text-slate-800 font-sans"><div class="flex justify-between items-center border-b pb-4"><h2 class="text-xl font-black uppercase tracking-widest">Notice Board</h2>${isAdmin ? `<button onclick="state.boardFormVisible=true; renderDiscussion()" class="bg-green-700 text-white px-6 py-2 rounded-xl font-black text-xs uppercase shadow-lg">New Post</button>` : ''}</div>${state.boardFormVisible ? `<div class="bg-white p-10 rounded-[3rem] border-2 border-green-100 shadow-2xl mb-10 animate-slide-up text-left"><form onsubmit="handlePostSubmit(event)" class="space-y-4"><input type="text" id="n-title" class="w-full p-4 rounded-xl border-2 font-black bg-slate-50 outline-none" placeholder="HEADING TITLE" required><textarea id="n-msg" class="w-full p-4 rounded-xl border-2 font-medium h-40 bg-slate-50 outline-none" placeholder="BODY..." required></textarea><div class="flex justify-end gap-3 pt-4"><button type="button" onclick="state.boardFormVisible=false; renderDiscussion()" class="px-6 py-2 text-slate-400 font-bold uppercase text-xs">Cancel</button><button type="submit" class="bg-green-700 text-white px-10 py-3 rounded-xl font-black uppercase shadow-lg">Publish Broadcast</button></div></form></div>` : ''}<div class="space-y-6 max-w-4xl mx-auto">${state.discussions.map(d => `<div class="bg-white border-l-[12px] border-l-green-600 shadow-lg !p-10 relative rounded-r-3xl transition-all hover:border-green-300 group"><div class="flex justify-between items-start mb-4"><h4 class="font-black text-2xl text-slate-800 uppercase leading-tight group-hover:text-green-700 transition-colors">${d.title}</h4><span class="text-[10px] font-black text-slate-300 uppercase whitespace-nowrap">${formatDate(d.date)}</span></div><p class="text-slate-600 text-lg leading-relaxed mb-6 border-b pb-6 border-slate-50 font-medium font-sans text-left">${d.message}</p><div class="flex justify-between items-center"><span class="bg-green-50 text-green-700 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border border-green-100 shadow-sm">Verified Board Dispatch</span><button class="text-blue-600 text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:underline">Reply</button></div></div>`).join('')}</div></div>`;
+            const isAdmin = state.user.role.toLowerCase() === 'admin';
+            container.innerHTML = `<div class="animate-fade-in space-y-8 text-left text-slate-800 font-sans"><div class="flex justify-between items-center border-b pb-4 border-slate-100 font-sans text-slate-800"><h2 class="text-xl font-black uppercase tracking-widest">Notice Board</h2>${isAdmin ? `<button onclick="state.boardFormVisible=true; renderDiscussion()" class="bg-green-700 text-white px-6 py-2 rounded-xl font-black text-xs uppercase shadow-lg">New Post</button>` : ''}</div>${state.boardFormVisible ? `<div class="bg-white p-10 rounded-[3rem] border-2 border-green-100 shadow-2xl mb-10 animate-slide-up text-left font-sans"><form onsubmit="handlePostSubmit(event)" class="space-y-4 font-sans"><input type="text" id="n-title" class="w-full p-4 rounded-xl border-2 font-black bg-slate-50 outline-none" placeholder="HEADING TITLE" required><textarea id="n-msg" class="w-full p-4 rounded-xl border-2 font-medium h-40 bg-slate-50 outline-none" placeholder="BODY..." required></textarea><div class="flex justify-end gap-3 pt-4"><button type="button" onclick="state.boardFormVisible=false; renderDiscussion()" class="px-6 py-2 text-slate-400 font-bold uppercase text-xs">Cancel</button><button type="submit" class="bg-green-700 text-white px-10 py-3 rounded-xl font-black uppercase shadow-lg">Publish</button></div></form></div>` : ''}<div class="space-y-6 max-w-4xl mx-auto font-sans">${state.discussions.map(d => `<div class="bg-white border-l-[12px] border-l-green-600 shadow-lg !p-10 relative rounded-r-3xl transition-all hover:border-green-300 group font-sans"><div class="flex justify-between items-start mb-4"><h4 class="font-black text-2xl text-slate-800 uppercase leading-tight group-hover:text-green-700 transition-colors font-sans">${d.title}</h4><span class="text-[10px] font-black text-slate-300 uppercase whitespace-nowrap font-sans">${formatDate(d.date)}</span></div><p class="text-slate-600 text-lg leading-relaxed mb-6 border-b pb-6 border-slate-50 font-medium font-sans text-left">${d.message}</p><div class="flex justify-between items-center"><span class="bg-green-50 text-green-700 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border border-green-100 shadow-sm font-sans">Verified Board Dispatch</span><button class="text-blue-600 text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:underline font-sans">Reply</button></div></div>`).join('')}</div></div>`;
         }
 
         async function handlePostSubmit(e) {
@@ -657,7 +695,7 @@
 
         function renderSettings() {
              const container = document.getElementById('view-container');
-             container.innerHTML = `<div class="animate-fade-in space-y-6 text-center py-20 font-sans text-slate-900"><h2 class="text-2xl font-black uppercase tracking-tight text-slate-400">Identity Security Key</h2><div class="max-w-md mx-auto p-12 bg-white border shadow-2xl rounded-[3rem] relative overflow-hidden text-center"><div class="absolute top-0 right-0 w-32 h-32 bg-red-50 rounded-full blur-3xl -mr-16 -mt-16 opacity-40"></div><div class="relative z-10 space-y-6"><div class="h-20 w-20 bg-slate-900 text-white rounded-[1.5rem] flex items-center justify-center mx-auto mb-4 shadow-xl"><i data-lucide="key" size="36"></i></div><input type="password" placeholder="NEW KEY" class="w-full p-4 rounded-xl border-2 font-black bg-slate-50 outline-none focus:bg-white focus:border-green-500 text-center"><button class="w-full py-5 bg-slate-900 text-white uppercase tracking-widest font-black rounded-2xl active:scale-95 transition-all shadow-xl shadow-slate-200" onclick="alert('Access Key Refreshed.')">Update Matrix</button></div></div></div>`;
+             container.innerHTML = `<div class="animate-fade-in space-y-6 text-center py-20 font-sans text-slate-900"><h2 class="text-2xl font-black uppercase tracking-tight text-slate-400 font-sans">Identity Security Key</h2><div class="max-w-md mx-auto p-12 bg-white border shadow-2xl rounded-[3rem] relative overflow-hidden text-center"><div class="absolute top-0 right-0 w-32 h-32 bg-red-50 rounded-full blur-3xl -mr-16 -mt-16 opacity-40"></div><div class="relative z-10 space-y-6"><div class="h-20 w-20 bg-slate-900 text-white rounded-[1.5rem] flex items-center justify-center mx-auto mb-4 shadow-xl"><i data-lucide="key" size="36"></i></div><input type="password" placeholder="NEW KEY" class="w-full p-4 rounded-xl border-2 font-black bg-slate-50 outline-none focus:bg-white focus:border-green-500 text-center font-sans"><button class="w-full py-5 bg-slate-900 text-white uppercase tracking-widest font-black rounded-2xl active:scale-95 transition-all shadow-xl shadow-slate-200 font-sans" onclick="alert('Access Key Refreshed.')">Update Matrix</button></div></div></div>`;
              lucide.createIcons();
         }
 
@@ -679,12 +717,9 @@
 
         function logout() { 
             localStorage.removeItem('hr_user'); 
-            state.user = null;
-            document.getElementById('app-shell').classList.add('hidden');
-            document.getElementById('login-container').classList.remove('hidden');
-            notify("Session Terminated.");
+            location.reload(); 
         }
-        
+
         function bypassSync() { document.getElementById('loading-screen').classList.add('hidden'); if(state.user) showApp(); else document.getElementById('login-container').classList.remove('hidden'); }
         window.onload = init;
     </script>
