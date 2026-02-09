@@ -16,15 +16,15 @@ app.use(express.json());
 
 // --- DATABASE CONFIGURATION ---
 // IMPORTANT: Verify these match your aaPanel / MySQL settings
-const dbConfig = {
-    host: 'localhost',
-    user: 'root',
-    password: '', // <--- CHECK THIS: If you set a password in aaPanel, enter it here
-    database: 'hr_management', // <--- CHECK THIS: If your old data is in a different DB, change this name
+const db = mysql.createPool({
+    host: process.env.DB_HOST || 'localhost',
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD || '', 
+    database: process.env.DB_NAME || 'hr_management',
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0
-};
+});
 
 const db = mysql.createPool(dbConfig);
 
