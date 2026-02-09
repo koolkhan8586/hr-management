@@ -1,5 +1,5 @@
 /**
- * LSAF-HR MANAGEMENT SYSTEM - COMPLETE BACKEND SERVER (v7.3.1)
+ * LSAF-HR MANAGEMENT SYSTEM - COMPLETE BACKEND SERVER (v7.4.0)
  * Core Logic: Staff Hub, Geofence Attendance, Payroll Ledger, WOP Leaves, Loans, Board
  * Dependencies: express, mysql2, cors, nodemailer, dotenv
  */
@@ -38,7 +38,6 @@ const transporter = nodemailer.createTransport({
 
 /**
  * --- DATABASE AUTO-MIGRATION ---
- * Defence against missing columns. catching errors for universal MySQL support.
  */
 const runMigrations = () => {
     console.log("LSAFHR: Synchronizing Full Identity Matrix...");
@@ -66,7 +65,6 @@ const runMigrations = () => {
 
     columnMigrations.forEach(sql => {
         db.query(sql, (err) => {
-            // Ignore error if column already exists (Error code 1060)
             if (err && err.errno !== 1060) console.log("LSAFHR Sync Note:", err.message);
         });
     });
@@ -122,7 +120,7 @@ app.put('/api/attendance-entry/:id', (req, res) => {
     db.query('UPDATE attendance SET time_str = ?, type = ? WHERE id = ?', [time_str, type, req.params.id], (err) => res.json({ success: true }));
 });
 
-// --- STAFF HUB MODULE (Robust Update & Delete) ---
+// --- STAFF HUB MODULE ---
 
 app.get('/api/employees', (req, res) => {
     db.query('SELECT * FROM employees ORDER BY id ASC', (err, r) => res.json(r || []));
@@ -145,27 +143,16 @@ app.post('/api/employees', (req, res) => {
 app.put('/api/employees/:id', (req, res) => {
     const id = req.params.id;
     const { name, email, role, password, loan_opening_balance, leave_annual, leave_casual } = req.body;
-    
-    // Explicit assignment to prevent "Sync Failure" caused by extra object keys
     const sql = `UPDATE employees SET name=?, email=?, role=?, password=?, loan_opening_balance=?, leave_annual=?, leave_casual=? WHERE id=?`;
     db.query(sql, [name, email, role, password, loan_opening_balance, leave_annual, leave_casual, id], (err) => {
-        if (err) {
-            console.error("Sync Failure:", err.message);
-            return res.status(500).json({ error: err.message });
-        }
+        if (err) return res.status(500).json({ error: err.message });
         res.json({ success: true });
     });
 });
 
 app.delete('/api/employees/:id', (req, res) => {
-    const id = req.params.id;
-    // Step 1: Purge related logs to maintain foreign key integrity
-    db.query('DELETE FROM attendance WHERE employee_id = ?', [id], () => {
-        // Step 2: Delete the actual staff identity
-        db.query('DELETE FROM employees WHERE id = ?', [id], (err) => {
-            if (err) return res.status(500).json({ error: err.message });
-            res.json({ success: true });
-        });
+    db.query('DELETE FROM attendance WHERE employee_id = ?', [req.params.id], () => {
+        db.query('DELETE FROM employees WHERE id = ?', [req.params.id], (err) => res.json({ success: true }));
     });
 });
 
@@ -173,6 +160,17 @@ app.delete('/api/employees/:id', (req, res) => {
 
 app.get('/api/leaves/:id', (req, res) => {
     db.query('SELECT * FROM leaves WHERE employee_id = ? ORDER BY id DESC', [req.params.id], (err, r) => res.json(r || []));
+});
+
+// Admin Route to see all leaves
+app.get('/api/admin/leaves', (req, res) => {
+    db.query('SELECT l.*, e.name FROM leaves l JOIN employees e ON l.employee_id = e.id ORDER BY l.id DESC', (err, r) => res.json(r || []));
+});
+
+app.put('/api/admin/leaves/:id', (req, res) => {
+    db.query('UPDATE leaves SET status = ? WHERE id = ?', [req.body.status, req.params.id], (err) => {
+        res.json({ success: true });
+    });
 });
 
 app.post('/api/leaves', (req, res) => {
@@ -200,6 +198,17 @@ app.post('/api/leaves', (req, res) => {
 
 app.get('/api/loans/:id', (req, res) => {
     db.query('SELECT * FROM loans WHERE employee_id = ? ORDER BY id DESC', [req.params.id], (err, r) => res.json(r || []));
+});
+
+// Admin Route to see all loans
+app.get('/api/admin/loans', (req, res) => {
+    db.query('SELECT l.*, e.name FROM loans l JOIN employees e ON l.employee_id = e.id ORDER BY l.id DESC', (err, r) => res.json(r || []));
+});
+
+app.put('/api/admin/loans/:id', (req, res) => {
+    db.query('UPDATE loans SET status = ? WHERE id = ?', [req.body.status, req.params.id], (err) => {
+        res.json({ success: true });
+    });
 });
 
 app.post('/api/loans', (req, res) => {
@@ -245,7 +254,7 @@ app.post('/api/discussions', (req, res) => {
     });
 });
 
-// --- PAYROLL & BULK ---
+// --- PAYROLL ---
 
 app.post('/api/employees/wipe-ledger', (req, res) => {
     db.query(`UPDATE employees SET basic_salary=0, invigilation=0, t_payment=0, increment=0, eidi=0, tax=0, loan_deduction=0, insurance=0, others_deduction=0, extra_leaves_deduction=0`, (err) => res.json({ success: true }));
