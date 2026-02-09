@@ -1,7 +1,7 @@
 /**
- * LSAF-HR MANAGEMENT SYSTEM - BACKEND SERVER
+ * LSAF-HR MANAGEMENT SYSTEM - COMPLETE BACKEND SERVER
  * Port: 5050
- * Features: Staff Hub, PKT Attendance, Payroll Posting, Loan Management, Bulk Wipe
+ * Features: Staff Hub, PKT Attendance, Payroll Posting, Loan Management, Bulk Ledger Wipe
  */
 
 require('dotenv').config();
@@ -10,7 +10,9 @@ const mysql = require('mysql2');
 const cors = require('cors');
 
 const app = express();
-app.use(cors());
+
+// High-compatibility CORS for live server environments
+app.use(cors({ origin: '*' }));
 app.use(express.json());
 
 // Database Connection
@@ -24,27 +26,38 @@ const db = mysql.createPool({
     queueLimit: 0
 });
 
-// --- DATABASE AUTO-INITIALIZATION ---
+/**
+ * --- DATABASE AUTO-INITIALIZATION & MIGRATIONS ---
+ * This section ensures all tables and new columns exist automatically.
+ */
 const initDB = () => {
-    console.log("LSAFHR: Synchronizing Core Database Schema...");
+    console.log("LSAFHR: Checking Matrix Integrity...");
 
     // Migration: Ensure necessary columns exist for LSAFHR features
+    // This allows existing data to stay while adding new financial capability
     const migrations = [
         `ALTER TABLE employees ADD COLUMN IF NOT EXISTS loan_opening_balance DECIMAL(15,2) DEFAULT 0`,
         `ALTER TABLE employees ADD COLUMN IF NOT EXISTS eidi DECIMAL(15,2) DEFAULT 0`,
         `ALTER TABLE employees ADD COLUMN IF NOT EXISTS insurance DECIMAL(15,2) DEFAULT 0`,
         `ALTER TABLE employees ADD COLUMN IF NOT EXISTS others_deduction DECIMAL(15,2) DEFAULT 0`,
-        `ALTER TABLE employees ADD COLUMN IF NOT EXISTS extra_leaves_deduction DECIMAL(15,2) DEFAULT 0`
+        `ALTER TABLE employees ADD COLUMN IF NOT EXISTS extra_leaves_deduction DECIMAL(15,2) DEFAULT 0`,
+        `ALTER TABLE employees ADD COLUMN IF NOT EXISTS basic_salary DECIMAL(15,2) DEFAULT 0`,
+        `ALTER TABLE employees ADD COLUMN IF NOT EXISTS invigilation DECIMAL(15,2) DEFAULT 0`,
+        `ALTER TABLE employees ADD COLUMN IF NOT EXISTS t_payment DECIMAL(15,2) DEFAULT 0`,
+        `ALTER TABLE employees ADD COLUMN IF NOT EXISTS increment DECIMAL(15,2) DEFAULT 0`,
+        `ALTER TABLE employees ADD COLUMN IF NOT EXISTS tax DECIMAL(15,2) DEFAULT 0`,
+        `ALTER TABLE employees ADD COLUMN IF NOT EXISTS loan_deduction DECIMAL(15,2) DEFAULT 0`
     ];
 
     migrations.forEach(sql => {
         db.query(sql, (err) => {
             if (err && err.code !== 'ER_DUP_FIELDNAME') {
-                console.log("Database Migration Note:", err.message);
+                console.log("Migration Note:", err.message);
             }
         });
     });
 
+    // Create Payroll Posts tracking table if missing
     db.query(`
         CREATE TABLE IF NOT EXISTS payroll_posts (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -53,10 +66,36 @@ const initDB = () => {
         )
     `, (err) => {
         if (err) console.error("Database Init Error (payroll_posts):", err.message);
-        else console.log("Database Sync: LSAFHR Tables Ready.");
+        else console.log("Database Sync: LSAFHR System Tables Ready.");
     });
 };
 initDB();
+
+// --- PAYROLL POSTING ENDPOINTS ---
+
+app.get('/api/payroll-posted', (req, res) => {
+    db.query('SELECT month_year FROM payroll_posts', (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json((results || []).map(r => r.month_year));
+    });
+});
+
+app.post('/api/payroll-post', (req, res) => {
+    const { month } = req.body;
+    if (!month) return res.status(400).json({ error: "Month is required" });
+    
+    db.query('INSERT IGNORE INTO payroll_posts (month_year) VALUES (?)', [month], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ success: true, message: `Month ${month} published.` });
+    });
+});
+
+app.delete('/api/payroll-post/:month', (req, res) => {
+    db.query('DELETE FROM payroll_posts WHERE month_year = ?', [req.params.month], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ success: true, message: `Month ${req.params.month} unpublished.` });
+    });
+});
 
 // --- EMPLOYEE HUB & SALARY HUB ROUTES ---
 
@@ -76,24 +115,28 @@ app.post('/api/employees', (req, res) => {
 
 /**
  * SALARY WIPE (BULK RESET)
- * High-performance route to zero out every staff ledger for the current month
+ * This endpoint is called when the "Wipe Month" button is pressed.
+ * It zeros out all 10 financial columns for every staff member at once.
  */
 app.post('/api/employees/wipe-ledger', (req, res) => {
-    console.log("LSAFHR: Initiating global month wipe...");
+    console.log("LSAFHR: Clearing entire monthly ledger...");
     const sql = `UPDATE employees SET 
         basic_salary = 0, invigilation = 0, t_payment = 0, increment = 0, 
         eidi = 0, tax = 0, loan_deduction = 0, insurance = 0, 
         others_deduction = 0, extra_leaves_deduction = 0`;
     
     db.query(sql, (err, results) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({ success: true, message: `Matrix Purged: ${results.affectedRows} identities zeroed.` });
+        if (err) {
+            console.error("Wipe Error:", err.message);
+            return res.status(500).json({ error: err.message });
+        }
+        res.json({ success: true, message: `Ledger zeroed for all identities.` });
     });
 });
 
 /**
- * INDIVIDUAL SALARY RESET
- * Targeted reset for one specific employee (Delete Salary Icon)
+ * INDIVIDUAL SALARY RESET (Delete Salary Icon)
+ * Targeted reset for one specific employee ID.
  */
 app.post('/api/employees/reset-salary/:id', (req, res) => {
     const sql = `UPDATE employees SET 
@@ -108,8 +151,14 @@ app.post('/api/employees/reset-salary/:id', (req, res) => {
     });
 });
 
+/**
+ * PUT ROUTE - UPDATE IDENTITY
+ * Handles editing staff profiles and individual salary saves.
+ */
 app.put('/api/employees/:id', (req, res) => {
     const data = req.body;
+    
+    // Explicitly define every field that can be updated
     const fields = [
         'name', 'role', 'email', 'password', 
         'basic_salary', 'invigilation', 't_payment', 'increment', 'eidi',
@@ -123,8 +172,8 @@ app.put('/api/employees/:id', (req, res) => {
     fields.forEach(field => {
         if (data[field] !== undefined) {
             let val = data[field];
-            // Sanitization: Ensure empty numbers don't crash database
-            if (['basic_salary', 'tax', 'loan_opening_balance', 'eidi'].includes(field)) {
+            // Sanitization: Convert empty inputs to numeric 0 to prevent SQL errors
+            if (['basic_salary', 'tax', 'loan_opening_balance', 'eidi', 'invigilation', 't_payment', 'increment', 'insurance', 'others_deduction', 'extra_leaves_deduction'].includes(field)) {
                 val = (val === '' || val === null || isNaN(val)) ? 0 : parseFloat(val);
             }
             updates.push(`${field} = ?`);
@@ -132,10 +181,13 @@ app.put('/api/employees/:id', (req, res) => {
         }
     });
 
-    if (updates.length === 0) return res.json({ message: "No fields updated" });
+    if (updates.length === 0) return res.json({ message: "No fields modified." });
 
     db.query(`UPDATE employees SET ${updates.join(', ')} WHERE id = ?`, [...values, req.params.id], (err, results) => {
-        if (err) return res.status(500).json({ error: err.message });
+        if (err) {
+            console.error("SQL Save Error:", err.message);
+            return res.status(500).json({ error: err.message });
+        }
         if (results.affectedRows === 0) return res.status(404).json({ error: "Identity not found" });
         res.json({ success: true });
     });
@@ -148,38 +200,62 @@ app.delete('/api/employees/:id', (req, res) => {
     });
 });
 
-// --- PAYROLL POSTING ENDPOINTS ---
-app.get('/api/payroll-posted', (req, res) => {
-    db.query('SELECT month_year FROM payroll_posts', (err, results) => {
+// --- ATTENDANCE ROUTES ---
+
+app.get('/api/attendance/:id', (req, res) => {
+    db.query('SELECT * FROM attendance WHERE employee_id = ? ORDER BY date_str DESC', [req.params.id], (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.json(results.map(r => r.month_year));
+        res.json(results || []);
     });
 });
 
-app.post('/api/payroll-post', (req, res) => {
-    const { month } = req.body;
-    db.query('INSERT IGNORE INTO payroll_posts (month_year) VALUES (?)', [month], (err) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({ success: true });
-    });
-});
-
-app.delete('/api/payroll-post/:month', (req, res) => {
-    db.query('DELETE FROM payroll_posts WHERE month_year = ?', [req.params.month], (err) => {
+app.post('/api/attendance', (req, res) => {
+    db.query('INSERT INTO attendance SET ?', req.body, (err) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json({ success: true });
     });
 });
 
-// --- ATTENDANCE, LOANS & BOARD ---
-app.get('/api/attendance/:id', (req, res) => { db.query('SELECT * FROM attendance WHERE employee_id = ? ORDER BY date_str DESC', [req.params.id], (err, r) => res.json(r || [])); });
-app.post('/api/attendance', (req, res) => { db.query('INSERT INTO attendance SET ?', req.body, (err) => res.json({success:true})); });
-app.get('/api/loans', (req, res) => { db.query('SELECT l.*, e.name as employee_name FROM loans l JOIN employees e ON l.employee_id = e.id', (err, r) => res.json(r || [])); });
-app.post('/api/loans', (req, res) => { db.query('INSERT INTO loans SET ?', { employee_id: req.body.employeeId, total_amount: req.body.totalAmount, reason: req.body.reason }, (err) => res.json({success:true})); });
-app.get('/api/discussions', (req, res) => { db.query('SELECT * FROM discussions ORDER BY id DESC', (err, r) => res.json(r || [])); });
-app.post('/api/discussions', (req, res) => { db.query('INSERT INTO discussions SET ?', req.body, (err) => res.json({success:true})); });
+// --- LOAN ROUTES ---
 
+app.get('/api/loans', (req, res) => {
+    db.query('SELECT l.*, e.name as employee_name FROM loans l JOIN employees e ON l.employee_id = e.id ORDER BY l.id DESC', (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(results || []);
+    });
+});
+
+app.post('/api/loans', (req, res) => {
+    const { employeeId, totalAmount, reason } = req.body;
+    db.query('INSERT INTO loans (employee_id, total_amount, reason, status, date_granted) VALUES (?, ?, ?, "Pending", NOW())', 
+    [employeeId, totalAmount, reason], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ success: true });
+    });
+});
+
+// --- DISCUSSIONS (BOARD) ---
+
+app.get('/api/discussions', (req, res) => {
+    db.query('SELECT * FROM discussions ORDER BY id DESC', (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(results || []);
+    });
+});
+
+app.post('/api/discussions', (req, res) => {
+    const { title, message, senderName, senderId, date } = req.body;
+    db.query('INSERT INTO discussions (title, message, senderName, senderId, date) VALUES (?, ?, ?, ?, ?)', 
+    [title, message, senderName, senderId, date], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ success: true });
+    });
+});
+
+// --- START SERVER ---
 const PORT = 5050;
 app.listen(PORT, () => {
+    console.log(`-------------------------------------------`);
     console.log(`LSAFHR Backend Operational on Port ${PORT}`);
+    console.log(`-------------------------------------------`);
 });
