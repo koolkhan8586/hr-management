@@ -23,7 +23,7 @@
         input[type="number"]::-webkit-inner-spin-button { display: none; }
         .animate-slide-up { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
         @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        #attendance-map { height: 350px; width: 100%; border-radius: 1.5rem; z-index: 10; border: 2px solid #f1f5f9; }
+        #attendance-map { height: 400px; width: 100%; border-radius: 1.5rem; z-index: 10; border: 2px solid #f1f5f9; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900 text-left text-[14px]">
@@ -41,7 +41,7 @@
             <div class="text-center mb-10">
                 <img src="UOL-Green-V1.png" alt="Logo" class="h-20 mx-auto mb-4 object-contain" onerror="this.src='https://placehold.co/150x150?text=LSAFHR'">
                 <h1 class="text-2xl font-black text-slate-800 leading-tight uppercase tracking-widest leading-none font-sans">Lahore School of Accountancy</h1>
-                <p class="text-slate-400 text-xs font-bold mt-2 uppercase tracking-widest font-sans">Administrative Hub v6.6.5</p>
+                <p class="text-slate-400 text-xs font-bold mt-2 uppercase tracking-widest font-sans">Administrative Hub v6.7.0</p>
             </div>
             <form id="login-form" class="space-y-5 text-left font-sans">
                 <div class="space-y-1">
@@ -67,10 +67,10 @@
             <nav class="flex-1 p-4 space-y-1 overflow-y-auto custom-scrollbar font-sans" id="sidebar-nav"></nav>
             <div class="p-4 border-t border-slate-50 flex items-center justify-between font-sans">
                 <div class="flex items-center gap-3 overflow-hidden text-left text-slate-800">
-                    <div id="user-avatar" class="h-9 w-9 rounded-xl bg-green-100 text-green-700 flex items-center justify-center font-black text-sm uppercase font-sans">?</div>
+                    <div id="user-avatar" class="h-9 w-9 rounded-xl bg-green-100 text-green-700 flex items-center justify-center font-black text-sm uppercase">?</div>
                     <div class="flex flex-col overflow-hidden">
-                        <span id="user-display-name" class="text-[11px] font-black truncate uppercase leading-none mb-1 text-left font-sans">User</span>
-                        <span id="user-display-role" class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter text-left font-sans">Verified</span>
+                        <span id="user-display-name" class="text-[11px] font-black truncate uppercase leading-none mb-1 text-left">User</span>
+                        <span id="user-display-role" class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter text-left">Verified</span>
                     </div>
                 </div>
                 <button onclick="logout()" class="text-red-500 p-2 hover:bg-red-50 rounded-xl transition-all font-sans"><i data-lucide="log-out" size="18"></i></button>
@@ -78,7 +78,7 @@
         </aside>
 
         <main class="flex-1 lg:ml-64 p-4 md:p-10 pb-24 lg:pb-10 min-h-screen bg-slate-50/30 font-sans">
-            <div id="view-container" class="max-w-7xl mx-auto text-left font-sans"></div>
+            <div id="view-container" class="max-w-7xl mx-auto text-left"></div>
         </main>
 
         <nav class="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 p-3 flex justify-around shadow-2xl z-50 rounded-t-[2.5rem] font-sans">
@@ -88,6 +88,11 @@
             <button onclick="switchTab('directory')" class="p-4 rounded-2xl mobile-nav-btn font-sans" id="mob-directory"><i data-lucide="users"></i></button>
             <button onclick="switchTab('discussion')" class="p-4 rounded-2xl mobile-nav-btn font-sans" id="mob-discussion"><i data-lucide="message-square"></i></button>
         </nav>
+    </div>
+
+    <!-- TOAST NOTIFICATION -->
+    <div id="status-toast" class="fixed top-10 left-1/2 -translate-x-1/2 z-[1000] bg-slate-900 text-white px-8 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-2xl opacity-0 pointer-events-none transition-all duration-300 transform translate-y-[-20px] font-sans text-center">
+        Status Updated
     </div>
 
     <script>
@@ -139,7 +144,7 @@
         }
 
         function exportToCSV(data, filename) {
-            if (!data || !data.length) { notify("No Matrix Data Found."); return; }
+            if (!data || !data.length) { notify("No Data Found."); return; }
             const headers = Object.keys(data[0]).join(',');
             const rows = data.map(row => Object.values(row).map(val => '"' + String(val || '').replace(/"/g, '""') + '"').join(','));
             const csvContent = "data:text/csv;charset=utf-8," + [headers, ...rows].join('\n');
@@ -152,6 +157,7 @@
             document.body.removeChild(link);
         }
 
+        // --- INITIALIZATION ---
         async function init() {
             setTimeout(() => { document.getElementById('loading-screen').classList.add('hidden'); }, 3000);
             try {
@@ -185,7 +191,7 @@
                     const atRes = await fetch(`${API_BASE}/attendance/${state.user.id}`);
                     if (atRes.ok) state.attendance = await atRes.json();
                 }
-            } catch (e) { console.warn("Matrix Sync Error."); }
+            } catch (e) { console.warn("Sync Partial failure."); }
         }
 
         function showApp() {
@@ -201,7 +207,7 @@
             const isAdmin = state.user && String(state.user.role).toLowerCase() === 'admin';
             nav.innerHTML = NAV_ITEMS.filter(i => !i.admin || isAdmin).map(i => `
                 <button onclick="switchTab('${i.id}')" class="w-full flex items-center gap-4 px-5 py-4 rounded-2xl transition-all font-bold ${state.currentTab === i.id ? 'bg-green-700 text-white shadow-lg scale-105' : 'text-slate-500 hover:bg-slate-50'}">
-                    <i data-lucide="${i.icon}" size="18"></i><span class="text-[11px] uppercase tracking-wider text-left font-sans">${i.label}</span>
+                    <i data-lucide="${i.icon}" size="18"></i><span class="text-[11px] uppercase tracking-wider text-left font-sans font-sans">${i.label}</span>
                 </button>
             `).join('');
             lucide.createIcons();
@@ -214,7 +220,7 @@
 
         function renderView() {
             const container = document.getElementById('view-container');
-            container.innerHTML = '<div class="py-40 text-center animate-pulse font-black text-slate-300 uppercase tracking-[0.5em] font-sans">LSAFHR Core Link...</div>';
+            container.innerHTML = '<div class="py-40 text-center animate-pulse font-black text-slate-300 uppercase tracking-[0.5em] font-sans">LSAFHR Matrix Linking...</div>';
             setTimeout(() => {
                 switch(state.currentTab) {
                     case 'dashboard': renderDashboard(); break;
@@ -222,7 +228,7 @@
                     case 'directory': renderDirectory(); break;
                     case 'attendance': renderAttendance(); break;
                     case 'loans': renderLoans(); break;
-                    case 'leaves': renderLeavesView(); break;
+                    case 'leaves': renderLeaves(); break;
                     case 'discussion': renderDiscussion(); break;
                     case 'settings': renderSettings(); break;
                     default: renderDashboard();
@@ -236,23 +242,23 @@
             container.innerHTML = `
                 <div class="animate-fade-in space-y-8 font-sans text-left">
                     <div class="flex justify-between items-center border-b pb-4 border-slate-100">
-                        <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase font-sans">Identity Base</h2>
+                        <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase font-sans">Home Base</h2>
                         <div class="bg-white p-4 rounded-2xl border shadow-sm text-right font-black font-sans">
-                            <p class="text-[10px] text-slate-400 uppercase font-sans">Pakistan Time</p><p class="text-green-700 font-black font-mono font-sans font-sans">${getPktTime()}</p>
+                            <p class="text-[10px] text-slate-400 uppercase">Pakistan Time</p><p class="text-green-700 font-black font-mono">${getPktTime()}</p>
                         </div>
                     </div>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div class="bg-green-700 p-8 rounded-[2rem] text-white shadow-xl relative overflow-hidden text-left font-sans font-sans">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 font-sans">
+                        <div class="bg-green-700 p-8 rounded-[2rem] text-white shadow-xl relative overflow-hidden text-left">
                             <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
-                            <p class="text-[10px] font-black uppercase opacity-60 font-sans">Identity status</p>
-                            <p class="text-3xl font-black mt-2 uppercase tracking-tighter font-sans">ACTIVE SESSION</p>
+                            <p class="text-[10px] font-black uppercase opacity-60">Status</p>
+                            <p class="text-3xl font-black mt-2 uppercase tracking-tighter">ACTIVE SESSION</p>
                         </div>
-                        <div class="bg-white p-8 rounded-[2rem] border shadow-sm text-left font-sans">
-                            <p class="text-[10px] font-black text-slate-400 uppercase">Opening Debt Balance</p>
+                        <div class="bg-white p-8 rounded-[2rem] border shadow-sm text-left">
+                            <p class="text-[10px] font-black text-slate-400 uppercase">Opening Loan Balance</p>
                             <p class="text-3xl font-black text-red-500 mt-2 font-mono">Rs. ${cleanNumber(state.user.loan_opening_balance).toLocaleString()}</p>
                         </div>
-                        <div class="bg-white p-8 rounded-[2rem] border shadow-sm text-left font-sans">
-                            <p class="text-[10px] font-black text-slate-400 uppercase font-sans">Verification</p>
+                        <div class="bg-white p-8 rounded-[2rem] border shadow-sm text-left">
+                            <p class="text-[10px] font-black text-slate-400 uppercase">Access Identity</p>
                             <p class="text-2xl font-black text-slate-800 mt-2 capitalize font-sans">${state.user.role}</p>
                         </div>
                     </div>
@@ -266,36 +272,32 @@
             const isPosted = (state.payrollPostedMonths || []).some(m => String(m).trim() === String(state.selectedMonth).trim());
 
             let content = `
-                <div class="animate-fade-in space-y-6 font-sans text-left text-slate-800 font-sans font-sans font-sans">
-                    <div class="flex flex-col md:flex-row justify-between items-center gap-4 border-b pb-4 border-slate-100 font-sans text-left">
-                        <h2 class="text-xl font-black uppercase tracking-widest text-slate-800 font-sans font-sans font-sans text-left">Salary hub</h2>
-                        <div class="flex flex-wrap gap-2 justify-center font-sans font-sans">
+                <div class="animate-fade-in space-y-6 font-sans text-left text-slate-800 font-sans">
+                    <div class="flex flex-col md:flex-row justify-between items-center gap-4 border-b pb-4 border-slate-100 font-sans">
+                        <h2 class="text-xl font-black uppercase tracking-widest text-slate-800 font-sans">Salary Matrix</h2>
+                        <div class="flex flex-wrap gap-2 justify-center font-sans">
                             <input type="month" value="${state.selectedMonth}" onchange="updateMonth(this.value)" class="p-2 border-2 rounded-xl font-black bg-white outline-none focus:border-green-500 font-sans">
                             ${isAdmin ? `
-                                <button onclick="togglePublish(${isPosted})" class="px-6 py-2 rounded-xl font-black text-[10px] text-white uppercase shadow-lg ${isPosted ? 'bg-red-600' : 'bg-slate-900'} font-sans">${isPosted ? 'Unpublish' : 'Publish'}</button>
-                                <button onclick="purgeMonthData()" class="bg-red-50 text-red-600 border-2 border-red-100 px-4 py-2 rounded-xl font-black text-[10px] uppercase shadow-lg font-sans">Wipe Month</button>
-                                <button onclick="exportToCSV(state.employees, 'LSAF_Payroll.csv')" class="bg-green-50 text-green-700 px-6 py-2 rounded-xl font-black text-[10px] uppercase shadow-sm font-sans">Export</button>
-                            ` : `
-                                <button onclick="downloadSalaryPDF()" class="px-8 py-3 bg-green-700 text-white rounded-2xl font-black text-xs uppercase shadow-xl hover:bg-green-800 transition-all font-sans">Download Slip</button>
-                            `}
+                                <button onclick="togglePublish(${isPosted})" class="px-6 py-2 rounded-xl font-black text-[10px] text-white uppercase shadow-lg ${isPosted ? 'bg-red-600' : 'bg-slate-900'} font-sans font-sans">${isPosted ? 'Unpublish' : 'Publish'}</button>
+                                <button onclick="purgeMonthData()" class="bg-red-50 text-red-600 border-2 border-red-100 px-4 py-2 rounded-xl font-black text-[10px] uppercase shadow-lg font-sans font-sans">Wipe Month</button>
+                            ` : ``}
                         </div>
                     </div>
             `;
 
             if (!isAdmin && !isPosted) {
-                content += `<div class="py-40 text-center bg-white rounded-[3rem] border-2 border-slate-100 shadow-sm font-sans text-left font-sans"><div class="bg-slate-50 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 font-sans"><i data-lucide="lock" class="text-slate-200" size="48"></i></div><h3 class="text-xl font-black text-slate-400 uppercase tracking-widest text-slate-300 font-sans">Period Locked</h3><p class="text-sm text-slate-400 font-sans">Access unauthorized for ${state.selectedMonth}.</p></div>`;
+                content += `<div class="py-40 text-center bg-white rounded-[3rem] border-2 border-slate-100 shadow-sm font-sans text-left font-sans"><div class="bg-slate-50 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 font-sans"><i data-lucide="lock" class="text-slate-200" size="48"></i></div><h3 class="text-xl font-black text-slate-400 uppercase tracking-widest text-slate-300 font-sans font-sans">Period Locked</h3><p class="text-sm text-slate-400 font-sans">Data is unauthorized for ${state.selectedMonth}.</p></div>`;
             } else {
                 content += `
-                    <div class="overflow-x-auto rounded-[2rem] bg-white border shadow-xl font-sans text-left">
+                    <div class="overflow-x-auto rounded-[2rem] bg-white border shadow-xl font-sans">
                         <table class="w-full text-left text-[10px] font-sans">
                             <thead class="bg-slate-50 border-b font-black text-slate-400 uppercase tracking-widest font-sans text-left font-sans">
                                 <tr>
-                                    <th class="p-4">ID</th><th class="p-4">Name</th>
-                                    <th class="p-4 text-right">Basic</th><th class="p-4 text-right font-sans">Invig</th>
-                                    <th class="p-4 text-right font-sans">T.Pay</th><th class="p-4 text-right font-sans">Incr</th>
-                                    <th class="p-4 text-right font-sans">Tax</th><th class="p-4 text-right font-sans">Loan</th>
-                                    <th class="p-4 text-right">Ins.</th><th class="p-4 text-right font-black text-slate-900 uppercase font-sans font-mono">Net Paid</th>
-                                    ${isAdmin ? `<th class="p-4 text-center font-sans">Action</th>` : ''}
+                                    <th class="p-4">ID</th><th class="p-4">Staff Name</th>
+                                    <th class="p-4 text-right">Basic</th><th class="p-4 text-right">Invig</th>
+                                    <th class="p-4 text-right">Tax</th><th class="p-4 text-right">Loan</th>
+                                    <th class="p-4 text-right font-sans">Ins.</th><th class="p-4 text-right font-black text-slate-900 uppercase font-sans font-mono">Net Paid</th>
+                                    ${isAdmin ? `<th class="p-4 text-center font-sans font-sans">Action</th>` : ''}
                                 </tr>
                             </thead>
                             <tbody class="divide-y font-bold font-sans text-left text-slate-800 font-sans">
@@ -303,29 +305,26 @@
 
                 const list = isAdmin ? state.employees : [state.employees.find(e => e.id === state.user.id) || state.user];
                 list.forEach(emp => {
-                    if (!emp) return;
                     const isEditing = state.editingSalaryId === emp.id;
                     const m = calculateSalaryMetrics(emp);
                     content += `
-                        <tr class="hover:bg-slate-50/80 transition-colors font-sans">
-                            <td class="p-4 font-black text-slate-900 text-left font-mono font-sans font-sans">${emp.id}</td>
+                        <tr class="hover:bg-slate-50/80 transition-colors font-sans font-sans">
+                            <td class="p-4 font-black text-slate-900 text-left font-sans font-mono">${emp.id}</td>
                             <td class="p-4 uppercase truncate max-w-[120px] font-sans text-left text-[11px] font-sans">${emp.name}</td>
-                            <td class="p-4 text-right font-mono font-sans">${isEditing ? `<input type="number" id="edit-basic" class="w-16 border rounded p-1 text-right font-sans" value="${emp.basic_salary}">` : cleanNumber(emp.basic_salary).toLocaleString()}</td>
-                            <td class="p-4 text-right font-mono font-sans">${isEditing ? `<input type="number" id="edit-invig" class="w-12 border rounded p-1 text-right font-sans" value="${emp.invigilation}">` : cleanNumber(emp.invigilation).toLocaleString()}</td>
-                            <td class="p-4 text-right font-mono font-sans">${isEditing ? `<input type="number" id="edit-tpay" class="w-12 border rounded p-1 text-right font-sans" value="${emp.t_payment}">` : cleanNumber(emp.t_payment).toLocaleString()}</td>
-                            <td class="p-4 text-right font-mono font-sans">${isEditing ? `<input type="number" id="edit-incr" class="w-12 border rounded p-1 text-right font-sans" value="${emp.increment}">` : cleanNumber(emp.increment).toLocaleString()}</td>
-                            <td class="p-4 text-right font-mono font-sans text-slate-500 font-sans">${isEditing ? `<input type="number" id="edit-tax" class="w-12 border rounded p-1 text-right font-sans" value="${emp.tax}">` : cleanNumber(emp.tax).toLocaleString()}</td>
-                            <td class="p-4 text-right font-mono font-sans text-slate-500 font-sans">${isEditing ? `<input type="number" id="edit-loan" class="w-12 border rounded p-1 text-right font-sans" value="${emp.loan_deduction}">` : cleanNumber(emp.loan_deduction).toLocaleString()}</td>
-                            <td class="p-4 text-right font-mono font-sans text-slate-500 font-sans">${isEditing ? `<input type="number" id="edit-ins" class="w-12 border rounded p-1 text-right font-sans" value="${emp.insurance}">` : cleanNumber(emp.insurance).toLocaleString()}</td>
+                            <td class="p-4 text-right font-mono">${isEditing ? `<input type="number" id="edit-basic" class="w-16 border rounded p-1 text-right font-sans" value="${emp.basic_salary}">` : cleanNumber(emp.basic_salary).toLocaleString()}</td>
+                            <td class="p-4 text-right font-mono">${isEditing ? `<input type="number" id="edit-invig" class="w-12 border rounded p-1 text-right font-sans" value="${emp.invigilation}">` : cleanNumber(emp.invigilation).toLocaleString()}</td>
+                            <td class="p-4 text-right font-mono text-slate-500">${isEditing ? `<input type="number" id="edit-tax" class="w-12 border rounded p-1 text-right font-sans" value="${emp.tax}">` : cleanNumber(emp.tax).toLocaleString()}</td>
+                            <td class="p-4 text-right font-mono text-slate-500">${isEditing ? `<input type="number" id="edit-loan" class="w-12 border rounded p-1 text-right font-sans" value="${emp.loan_deduction}">` : cleanNumber(emp.loan_deduction).toLocaleString()}</td>
+                            <td class="p-4 text-right font-mono text-slate-500">${isEditing ? `<input type="number" id="edit-ins" class="w-12 border rounded p-1 text-right font-sans" value="${emp.insurance}">` : cleanNumber(emp.insurance).toLocaleString()}</td>
                             <td class="p-4 text-right font-black text-slate-900 uppercase font-sans font-mono">Rs. ${m.netPaid.toLocaleString()}</td>
                             ${isAdmin ? `
                                 <td class="p-4 text-center font-sans font-sans">
                                     ${isEditing ? `
-                                        <button onclick="saveSalary('${emp.id}')" class="text-green-600 font-black text-[9px] uppercase border-b-2 border-green-600 font-sans">Save</button>
+                                        <button onclick="saveSalary('${emp.id}')" class="text-green-600 font-black text-[9px] uppercase border-b-2 border-green-600 font-sans font-sans">Save</button>
                                     ` : `
-                                        <div class="flex justify-center gap-2 font-sans">
-                                            <button onclick="editSalaryMode('${emp.id}')" class="text-blue-500 hover:scale-125 transition-transform font-sans"><i data-lucide="pencil" size="14"></i></button>
-                                            <button onclick="resetIndividualSalary('${emp.id}')" class="text-red-400 hover:scale-125 transition-transform font-sans"><i data-lucide="trash-2" size="14"></i></button>
+                                        <div class="flex justify-center gap-2 font-sans font-sans">
+                                            <button onclick="editSalaryMode('${emp.id}')" class="text-blue-500 transition-transform hover:scale-125 font-sans"><i data-lucide="pencil" size="14"></i></button>
+                                            <button onclick="resetIndividualSalary('${emp.id}')" class="text-red-400 transition-transform hover:scale-125 font-sans"><i data-lucide="trash-2" size="14"></i></button>
                                         </div>
                                     `}
                                 </td>
@@ -340,16 +339,16 @@
         }
 
         async function purgeMonthData() {
-            if (!confirm("DANGER: Wipe all salary data for EVERY employee?")) return;
+            if (!confirm("CRITICAL: Wipe every staff member's financial data for this month?")) return;
             const res = await fetch(`${API_BASE}/employees/wipe-ledger`, { method: 'POST' });
-            if (res.ok) { notify("Identity Matrix Purged."); await syncData(); renderPayroll(); setTimeout(() => location.reload(), 800); }
-            else alert("Matrix wipe protocol failed.");
+            if (res.ok) { notify("Matrix Cleared."); await syncData(); renderPayroll(); }
+            else alert("Matrix failed to wipe data.");
         }
 
         async function resetIndividualSalary(id) {
-            if (!confirm("Zero out monthly data for staff ID " + id + "?")) return;
+            if (!confirm("Zero out monthly data for " + id + "?")) return;
             const res = await fetch(`${API_BASE}/employees/reset-salary/${id}`, { method: 'POST' });
-            if (res.ok) { notify("Individual Zeroed."); await syncData(); renderPayroll(); }
+            if (res.ok) { notify("Individual Reset."); await syncData(); renderPayroll(); }
         }
 
         async function saveSalary(id) {
@@ -359,21 +358,19 @@
                 ...emp,
                 basic_salary: document.getElementById('edit-basic').value,
                 invigilation: document.getElementById('edit-invig').value,
-                t_payment: document.getElementById('edit-tpay').value,
-                increment: document.getElementById('edit-incr').value,
                 tax: document.getElementById('edit-tax').value,
                 loan_deduction: document.getElementById('edit-loan').value,
                 insurance: document.getElementById('edit-ins').value
             };
             const res = await fetch(`${API_BASE}/employees/${id}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
-            if (res.ok) { state.editingSalaryId = null; await syncData(); renderPayroll(); notify("Ledger Matrix Updated."); }
+            if (res.ok) { state.editingSalaryId = null; await syncData(); renderPayroll(); notify("Identity Synced."); }
         }
 
         // --- ATTENDANCE HUB ---
         async function renderAttendance() {
             const container = document.getElementById('view-container');
             const isAdmin = state.user && String(state.user.role).toLowerCase() === 'admin';
-            const filteredAttendance = state.attendance
+            const filteredAttendance = (state.attendance || [])
                 .filter(log => log.date_str && log.date_str.startsWith(state.selectedAttendanceMonth))
                 .sort((a, b) => new Date(b.date_str + ' ' + b.time_str) - new Date(a.date_str + ' ' + a.time_str));
 
@@ -390,40 +387,40 @@
 
                     <!-- GEOLOCATION MAP VIEW -->
                     <div class="bg-white p-6 rounded-[2.5rem] border-2 shadow-sm font-sans font-sans">
-                        <div class="flex justify-between items-center mb-4">
-                             <h3 class="font-black text-[10px] uppercase text-slate-400 tracking-widest font-sans font-sans">Identity Location Map</h3>
-                             <span class="bg-green-100 text-green-700 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-tighter">Verified Pakistan Sync</span>
+                        <div class="flex justify-between items-center mb-4 font-sans font-sans">
+                             <h3 class="font-black text-[10px] uppercase text-slate-400 tracking-widest">Identity Location Matrix</h3>
+                             <span class="bg-green-100 text-green-700 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-tighter">Live Verification Sync</span>
                         </div>
                         <div id="attendance-map"></div>
                     </div>
 
-                    <div class="grid md:grid-cols-2 gap-6 font-sans font-sans">
-                        <div class="bg-white rounded-[2.5rem] py-12 flex flex-col items-center justify-center space-y-6 border-2 shadow-inner bg-slate-50/50 font-sans font-sans">
+                    <div class="grid md:grid-cols-2 gap-6 font-sans">
+                        <div class="bg-white rounded-[2.5rem] py-12 flex flex-col items-center justify-center space-y-6 border-2 shadow-inner bg-slate-50/50">
                             <h3 class="text-6xl font-black text-slate-800 font-mono tracking-tighter font-sans">${getPktTime()}</h3>
-                            <p class="text-xs font-bold text-slate-400 uppercase tracking-[0.2em] font-sans font-sans">${getPktDate()}</p>
+                            <p class="text-xs font-bold text-slate-400 uppercase tracking-[0.2em] font-sans">${getPktDate()}</p>
                             <div class="w-full max-w-xs space-y-3 pt-6 font-sans text-left">
-                                <button onclick="handleClock('Clock In')" class="w-full py-5 rounded-2xl bg-green-700 text-white font-black shadow-lg hover:bg-green-800 transition-all active:scale-95 text-base font-sans font-sans">Clock In</button>
-                                <button onclick="handleClock('Clock Out')" class="w-full py-5 rounded-2xl bg-white border-2 text-slate-700 font-black hover:bg-slate-50 transition-all active:scale-95 text-base font-sans font-sans">Clock Out</button>
+                                <button onclick="handleClock('Clock In')" class="w-full py-5 rounded-2xl bg-green-700 text-white font-black shadow-lg hover:bg-green-800 transition-all active:scale-95 text-base font-sans font-sans font-sans">Clock In</button>
+                                <button onclick="handleClock('Clock Out')" class="w-full py-5 rounded-2xl bg-white border-2 text-slate-700 font-black hover:bg-slate-50 transition-all active:scale-95 text-base font-sans font-sans font-sans">Clock Out</button>
                             </div>
                         </div>
                         <div class="bg-white rounded-[2.5rem] p-10 border-2 text-center flex flex-col items-center justify-center font-sans font-sans">
-                            <div class="bg-green-50 w-20 h-20 rounded-full flex items-center justify-center mb-6 font-sans font-sans"><i data-lucide="map-pin" class="text-green-600 animate-bounce"></i></div>
-                            <p class="text-xs font-black text-slate-600 uppercase tracking-widest leading-relaxed font-sans font-sans">Geofence Status: OK</p>
-                            <p class="text-[10px] text-slate-400 font-bold uppercase mt-2 font-sans font-sans">Identity email notification active</p>
+                            <div class="bg-green-50 w-20 h-20 rounded-full flex items-center justify-center mb-6 font-sans font-sans font-sans"><i data-lucide="map-pin" class="text-green-600 animate-bounce"></i></div>
+                            <p class="text-xs font-black text-slate-600 uppercase tracking-widest leading-relaxed font-sans font-sans">Geofence Verified Sync</p>
+                            <p class="text-[10px] text-slate-400 font-bold uppercase mt-2 font-sans font-sans">Verification email notification active</p>
                         </div>
                     </div>
 
                     <div class="bg-white rounded-3xl border shadow-sm mt-8 overflow-hidden font-sans font-sans">
                         <div class="bg-slate-50 p-4 border-b flex justify-between items-center font-sans font-sans">
-                            <span class="font-black text-[10px] uppercase text-slate-400 tracking-widest font-sans">Timeline Logs (${state.selectedAttendanceMonth})</span>
-                            <span class="text-[10px] font-bold text-slate-300 font-sans font-sans">Click to View on Map</span>
+                            <span class="font-black text-[10px] uppercase text-slate-400 tracking-widest font-sans font-sans">Timeline Logs (${state.selectedAttendanceMonth})</span>
+                            <span class="text-[10px] font-bold text-slate-300 font-sans font-sans">Click entry to center Map</span>
                         </div>
                         <div class="divide-y max-h-[400px] overflow-y-auto custom-scrollbar font-sans font-sans">
                             ${filteredAttendance.length > 0 ? filteredAttendance.map(log => `
                                 <div onclick="focusMap(${log.latitude}, ${log.longitude}, '${log.type}', '${log.time_str}')" class="p-5 flex justify-between items-center hover:bg-green-50 cursor-pointer transition-all group font-sans font-sans">
-                                    <div class="flex items-center gap-4 font-sans font-sans"><div class="h-2 w-2 rounded-full ${log.type === 'Clock In' ? 'bg-green-500' : 'bg-red-500'} font-sans font-sans"></div><div><p class="text-xs font-black uppercase font-sans font-sans group-hover:text-green-700">${log.type}</p><p class="text-[10px] text-slate-400 uppercase font-sans font-sans">${formatDate(log.date_str)}</p></div></div>
+                                    <div class="flex items-center gap-4 font-sans font-sans"><div class="h-2 w-2 rounded-full ${log.type === 'Clock In' ? 'bg-green-500' : 'bg-red-500'} font-sans font-sans font-sans"></div><div><p class="text-xs font-black uppercase font-sans font-sans group-hover:text-green-700">${log.type}</p><p class="text-[10px] text-slate-400 uppercase font-sans font-sans">${formatDate(log.date_str)}</p></div></div>
                                     <div class="text-right font-sans">
-                                        <p class="font-mono text-sm font-black text-slate-500 font-sans">${log.time_str}</p>
+                                        <p class="font-mono text-sm font-black text-slate-500 font-sans font-sans font-sans">${log.time_str}</p>
                                         <p class="text-[8px] font-bold text-slate-300 uppercase font-sans font-sans">Verified Coordinate</p>
                                     </div>
                                 </div>
@@ -434,10 +431,11 @@
             
             lucide.createIcons();
             
+            // Map Start Logic: Try current position first
             navigator.geolocation.getCurrentPosition((p) => {
-                initMap(p.coords.latitude, p.coords.longitude, "Detection");
+                initMap(p.coords.latitude, p.coords.longitude, "Detection Area");
             }, () => {
-                if (filteredAttendance[0]) initMap(filteredAttendance[0].latitude, filteredAttendance[0].longitude, "Last Marked");
+                if (filteredAttendance[0]) initMap(filteredAttendance[0].latitude, filteredAttendance[0].longitude, "Last Marked Location");
                 else initMap(31.5204, 74.3587, "Lahore");
             });
         }
@@ -447,34 +445,42 @@
             if (!mapContainer) return;
             if (state.map) state.map.remove();
             state.map = L.map('attendance-map').setView([lat, lng], 15);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(state.map);
-            L.marker([lat, lng]).addTo(state.map).bindPopup(`<p class="font-black uppercase text-[10px] font-sans">${label}</p>`).openPopup();
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: 'LSAFHR' }).addTo(state.map);
+            L.marker([lat, lng]).addTo(state.map).bindPopup(`<p class="font-black uppercase text-[10px] font-sans font-sans">${label}</p>`).openPopup();
         }
 
         function focusMap(lat, lng, type, time) {
             if (!state.map || !lat || !lng) return;
             state.map.setView([lat, lng], 17);
-            L.marker([lat, lng]).addTo(state.map).bindPopup(`<p class="font-black uppercase text-[10px] font-sans">${type}<br/>${time}</p>`).openPopup();
+            L.marker([lat, lng]).addTo(state.map).bindPopup(`<p class="font-black uppercase text-[10px] font-sans font-sans">${type}<br/>${time}</p>`).openPopup();
             window.scrollTo({ top: 150, behavior: 'smooth' });
         }
 
         function updateAttendanceMonth(val) { state.selectedAttendanceMonth = val; renderAttendance(); }
 
         async function handleClock(type) {
-            notify("Processing Identity GPS Sync...");
+            notify("Processing GPS identity verification...");
             const opt = { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 };
             
             navigator.geolocation.getCurrentPosition(async (pos) => {
                 try {
+                    const payload = { 
+                        employee_id: state.user.id, 
+                        type: type, 
+                        date_str: getPktDate(), 
+                        time_str: getPktTime(), 
+                        latitude: pos.coords.latitude, 
+                        longitude: pos.coords.longitude 
+                    };
                     const res = await fetch(`${API_BASE}/attendance`, { 
                         method: 'POST', 
                         headers: {'Content-Type':'application/json'}, 
-                        body: JSON.stringify({ employeeId: state.user.id, type, date: getPktDate(), time: getPktTime(), latitude: pos.coords.latitude, longitude: pos.coords.longitude }) 
+                        body: JSON.stringify(payload) 
                     });
                     if(res.ok) { notify(`${type} Verified. Identity Email Dispatched.`); await syncData(); if(state.currentTab === 'attendance') renderAttendance(); }
-                    else notify("Matrix Sync Error.");
-                } catch (e) { notify("Matrix Connection Offline."); }
-            }, (err) => notify("Location Required for Identity verification."), opt);
+                    else notify("Matrix Sync Error. Protocol mismatch.");
+                } catch (e) { notify("Matrix Link Offline."); }
+            }, (err) => notify("Location required for identity marking. Enable GPS."), opt);
         }
 
         async function exportAttendanceCSV(all = false) {
@@ -488,7 +494,7 @@
                         logs.forEach(l => allLogs.push({ "Employee ID": emp.id, "Staff Name": emp.name, "Date": l.date_str, "Time": l.time_str, "Status": l.type, "Location": `${l.latitude}, ${l.longitude}` }));
                     }
                 }
-                exportToCSV(allLogs, `LSAF_Global_Roster_${getPktDate()}.csv`);
+                exportToCSV(allLogs, `LSAF_Global_Attendance_${getPktDate()}.csv`);
             } else {
                 const myLogs = state.attendance.map(l => ({ Date: l.date_str, Time: l.time_str, Status: l.type, Location: `${l.latitude}, ${l.longitude}` }));
                 exportToCSV(myLogs, `LSAF_My_Attendance_${state.user.id}.csv`);
@@ -496,21 +502,21 @@
         }
 
         // --- LEAVES HUB ---
-        function renderLeavesView() {
+        function renderLeaves() {
             const container = document.getElementById('view-container');
             const userLeaves = (state.leaves || []).sort((a, b) => new Date(b.start_date) - new Date(a.start_date));
             
             container.innerHTML = `
                 <div class="animate-fade-in space-y-8 font-sans text-left">
-                    <div class="flex bg-slate-200 p-1.5 rounded-2xl max-w-xs mx-auto mb-10 shadow-inner font-sans">
-                        <button onclick="state.leaveTab='apply'; renderLeavesView()" class="flex-1 py-2.5 text-[10px] font-black rounded-xl uppercase transition-all font-sans ${state.leaveTab === 'apply' ? 'bg-white text-green-700 shadow-sm' : 'text-slate-500'}">Apply</button>
-                        <button onclick="state.leaveTab='history'; renderLeavesView()" class="flex-1 py-2.5 text-[10px] font-black rounded-xl uppercase transition-all font-sans ${state.leaveTab === 'history' ? 'bg-white text-green-700 shadow-sm' : 'text-slate-500'}">History</button>
+                    <div class="flex bg-slate-200 p-1.5 rounded-2xl max-w-xs mx-auto mb-10 shadow-inner font-sans font-sans">
+                        <button onclick="state.leaveTab='apply'; renderLeaves()" class="flex-1 py-2.5 text-[10px] font-black rounded-xl uppercase transition-all font-sans font-sans ${state.leaveTab === 'apply' ? 'bg-white text-green-700 shadow-sm' : 'text-slate-500'}">Apply</button>
+                        <button onclick="state.leaveTab='history'; renderLeaves()" class="flex-1 py-2.5 text-[10px] font-black rounded-xl uppercase transition-all font-sans font-sans ${state.leaveTab === 'history' ? 'bg-white text-green-700 shadow-sm' : 'text-slate-500'}">History</button>
                     </div>
 
                     ${state.leaveTab === 'apply' ? `
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto font-sans font-sans">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto font-sans font-sans font-sans">
                             <div class="bg-white p-8 rounded-[3rem] shadow-2xl border-2 border-slate-50 animate-slide-up text-left font-sans">
-                                <h3 class="font-black text-xl mb-6 uppercase tracking-tight font-sans">Apply for Leave</h3>
+                                <h3 class="font-black text-xl mb-6 uppercase tracking-tight font-sans font-sans">Request Absence</h3>
                                 <form onsubmit="handleLeaveApply(event)" class="space-y-6 text-left font-sans">
                                     <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans font-sans">Type</label><select id="lv-type" class="w-full p-4 rounded-xl border-2 font-black bg-slate-50 outline-none focus:bg-white focus:border-green-500 font-sans font-sans"><option>Annual Leave</option><option>Casual Leave</option><option>Sick Leave</option><option>WOP Leave</option></select></div>
                                     <div class="grid grid-cols-2 gap-4 font-sans">
@@ -521,24 +527,24 @@
                                     <button type="submit" class="w-full py-5 bg-green-700 text-white font-black rounded-2xl uppercase tracking-widest shadow-xl font-sans">Transmit application</button>
                                 </form>
                             </div>
-                            <div class="space-y-6 font-sans font-sans">
+                            <div class="space-y-6 font-sans font-sans font-sans">
                                 <div class="bg-green-700 p-8 rounded-[3rem] text-white shadow-xl text-left font-sans">
-                                    <p class="text-[10px] font-black uppercase opacity-60 font-sans">Annual Balance</p><p class="text-4xl font-black mt-2 font-mono font-sans font-sans">${state.user.leave_annual || 0} Days</p>
+                                    <p class="text-[10px] font-black uppercase opacity-60 font-sans">Annual Balance</p><p class="text-4xl font-black mt-2 font-mono font-sans font-sans font-sans">${state.user.leave_annual || 0} Days</p>
                                 </div>
                                 <div class="bg-white p-8 rounded-[3rem] border-2 shadow-sm text-left font-sans">
-                                    <p class="text-[10px] font-black text-slate-400 uppercase font-sans">Casual Balance</p><p class="text-4xl font-black mt-2 font-mono text-slate-800 font-sans font-sans">${state.user.leave_casual || 0} Days</p>
+                                    <p class="text-[10px] font-black text-slate-400 uppercase font-sans font-sans">Casual Balance</p><p class="text-4xl font-black mt-2 font-mono text-slate-800 font-sans font-sans">${state.user.leave_casual || 0} Days</p>
                                 </div>
                             </div>
                         </div>
                     ` : `
-                        <div class="space-y-4 max-w-2xl mx-auto font-sans font-sans">
+                        <div class="space-y-4 max-w-2xl mx-auto font-sans font-sans font-sans">
                             ${userLeaves.map(l => `
-                                <div class="bg-white p-6 rounded-2xl border-2 flex justify-between items-center text-left font-sans text-slate-800 font-sans font-sans font-sans font-sans">
-                                    <div><h4 class="font-black uppercase font-sans font-sans">${l.leave_type}</h4><p class="text-xs text-slate-400 font-bold uppercase mt-1 font-sans font-sans font-sans font-sans">${formatDate(l.start_date)} • ${l.days} Days</p></div>
-                                    <span class="text-[10px] font-black uppercase px-3 py-1 rounded-lg ${l.status === 'Approved' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'} font-sans font-sans font-sans font-sans">${l.status}</span>
+                                <div class="bg-white p-6 rounded-2xl border-2 flex justify-between items-center text-left font-sans font-sans text-slate-800 font-sans font-sans">
+                                    <div><h4 class="font-black uppercase font-sans font-sans font-sans font-sans">${l.leave_type}</h4><p class="text-xs text-slate-400 font-bold uppercase mt-1 font-sans font-sans">${formatDate(l.start_date)} • ${l.days} Days</p></div>
+                                    <span class="text-[10px] font-black uppercase px-3 py-1 rounded-lg ${l.status === 'Approved' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'} font-sans font-sans font-sans">${l.status}</span>
                                 </div>
                             `).join('')}
-                            ${userLeaves.length === 0 ? '<div class="p-20 text-center text-slate-300 font-bold uppercase tracking-widest font-sans font-sans font-sans">No Records Found</div>' : ''}
+                            ${userLeaves.length === 0 ? '<div class="p-20 text-center text-slate-300 font-bold uppercase tracking-widest font-sans font-sans font-sans font-sans font-sans">No History Recorded</div>' : ''}
                         </div>
                     `}
                 </div>`;
@@ -548,27 +554,27 @@
             e.preventDefault();
             const payload = { employeeId: state.user.id, type: document.getElementById('lv-type').value, startDate: document.getElementById('lv-date').value, days: document.getElementById('lv-days').value, reason: document.getElementById('lv-rsn').value };
             const res = await fetch(`${API_BASE}/leaves`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
-            if (res.ok) { notify("Identity Matrix Updated."); await syncData(); state.leaveTab = 'history'; renderLeavesView(); }
+            if (res.ok) { notify("Application Logged."); await syncData(); state.leaveTab = 'history'; renderLeaves(); }
         }
 
         // --- STAFF HUB ---
         function renderDirectory() {
             const container = document.getElementById('view-container');
             container.innerHTML = `
-                <div class="animate-fade-in space-y-6 font-sans text-left text-slate-800 font-sans font-sans">
+                <div class="animate-fade-in space-y-6 font-sans text-left text-slate-800 font-sans font-sans font-sans">
                     <div class="flex flex-col md:flex-row justify-between items-center gap-4 border-b pb-4 border-slate-100 font-sans text-left">
-                        <h2 class="text-xl font-black uppercase tracking-widest text-slate-800 font-sans font-sans text-left font-sans">Staff Hub</h2>
-                        <button onclick="toggleStaffForm()" class="bg-green-700 text-white px-6 py-2 rounded-xl font-black text-[10px] uppercase shadow-lg hover:bg-green-800 transition-all font-sans">New Identity</button>
+                        <h2 class="text-xl font-black uppercase tracking-widest text-slate-800 font-sans font-sans text-left font-sans font-sans font-sans">Staff Hub</h2>
+                        <button onclick="toggleStaffForm()" class="bg-green-700 text-white px-6 py-2 rounded-xl font-black text-[10px] uppercase shadow-lg hover:bg-green-800 transition-all font-sans font-sans font-sans">New Identity</button>
                     </div>
-                    <div id="staff-form-area" class="font-sans text-left font-sans"></div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 font-sans">
+                    <div id="staff-form-area" class="font-sans text-left font-sans font-sans"></div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 font-sans font-sans font-sans">
                         ${state.employees.map(emp => `
-                            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4 hover:border-green-300 transition-all group text-left font-sans font-sans">
-                                <div class="h-12 w-12 bg-green-50 text-green-700 rounded-xl flex items-center justify-center font-black text-xl uppercase font-sans">${getInitial(emp.name)}</div>
-                                <div class="flex-1 overflow-hidden text-left font-sans font-sans"><h4 class="font-black text-slate-800 uppercase truncate leading-none mb-1 font-sans text-sm text-left">${emp.name}</h4><p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest font-sans">${emp.id} • ${emp.role}</p><p class="text-[9px] font-black text-red-400 uppercase mt-2 font-sans text-left font-sans">Opening Debt: Rs. ${cleanNumber(emp.loan_opening_balance).toLocaleString()}</p></div>
-                                <div class="opacity-0 group-hover:opacity-100 flex transition-all font-sans">
-                                    <button onclick="editStaff('${emp.id}')" class="text-blue-500 p-2 hover:bg-blue-50 rounded-lg transition-transform hover:scale-125 font-sans font-sans font-sans font-sans font-sans"><i data-lucide="pencil" size="16"></i></button>
-                                    <button onclick="deleteStaff('${emp.id}')" class="text-red-400 p-2 hover:bg-red-50 rounded-lg transition-transform hover:scale-125 font-sans font-sans font-sans font-sans font-sans"><i data-lucide="trash-2" size="16"></i></button>
+                            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4 hover:border-green-300 transition-all group text-left font-sans font-sans font-sans font-sans">
+                                <div class="h-12 w-12 bg-green-50 text-green-700 rounded-xl flex items-center justify-center font-black text-xl uppercase font-sans font-sans font-sans font-sans">${getInitial(emp.name)}</div>
+                                <div class="flex-1 overflow-hidden text-left font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><h4 class="font-black text-slate-800 uppercase truncate leading-none mb-1 font-sans text-sm text-left font-sans font-sans font-sans font-sans font-sans">${emp.name}</h4><p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest font-sans font-sans font-sans font-sans font-sans font-sans">${emp.id} • ${emp.role}</p><p class="text-[9px] font-black text-red-400 uppercase mt-2 font-sans text-left font-sans font-sans font-sans font-sans font-sans font-sans">Opening Debt: Rs. ${cleanNumber(emp.loan_opening_balance).toLocaleString()}</p></div>
+                                <div class="opacity-0 group-hover:opacity-100 flex transition-all font-sans font-sans font-sans font-sans font-sans">
+                                    <button onclick="editStaff('${emp.id}')" class="text-blue-500 p-2 hover:bg-blue-50 rounded-lg transition-transform hover:scale-125 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><i data-lucide="pencil" size="16"></i></button>
+                                    <button onclick="deleteStaff('${emp.id}')" class="text-red-400 p-2 hover:bg-red-50 rounded-lg transition-transform hover:scale-125 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><i data-lucide="trash-2" size="16"></i></button>
                                 </div>
                             </div>
                         `).join('')}
@@ -583,17 +589,17 @@
             if (!emp && area.innerHTML && !state.editingMemberId) { area.innerHTML = ''; return; }
             state.editingMemberId = emp ? emp.id : null;
             area.innerHTML = `
-                <div class="bg-white p-8 rounded-[2rem] border-2 border-green-100 animate-slide-up mb-8 shadow-xl text-left font-sans">
-                    <form onsubmit="handleStaffSubmit(event)" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 font-sans text-left font-sans">
-                        <div class="text-left font-sans font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 block text-left font-sans font-sans font-sans">Staff ID</label><input type="text" id="s-id" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 uppercase text-left font-sans text-slate-800" value="${emp ? emp.id : ''}" ${emp ? 'readonly' : 'required'}></div>
-                        <div class="text-left font-sans font-sans font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 block text-left font-sans font-sans font-sans">Name</label><input type="text" id="s-name" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 text-left font-sans text-slate-800 font-sans" value="${emp ? emp.name : ''}" required></div>
-                        <div class="text-left font-sans font-sans font-sans font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 block text-left font-sans font-sans font-sans">Email</label><input type="email" id="s-email" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 text-left font-sans text-slate-800 font-sans" value="${emp ? emp.email : ''}" required></div>
-                        <div class="text-left font-sans font-sans font-sans font-sans font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 block text-left font-sans font-sans font-sans font-sans">Password</label><input type="text" id="s-pass" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 text-left font-sans text-slate-800 font-sans placeholder="••••••••" value="${emp ? emp.password : ''}" required></div>
-                        <div class="text-left font-sans font-sans font-sans font-sans font-sans font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 block text-left font-sans font-sans font-sans font-sans">Role</label><select id="s-role" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 font-sans font-sans text-slate-800 text-left font-sans font-sans font-sans"><option value="employee" ${emp?.role==='employee'?'selected':''}>Employee</option><option value="admin" ${emp?.role==='admin'?'selected':''}>Admin</option></select></div>
-                        <div class="text-left font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 block text-left font-sans font-sans font-sans font-sans font-sans">Annual Bal</label><input type="number" id="s-leave-annual" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 text-left font-sans text-slate-800 font-sans font-sans font-sans" value="${emp ? emp.leave_annual : '14'}"></div>
-                        <div class="text-left font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 block text-left font-sans font-sans font-sans font-sans font-sans font-sans">Casual Bal</label><input type="number" id="s-leave-casual" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 text-left font-sans text-slate-800 font-sans font-sans font-sans" value="${emp ? emp.leave_casual : '10'}"></div>
-                        <div class="text-left font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 block text-left font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Opening Loan</label><input type="number" id="s-loan-open" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 text-left font-sans text-slate-800 font-sans font-sans font-sans font-sans font-sans font-sans" value="${emp ? (emp.loan_opening_balance || 0) : '0'}"></div>
-                        <div class="md:col-span-2 lg:col-span-4 flex justify-end gap-3 pt-4 border-t font-sans font-sans"><button type="button" onclick="toggleStaffForm()" class="px-6 py-2 text-slate-400 font-bold uppercase text-xs font-sans font-sans">Cancel</button><button type="submit" class="bg-green-700 text-white px-10 py-4 rounded-xl font-black uppercase text-xs shadow-lg hover:bg-green-800 transition-all text-left font-sans font-sans font-sans">${emp ? 'Sync changes' : 'Create identity'}</button></div>
+                <div class="bg-white p-8 rounded-[2rem] border-2 border-green-100 animate-slide-up mb-8 shadow-xl text-left font-sans font-sans font-sans font-sans">
+                    <form onsubmit="handleStaffSubmit(event)" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 font-sans font-sans font-sans font-sans font-sans text-left font-sans font-sans">
+                        <div class="text-left font-sans font-sans font-sans font-sans font-sans font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 block text-left font-sans font-sans font-sans font-sans font-sans">Staff ID</label><input type="text" id="s-id" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 uppercase text-left font-sans text-slate-800 font-sans font-sans font-sans font-sans font-sans" value="${emp ? emp.id : ''}" ${emp ? 'readonly' : 'required'}></div>
+                        <div class="text-left font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 block text-left font-sans font-sans font-sans font-sans font-sans">Name</label><input type="text" id="s-name" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 text-left font-sans text-slate-800 font-sans font-sans font-sans font-sans font-sans font-sans" value="${emp ? emp.name : ''}" required></div>
+                        <div class="text-left font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 block text-left font-sans font-sans font-sans font-sans font-sans">Email</label><input type="email" id="s-email" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 text-left font-sans text-slate-800 font-sans font-sans font-sans font-sans font-sans font-sans" value="${emp ? emp.email : ''}" required></div>
+                        <div class="text-left font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 block text-left font-sans font-sans font-sans font-sans font-sans">Password</label><input type="text" id="s-pass" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 text-left font-sans text-slate-800 font-sans font-sans font-sans font-sans font-sans font-sans" placeholder="••••••••" value="${emp ? emp.password : ''}" required></div>
+                        <div class="text-left font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 block text-left font-sans font-sans font-sans font-sans font-sans">Role</label><select id="s-role" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 font-sans font-sans text-slate-800 text-left font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><option value="employee" ${emp?.role==='employee'?'selected':''}>Employee</option><option value="admin" ${emp?.role==='admin'?'selected':''}>Admin</option></select></div>
+                        <div class="text-left font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 block text-left font-sans font-sans font-sans font-sans font-sans">Annual Bal</label><input type="number" id="s-leave-annual" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 text-left font-sans text-slate-800 font-sans font-sans font-sans font-sans font-sans font-sans font-sans" value="${emp ? emp.leave_annual : '14'}"></div>
+                        <div class="text-left font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 block text-left font-sans font-sans font-sans font-sans font-sans">Casual Bal</label><input type="number" id="s-leave-casual" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 text-left font-sans text-slate-800 font-sans font-sans font-sans font-sans font-sans font-sans font-sans" value="${emp ? emp.leave_casual : '10'}"></div>
+                        <div class="text-left font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 block text-left font-sans font-sans font-sans font-sans font-sans">Opening Loan</label><input type="number" id="s-loan-open" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 text-left font-sans text-slate-800 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans" value="${emp ? (emp.loan_opening_balance || 0) : '0'}"></div>
+                        <div class="md:col-span-2 lg:col-span-4 flex justify-end gap-3 pt-4 border-t font-sans font-sans font-sans font-sans"><button type="button" onclick="toggleStaffForm()" class="px-6 py-2 text-slate-400 font-bold uppercase text-xs font-sans font-sans">Cancel</button><button type="submit" class="bg-green-700 text-white px-10 py-4 rounded-xl font-black uppercase text-xs shadow-lg hover:bg-green-800 transition-all text-left font-sans font-sans font-sans">${emp ? 'Sync changes' : 'Create identity'}</button></div>
                     </form>
                 </div>
             `;
@@ -601,12 +607,7 @@
 
         async function handleStaffSubmit(e) {
             e.preventDefault();
-            const payload = { 
-                id: document.getElementById('s-id').value.toUpperCase(), name: document.getElementById('s-name').value, 
-                email: document.getElementById('s-email').value, role: document.getElementById('s-role').value,
-                password: document.getElementById('s-pass').value, loan_opening_balance: document.getElementById('s-loan-open').value,
-                leave_annual: document.getElementById('s-leave-annual').value, leave_casual: document.getElementById('s-leave-casual').value
-            };
+            const payload = { id: document.getElementById('s-id').value.toUpperCase(), name: document.getElementById('s-name').value, email: document.getElementById('s-email').value, role: document.getElementById('s-role').value, password: document.getElementById('s-pass').value, loan_opening_balance: document.getElementById('s-loan-open').value, leave_annual: document.getElementById('s-leave-annual').value, leave_casual: document.getElementById('s-leave-casual').value };
             const method = state.editingMemberId ? 'PUT' : 'POST';
             const url = state.editingMemberId ? `${API_BASE}/employees/${state.editingMemberId}` : `${API_BASE}/employees`;
             const res = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
@@ -614,7 +615,7 @@
         }
 
         async function deleteStaff(id) {
-            if(!confirm(`DANGER: Permanently wipe ${id} from system?`)) return;
+            if(!confirm(`DANGER: Wipe identity ${id} from LSAFHR?`)) return;
             try {
                 const res = await fetch(`${API_BASE}/employees/${id}`, { method: 'DELETE' });
                 if(res.ok) { notify("Identity Purged."); await syncData(); renderDirectory(); }
@@ -650,15 +651,15 @@
 
         function renderLoans() {
             const container = document.getElementById('view-container');
-            container.innerHTML = `<div class="py-40 text-center font-bold text-slate-300 uppercase tracking-widest font-sans font-sans font-sans">Transmitting Loans Hub...</div>`;
+            container.innerHTML = `<div class="py-40 text-center font-bold text-slate-300 uppercase tracking-widest font-sans font-sans font-sans font-sans">Syncing Loans Matrix...</div>`;
         }
         function renderDiscussion() {
             const container = document.getElementById('view-container');
-            container.innerHTML = `<div class="py-40 text-center font-bold text-slate-300 uppercase tracking-widest font-sans font-sans font-sans font-sans">Board Synchronizing...</div>`;
+            container.innerHTML = `<div class="py-40 text-center font-bold text-slate-300 uppercase tracking-widest font-sans font-sans font-sans font-sans font-sans font-sans">Board Synchronizing...</div>`;
         }
         function renderSettings() {
              const container = document.getElementById('view-container');
-             container.innerHTML = `<div class="py-40 text-center font-bold text-slate-300 uppercase tracking-widest font-sans font-sans font-sans">Identity Security Active</div>`;
+             container.innerHTML = `<div class="py-40 text-center font-bold text-slate-300 uppercase tracking-widest font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Identity Security Active</div>`;
         }
 
         window.onload = init;
