@@ -127,6 +127,23 @@ app.get('/api/attendance/:id', (req, res) => {
     });
 });
 
+// Delete individual attendance log
+app.delete('/api/attendance-entry/:id', (req, res) => {
+    db.query('DELETE FROM attendance WHERE id = ?', [req.params.id], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ success: true });
+    });
+});
+
+// Update individual attendance log (Time/Type)
+app.put('/api/attendance-entry/:id', (req, res) => {
+    const { time_str, type } = req.body;
+    db.query('UPDATE attendance SET time_str = ?, type = ? WHERE id = ?', [time_str, type, req.params.id], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ success: true });
+    });
+});
+
 // --- STAFF HUB & SALARY MATRIX ROUTES ---
 
 app.get('/api/employees', (req, res) => {
