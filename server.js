@@ -29,6 +29,7 @@ const initDB = () => {
     console.log("LSAFHR: Checking Database Integrity...");
 
     // Migration: Ensure EVERY necessary column exists for LSAFHR features
+    // This script adds missing columns to existing tables without deleting old data.
     const migrations = [
         `ALTER TABLE employees ADD COLUMN IF NOT EXISTS loan_opening_balance DECIMAL(15,2) DEFAULT 0`,
         `ALTER TABLE employees ADD COLUMN IF NOT EXISTS eidi DECIMAL(15,2) DEFAULT 0`,
@@ -108,48 +109,62 @@ app.post('/api/employees', (req, res) => {
 
 /**
  * SALARY WIPE (BULK RESET)
- * Corrected to explicitly zero out all 10 financial columns
+ * Sets all monthly financial figures to 0 for all staff.
  */
 app.post('/api/employees/wipe-ledger', (req, res) => {
-    console.log("LSAFHR: Wiping entire ledger for current month...");
+    console.log("LSAFHR: Wiping monthly ledger data...");
     const sql = `UPDATE employees SET 
-        basic_salary = 0, invigilation = 0, t_payment = 0, increment = 0, 
-        eidi = 0, tax = 0, loan_deduction = 0, insurance = 0, 
-        others_deduction = 0, extra_leaves_deduction = 0`;
+        basic_salary = 0, 
+        invigilation = 0, 
+        t_payment = 0, 
+        increment = 0, 
+        eidi = 0, 
+        tax = 0, 
+        loan_deduction = 0, 
+        insurance = 0, 
+        others_deduction = 0, 
+        extra_leaves_deduction = 0`;
     
-    db.query(sql, (err) => {
+    db.query(sql, (err, results) => {
         if (err) {
             console.error("Wipe Error:", err.message);
             return res.status(500).json({ error: err.message });
         }
-        res.json({ success: true, message: "Ledger zeroed for all employees." });
+        res.json({ success: true, message: `Ledger wiped for ${results.affectedRows} employees.` });
     });
 });
 
 /**
- * INDIVIDUAL SALARY RESET (Used by the Delete Salary action)
+ * INDIVIDUAL SALARY RESET (Used by the "Delete" trash icon in Salary Hub)
  */
 app.post('/api/employees/reset-salary/:id', (req, res) => {
     const sql = `UPDATE employees SET 
-        basic_salary = 0, invigilation = 0, t_payment = 0, increment = 0, 
-        eidi = 0, tax = 0, loan_deduction = 0, insurance = 0, 
-        others_deduction = 0, extra_leaves_deduction = 0 
+        basic_salary = 0, 
+        invigilation = 0, 
+        t_payment = 0, 
+        increment = 0, 
+        eidi = 0, 
+        tax = 0, 
+        loan_deduction = 0, 
+        insurance = 0, 
+        others_deduction = 0, 
+        extra_leaves_deduction = 0 
         WHERE id = ?`;
     
     db.query(sql, [req.params.id], (err) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.json({ success: true, message: "Salary record reset." });
+        res.json({ success: true, message: "Individual salary record reset." });
     });
 });
 
 /**
  * UPDATED PUT ROUTE
- * Now sanitizes numeric inputs to prevent "Data truncated" errors
+ * Handles editing staff profiles and saving monthly salary updates.
+ * Includes sanitization for numeric fields to prevent MySQL errors.
  */
 app.put('/api/employees/:id', (req, res) => {
     const data = req.body;
     
-    // Define all possible fields
     const fields = [
         'name', 'role', 'email', 'password', 
         'basic_salary', 'invigilation', 't_payment', 'increment', 'eidi',
@@ -169,23 +184,29 @@ app.put('/api/employees/:id', (req, res) => {
     fields.forEach(field => {
         if (data[field] !== undefined) {
             let val = data[field];
-            // Sanitization: Convert empty strings or nulls to 0 for numeric fields
-            if (numericFields.includes(field) && (val === '' || val === null)) {
-                val = 0;
+            
+            // Sanitization: Convert empty inputs to numeric 0 for database compatibility
+            if (numericFields.includes(field)) {
+                if (val === '' || val === null || isNaN(val)) {
+                    val = 0;
+                } else {
+                    val = parseFloat(val);
+                }
             }
+            
             updates.push(`${field} = ?`);
             values.push(val);
         }
     });
 
-    if (updates.length === 0) return res.json({ message: "No changes detected." });
+    if (updates.length === 0) return res.json({ message: "No data changed." });
 
     db.query(`UPDATE employees SET ${updates.join(', ')} WHERE id = ?`, [...values, req.params.id], (err, results) => {
         if (err) {
             console.error("SQL Save Error:", err.message);
             return res.status(500).json({ error: err.message });
         }
-        if (results.affectedRows === 0) return res.status(404).json({ error: "Employee not found" });
+        if (results.affectedRows === 0) return res.status(404).json({ error: "Identity not found" });
         res.json({ success: true });
     });
 });
