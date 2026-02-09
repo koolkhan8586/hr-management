@@ -126,7 +126,7 @@
             selectedAttendanceMonth: new Date().toISOString().slice(0, 7),
             selectedAdminEmployeeId: null,
             editingSalaryId: null, editingMemberId: null, editingAttendanceDate: null, 
-            showManualEntryForm: false, map: null, leaveTab: 'apply'
+            showManualEntryForm: false, map: null, leaveTab: 'apply', loanTab: 'apply'
         };
 
         const NAV_ITEMS = [
@@ -266,7 +266,6 @@
             }, 10);
         }
 
-        // --- DASHBOARD ---
         function renderDashboard() {
             const container = document.getElementById('view-container');
             container.innerHTML = `
@@ -284,8 +283,8 @@
                             <p class="text-3xl font-black mt-2 uppercase tracking-tighter font-sans">ACTIVE SESSION</p>
                         </div>
                         <div class="bg-white p-8 rounded-[2rem] border shadow-sm text-left font-sans font-sans font-sans font-sans font-sans">
-                            <p class="text-[10px] font-black text-slate-400 uppercase font-sans">Opening Debt Balance</p>
-                            <p class="text-3xl font-black text-red-500 mt-2 font-mono font-sans font-sans font-sans">Rs. ${cleanNumber(state.user.loan_opening_balance).toLocaleString()}</p>
+                            <p class="text-[10px] font-black text-slate-400 uppercase font-sans">Current Loan Balance</p>
+                            <p class="text-3xl font-black text-red-500 mt-2 font-mono font-sans font-sans font-sans">Rs. ${cleanNumber(state.user.loan_opening_balance - state.user.loan_deduction).toLocaleString()}</p>
                         </div>
                         <div class="bg-white p-8 rounded-[2rem] border shadow-sm text-left font-sans font-sans font-sans font-sans">
                             <p class="text-[10px] font-black text-slate-400 uppercase font-sans">Verification Level</p>
@@ -296,7 +295,7 @@
             `;
         }
 
-        // --- SALARY HUB (All Columns) ---
+        // --- SALARY HUB ---
         async function renderPayroll() {
             const container = document.getElementById('view-container');
             const isAdmin = state.user && String(state.user.role).toLowerCase() === 'admin';
@@ -321,7 +320,7 @@
             `;
 
             if (!isAdmin && !isPosted) {
-                content += `<div class="py-40 text-center bg-white rounded-[3rem] border-2 border-slate-100 shadow-sm font-sans text-left font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><div class="bg-slate-50 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 font-sans font-sans font-sans font-sans font-sans"><i data-lucide="lock" class="text-slate-200" size="48"></i></div><h3 class="text-xl font-black text-slate-400 uppercase tracking-widest text-slate-300 font-sans font-sans font-sans font-sans font-sans">Period Locked</h3><p class="text-sm text-slate-400 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Waiting for administrative sync for ${state.selectedMonth}.</p></div>`;
+                content += `<div class="py-40 text-center bg-white rounded-[3rem] border-2 border-slate-100 shadow-sm font-sans text-left font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><div class="bg-slate-50 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 font-sans"><i data-lucide="lock" class="text-slate-200" size="48"></i></div><h3 class="text-xl font-black text-slate-400 uppercase tracking-widest text-slate-300 font-sans font-sans font-sans font-sans font-sans">Period Locked</h3><p class="text-sm text-slate-400 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Waiting for administrative sync for ${state.selectedMonth}.</p></div>`;
             } else {
                 content += `
                     <div class="overflow-x-auto rounded-[2rem] bg-white border shadow-xl font-sans text-left font-sans font-sans font-sans font-sans">
@@ -386,7 +385,6 @@
             const emp = state.employees.find(e => String(e.id) === String(id));
             if (!emp) return;
             const payload = {
-                ...emp,
                 basic_salary: cleanNumber(document.getElementById('edit-basic').value),
                 invigilation: cleanNumber(document.getElementById('edit-invig').value),
                 t_payment: cleanNumber(document.getElementById('edit-tpay').value),
@@ -571,7 +569,7 @@
             lucide.createIcons();
         }
 
-        // --- STAFF HUB (WOP (Without Pay) Replacement & Edit Fix) ---
+        // --- STAFF HUB (Edit Fix & WOP Label) ---
         function renderDirectory() {
             const container = document.getElementById('view-container');
             const isAdmin = state.user && String(state.user.role).toLowerCase() === 'admin';
@@ -621,15 +619,15 @@
             area.innerHTML = `
                 <div class="bg-white p-8 rounded-[2rem] border-2 border-green-100 animate-slide-up mb-8 shadow-xl text-left font-sans">
                     <form onsubmit="handleStaffSubmit(event)" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 font-sans text-left font-sans font-sans font-sans">
-                        <div class="text-left font-sans font-sans font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 block font-sans font-sans font-sans">Staff ID</label><input type="text" id="s-id" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 uppercase text-left font-sans text-slate-800 font-sans font-sans font-sans font-sans" value="${emp ? emp.id : ''}" ${emp ? 'readonly' : 'required'}></div>
-                        <div class="text-left font-sans font-sans font-sans font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 block font-sans font-sans font-sans font-sans font-sans">Name</label><input type="text" id="s-name" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 text-left font-sans text-slate-800 font-sans font-sans font-sans font-sans" value="${emp ? emp.name : ''}" required></div>
-                        <div class="text-left font-sans font-sans font-sans font-sans font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 block font-sans font-sans font-sans font-sans font-sans font-sans">Email</label><input type="email" id="s-email" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 text-left font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans" value="${emp ? emp.email : ''}" required></div>
-                        <div class="text-left font-sans font-sans font-sans font-sans font-sans font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 block font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Password</label><input type="text" id="s-pass" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 text-left font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans" value="${emp ? emp.password : ''}" required></div>
-                        <div class="text-left font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 block font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Role</label><select id="s-role" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 text-slate-800 text-left font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><option value="employee" ${emp?.role==='employee'?'selected':''}>Employee</option><option value="admin" ${emp?.role==='admin'?'selected':''}>Admin</option></select></div>
-                        <div class="text-left font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 block font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Annual Bal</label><input type="number" id="s-leave-annual" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 text-left font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans" value="${emp ? emp.leave_annual : '14'}"></div>
-                        <div class="text-left font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 block font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">WOP Bal</label><input type="number" id="s-leave-casual" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 text-left font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans" value="${emp ? emp.leave_casual : '10'}"></div>
-                        <div class="text-left font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 block font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Opening Loan</label><input type="number" id="s-loan-open" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 text-left font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans" value="${emp ? (emp.loan_opening_balance || 0) : '0'}"></div>
-                        <div class="md:col-span-2 lg:col-span-4 flex justify-end gap-3 pt-4 border-t font-sans"><button type="button" onclick="toggleStaffForm()" class="px-6 py-2 text-slate-400 font-bold uppercase text-xs font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Cancel</button><button type="submit" class="bg-green-700 text-white px-10 py-4 rounded-xl font-black uppercase text-xs shadow-lg hover:bg-green-800 transition-all text-left font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">${emp ? 'Sync changes' : 'Create identity'}</button></div>
+                        <div class="text-left font-sans font-sans font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 block font-sans font-sans font-sans">Staff ID</label><input type="text" id="s-id" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 uppercase text-left font-sans" value="${emp ? emp.id : ''}" ${emp ? 'readonly' : 'required'}></div>
+                        <div class="text-left font-sans font-sans font-sans font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 block font-sans font-sans font-sans font-sans">Name</label><input type="text" id="s-name" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 text-left font-sans" value="${emp ? emp.name : ''}" required></div>
+                        <div class="text-left font-sans font-sans font-sans font-sans font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 block font-sans font-sans font-sans font-sans font-sans">Email</label><input type="email" id="s-email" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 text-left font-sans" value="${emp ? emp.email : ''}" required></div>
+                        <div class="text-left font-sans font-sans font-sans font-sans font-sans font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 block font-sans font-sans font-sans font-sans font-sans font-sans">Password</label><input type="text" id="s-pass" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 text-left placeholder="••••••••" value="${emp ? emp.password : ''}" required></div>
+                        <div class="text-left font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 block font-sans">Role</label><select id="s-role" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 text-slate-800 text-left font-sans"><option value="employee" ${emp?.role==='employee'?'selected':''}>Employee</option><option value="admin" ${emp?.role==='admin'?'selected':''}>Admin</option></select></div>
+                        <div class="text-left font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 block font-sans">Annual Bal</label><input type="number" id="s-leave-annual" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 text-left font-sans" value="${emp ? emp.leave_annual : '14'}"></div>
+                        <div class="text-left font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 block font-sans text-red-500 font-bold">WOP Bal</label><input type="number" id="s-leave-casual" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 text-left font-sans" value="${emp ? emp.leave_casual : '10'}"></div>
+                        <div class="text-left font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 block font-sans">Opening Loan</label><input type="number" id="s-loan-open" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 text-left" value="${emp ? (emp.loan_opening_balance || 0) : '0'}"></div>
+                        <div class="md:col-span-2 lg:col-span-4 flex justify-end gap-3 pt-4 border-t"><button type="button" onclick="toggleStaffForm()" class="px-6 py-2 text-slate-400 font-bold uppercase text-xs font-sans font-sans">Cancel</button><button type="submit" class="bg-green-700 text-white px-10 py-4 rounded-xl font-black uppercase text-xs shadow-lg hover:bg-green-800 transition-all text-left font-sans font-sans font-sans">${emp ? 'Sync changes' : 'Create identity'}</button></div>
                     </form>
                 </div>`;
         }
@@ -648,27 +646,72 @@
             
             const method = state.editingMemberId ? 'PUT' : 'POST';
             const url = state.editingMemberId ? `${API_BASE}/employees/${state.editingMemberId}` : `${API_BASE}/employees`;
-            
-            // If POST, we must include the ID
             if (!state.editingMemberId) payload.id = document.getElementById('s-id').value.toUpperCase();
 
             const res = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
             if (res.ok) { 
-                notify(state.editingMemberId ? "Identity Synchronized." : "Identity Initialized & Welcome Email Sent."); 
+                notify(state.editingMemberId ? "Identity Synchronized." : "Identity Created & Welcome Email Sent."); 
                 state.editingMemberId = null;
                 document.getElementById('staff-form-area').innerHTML = '';
                 await syncData(); renderDirectory(); 
-            } else {
-                notify("Matrix Sync Failure.");
-            }
+            } else notify("Matrix Sync Failure. Port 5050?");
         }
 
         async function deleteStaff(id) {
-            if(!confirm(`DANGER: Wipe identity ${id} from system?`)) return;
+            if(!confirm(`DANGER: Wipe identity ${id} and all related logs?`)) return;
             try {
                 const res = await fetch(`${API_BASE}/employees/${id}`, { method: 'DELETE' });
                 if(res.ok) { notify("Identity Purged."); await syncData(); renderDirectory(); }
             } catch(e) { alert("Matrix Purge Failure."); }
+        }
+
+        // --- LOANS HUB ---
+        function renderLoans() {
+            const container = document.getElementById('view-container');
+            const targetId = (state.user.role === 'admin' && state.selectedAdminEmployeeId) ? state.selectedAdminEmployeeId : state.user.id;
+            const targetUser = state.employees.find(e => e.id === targetId) || state.user;
+            
+            const opBal = cleanNumber(targetUser.loan_opening_balance);
+            const ded = cleanNumber(targetUser.loan_deduction);
+            const currentBal = opBal - ded;
+
+            container.innerHTML = `
+                <div class="animate-fade-in space-y-8 font-sans text-left text-slate-800">
+                    <div class="flex bg-slate-200 p-1.5 rounded-2xl max-w-xs mx-auto mb-10 shadow-inner">
+                        <button onclick="state.loanTab='apply'; renderLoans()" class="flex-1 py-2.5 text-[10px] font-black rounded-xl uppercase transition-all ${state.loanTab === 'apply' ? 'bg-white text-green-700 shadow-sm' : 'text-slate-500'}">Apply</button>
+                        <button onclick="state.loanTab='history'; renderLoans()" class="flex-1 py-2.5 text-[10px] font-black rounded-xl uppercase transition-all ${state.loanTab === 'history' ? 'bg-white text-green-700 shadow-sm' : 'text-slate-500'}">History</button>
+                    </div>
+
+                    ${state.loanTab === 'apply' ? `
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+                            <div class="bg-white p-8 rounded-[3rem] shadow-2xl border-2 border-slate-50 animate-slide-up">
+                                <h3 class="font-black text-xl mb-6 uppercase tracking-tight">Loan Application</h3>
+                                <form onsubmit="handleLoanApply(event)" class="space-y-6">
+                                    <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2">Amount (Rs.)</label><input type="number" id="ln-amt" class="w-full p-4 rounded-xl border-2 font-black bg-slate-50" placeholder="0.00" required></div>
+                                    <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2">Purpose</label><textarea id="ln-rsn" class="w-full p-4 rounded-xl border-2 font-bold h-24 bg-slate-50" placeholder="Reason for loan..." required></textarea></div>
+                                    <button type="submit" class="w-full py-5 bg-green-700 text-white font-black rounded-2xl uppercase tracking-widest shadow-xl">Submit Request</button>
+                                </form>
+                            </div>
+                            <div class="space-y-6">
+                                <div class="bg-white p-8 rounded-[3rem] border-2 shadow-sm text-left">
+                                    <p class="text-[10px] font-black text-slate-400 uppercase">Identity Opening Balance</p>
+                                    <p class="text-4xl font-black mt-2 font-mono">Rs. ${opBal.toLocaleString()}</p>
+                                </div>
+                                <div class="bg-red-50 p-8 rounded-[3rem] border-2 border-red-100 text-left">
+                                    <p class="text-[10px] font-black text-red-400 uppercase">Current Outstanding Matrix</p>
+                                    <p class="text-4xl font-black mt-2 font-mono text-red-600">Rs. ${currentBal.toLocaleString()}</p>
+                                </div>
+                            </div>
+                        </div>` : `
+                        <div class="py-20 text-center text-slate-300 font-black uppercase tracking-widest">No Recent Loan Requests Matrix found</div>
+                    `}
+                </div>`;
+        }
+
+        async function handleLoanApply(e) {
+            e.preventDefault();
+            notify("Processing Request Matrix...");
+            setTimeout(() => { notify("Loan Application Sent for review."); state.loanTab = 'history'; renderLoans(); }, 1000);
         }
 
         // --- HANDLERS (MISC) ---
@@ -729,7 +772,7 @@
         function focusMap(lat, lng, type, time) {
             if (!state.map || !lat || !lng) return;
             state.map.setView([lat, lng], 17);
-            L.marker([lat, lng]).addTo(state.map).bindPopup(`<p class="font-black uppercase text-[10px] font-sans">${type}<br/>${time}</p>`).openPopup();
+            L.marker([lat, lng]).addTo(state.map).bindPopup(`<p class="font-black uppercase text-[10px] font-sans font-sans font-sans">${type}<br/>${time}</p>`).openPopup();
             window.scrollTo({ top: 150, behavior: 'smooth' });
         }
 
@@ -785,27 +828,68 @@
             document.body.appendChild(link); link.click(); document.body.removeChild(link);
         }
 
+        // --- LEAVES HUB ---
+        function renderLeaves() {
+            const container = document.getElementById('view-container');
+            const targetId = (state.user.role === 'admin' && state.selectedAdminEmployeeId) ? state.selectedAdminEmployeeId : state.user.id;
+            const targetUser = state.employees.find(e => e.id === targetId) || state.user;
+            const userLeaves = (state.leaves || []).sort((a, b) => new Date(b.start_date) - new Date(a.start_date));
+            
+            container.innerHTML = `
+                <div class="animate-fade-in space-y-8 font-sans text-left text-slate-800">
+                    <div class="flex bg-slate-200 p-1.5 rounded-2xl max-w-xs mx-auto mb-10 shadow-inner font-sans">
+                        <button onclick="state.leaveTab='apply'; renderLeaves()" class="flex-1 py-2.5 text-[10px] font-black rounded-xl uppercase transition-all ${state.leaveTab === 'apply' ? 'bg-white text-green-700 shadow-sm' : 'text-slate-500'}">Apply</button>
+                        <button onclick="state.leaveTab='history'; renderLeaves()" class="flex-1 py-2.5 text-[10px] font-black rounded-xl uppercase transition-all ${state.leaveTab === 'history' ? 'bg-white text-green-700 shadow-sm' : 'text-slate-500'}">History</button>
+                    </div>
+                    ${state.leaveTab === 'apply' ? `
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+                            <div class="bg-white p-8 rounded-[3rem] shadow-2xl border-2 border-slate-50 animate-slide-up text-left">
+                                <h3 class="font-black text-xl mb-6 uppercase tracking-tight">Identity Request</h3>
+                                <form onsubmit="handleLeaveApply(event)" class="space-y-6 text-left">
+                                    <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2">Type</label><select id="lv-type" class="w-full p-4 rounded-xl border-2 font-black bg-slate-50 outline-none focus:bg-white focus:border-green-500 font-sans"><option>Annual Leave</option><option>WOP (Without Pay)</option><option>Sick Leave</option></select></div>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2">Start Date</label><input type="date" id="lv-date" class="w-full p-4 rounded-xl border-2 font-black bg-slate-50 outline-none focus:bg-white" required></div>
+                                        <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2">Days</label><input type="number" id="lv-days" class="w-full p-4 rounded-xl border-2 font-black bg-slate-50 outline-none focus:bg-white" placeholder="Qty" required></div>
+                                    </div>
+                                    <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2">Reason</label><textarea id="lv-rsn" class="w-full p-4 rounded-xl border-2 font-bold h-24 bg-slate-50 outline-none focus:bg-white" placeholder="..." required></textarea></div>
+                                    <button type="submit" class="w-full py-5 bg-green-700 text-white font-black rounded-2xl uppercase tracking-widest shadow-xl">Transmit application</button>
+                                </form>
+                            </div>
+                            <div class="space-y-6">
+                                <div class="bg-green-700 p-8 rounded-[3rem] text-white shadow-xl text-left"><p class="text-[10px] font-black uppercase opacity-60 font-sans">Annual Balance</p><p class="text-4xl font-black mt-2 font-mono font-sans">Rs. ${targetUser.leave_annual || 0} Days</p></div>
+                                <div class="bg-white p-8 rounded-[3rem] border-2 shadow-sm text-left"><p class="text-[10px] font-black text-slate-400 uppercase font-sans">WOP Balance</p><p class="text-4xl font-black mt-2 font-mono text-slate-800 font-sans">${targetUser.leave_casual || 0} Days</p></div>
+                            </div>
+                        </div>` : `
+                        <div class="space-y-4 max-w-2xl mx-auto">
+                            ${userLeaves.map(l => `
+                                <div class="bg-white p-6 rounded-2xl border-2 flex justify-between items-center text-left text-slate-800 font-sans">
+                                    <div><h4 class="font-black uppercase">${l.leave_type}</h4><p class="text-xs text-slate-400 font-bold uppercase mt-1">${formatDate(l.start_date)} • ${l.days} Days</p></div>
+                                    <span class="text-[10px] font-black uppercase px-3 py-1 rounded-lg ${l.status === 'Approved' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}">${l.status}</span>
+                                </div>`).join('')}
+                        </div>`}
+                </div>`;
+        }
+
+        async function handleLeaveApply(e) {
+            e.preventDefault();
+            const payload = { employeeId: state.user.id, type: document.getElementById('lv-type').value, startDate: document.getElementById('lv-date').value, days: document.getElementById('lv-days').value, reason: document.getElementById('lv-rsn').value };
+            const res = await fetch(`${API_BASE}/leaves`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+            if (res.ok) { notify("Application Logged."); await syncData(); state.leaveTab = 'history'; renderLeaves(); }
+        }
+
         async function togglePublish(currentlyPosted) {
             const method = currentlyPosted ? 'DELETE' : 'POST';
             const res = await fetch(`${API_BASE}/payroll-post${currentlyPosted ? '/' + state.selectedMonth : ''}`, { method: method, headers: {'Content-Type':'application/json'}, body: currentlyPosted ? null : JSON.stringify({ month: state.selectedMonth }) });
             if (res.ok) { await syncData(); renderPayroll(); }
         }
 
-        function renderLoans() {
-            const container = document.getElementById('view-container');
-            container.innerHTML = `<div class="py-40 text-center font-bold text-slate-300 uppercase tracking-widest font-sans font-sans font-sans">Transmitting Loans Hub...</div>`;
-        }
         function renderDiscussion() {
             const container = document.getElementById('view-container');
-            container.innerHTML = `<div class="py-40 text-center font-bold text-slate-300 uppercase tracking-widest font-sans font-sans font-sans font-sans font-sans">Board Synchronizing...</div>`;
+            container.innerHTML = `<div class="py-40 text-center font-bold text-slate-300 uppercase tracking-widest font-sans font-sans font-sans">Board Synchronizing...</div>`;
         }
         function renderSettings() {
              const container = document.getElementById('view-container');
              container.innerHTML = `<div class="py-40 text-center font-bold text-slate-300 uppercase tracking-widest font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Identity Security Active</div>`;
-        }
-        function renderLeaves() {
-            const container = document.getElementById('view-container');
-            container.innerHTML = `<div class="py-40 text-center font-bold text-slate-300 uppercase tracking-widest font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Matrix Leaves Link Active...</div>`;
         }
 
         document.getElementById('login-form').addEventListener('submit', async (e) => {
