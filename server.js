@@ -1,220 +1,149 @@
 /**
- * LSAFHR MANAGEMENT SYSTEM - COMPLETE BACKEND
- * Port: 5050 | Project: LSAFHR
- * Features: Auto-Table Creation, Staff Hub, Attendance, Payroll, Loans, Leaves, Board
+ * LSAF-HR MANAGEMENT SYSTEM - BACKEND SERVER
+ * Port: 5050
+ * Features: Staff Hub, PKT Attendance, Payroll Posting, Loan Management
  */
 
+require('dotenv').config();
 const express = require('express');
 const mysql = require('mysql2');
 const cors = require('cors');
 
 const app = express();
-
-// High-compatibility CORS for live server environments
-app.use(cors({ origin: '*' }));
+app.use(cors());
 app.use(express.json());
 
-// --- DATABASE CONFIGURATION ---
-// IMPORTANT: If your old data is not showing, it means the 'database' name below 
-// might be different from your previous setup (e.g., 'nexus_db' or 'lsaf_db').
-const dbConfig = {
-    host: 'localhost',
-    user: 'root',
-    password: '', // If you set a password in aaPanel, enter it here
-    database: 'hr_management', 
+// Database Connection
+const db = mysql.createPool({
+    host: process.env.DB_HOST || 'localhost',
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD || '', 
+    database: process.env.DB_NAME || 'hr_management',
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0
+});
+
+// --- DATABASE AUTO-INITIALIZATION ---
+const initDB = () => {
+    console.log("LSAFHR: Checking Database Integrity...");
+
+    // Migration: Ensure necessary columns exist for LSAFHR features
+    // This allows old databases to accept new data without errors
+    const migrations = [
+        `ALTER TABLE employees ADD COLUMN IF NOT EXISTS loan_opening_balance DECIMAL(15,2) DEFAULT 0`,
+        `ALTER TABLE employees ADD COLUMN IF NOT EXISTS eidi DECIMAL(15,2) DEFAULT 0`,
+        `ALTER TABLE employees ADD COLUMN IF NOT EXISTS insurance DECIMAL(15,2) DEFAULT 0`,
+        `ALTER TABLE employees ADD COLUMN IF NOT EXISTS others_deduction DECIMAL(15,2) DEFAULT 0`,
+        `ALTER TABLE employees ADD COLUMN IF NOT EXISTS extra_leaves_deduction DECIMAL(15,2) DEFAULT 0`
+    ];
+
+    migrations.forEach(sql => {
+        db.query(sql, (err) => {
+            if (err) {
+                // If the error is 'Duplicate column', we can ignore it.
+                // Otherwise, we log it for debugging.
+                if (err.code !== 'ER_DUP_FIELDNAME') {
+                    console.log("Migration Note:", err.message);
+                }
+            }
+        });
+    });
+
+    // Create Payroll Posts table if it's missing
+    db.query(`
+        CREATE TABLE IF NOT EXISTS payroll_posts (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            month_year VARCHAR(10) UNIQUE,
+            posted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    `, (err) => {
+        if (err) console.error("Database Init Error (payroll_posts):", err.message);
+        else console.log("Database Sync: LSAFHR Tables ready.");
+    });
 };
+initDB();
 
-const db = mysql.createPool(dbConfig);
-
-/**
- * --- DATABASE INITIALIZATION & MIGRATIONS ---
- */
-const initSystem = async () => {
-    console.log("LSAFHR: Initializing Core Matrix...");
-
-    // 0. Test Connection First
-    try {
-        await db.promise().query("SELECT 1");
-        console.log("LSAFHR: Database Connection Successful.");
-    } catch (err) {
-        console.error("CRITICAL: Database connection failed! Data will not show.");
-        console.error("Error Detail:", err.message);
-        return;
-    }
-
-    // 1. Table Schema Definitions
-    const tables = [
-        `CREATE TABLE IF NOT EXISTS employees (
-            id VARCHAR(50) PRIMARY KEY,
-            name VARCHAR(255) NOT NULL,
-            email VARCHAR(255),
-            password VARCHAR(255),
-            role VARCHAR(50) DEFAULT 'employee',
-            basic_salary DECIMAL(15,2) DEFAULT 0,
-            invigilation DECIMAL(15,2) DEFAULT 0,
-            t_payment DECIMAL(15,2) DEFAULT 0,
-            increment DECIMAL(15,2) DEFAULT 0,
-            extra_leaves_deduction DECIMAL(15,2) DEFAULT 0,
-            tax DECIMAL(15,2) DEFAULT 0,
-            loan_deduction DECIMAL(15,2) DEFAULT 0,
-            insurance DECIMAL(15,2) DEFAULT 0,
-            others_deduction DECIMAL(15,2) DEFAULT 0,
-            leave_annual INT DEFAULT 14,
-            leave_casual INT DEFAULT 10,
-            loan_opening_balance DECIMAL(15,2) DEFAULT 0,
-            eidi DECIMAL(15,2) DEFAULT 0
-        )`,
-        `CREATE TABLE IF NOT EXISTS attendance (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            employee_id VARCHAR(50),
-            type VARCHAR(20),
-            date_str DATE,
-            time_str VARCHAR(20),
-            latitude VARCHAR(50),
-            longitude VARCHAR(50)
-        )`,
-        `CREATE TABLE IF NOT EXISTS payroll_posts (
-            month_year VARCHAR(10) PRIMARY KEY
-        )`,
-        `CREATE TABLE IF NOT EXISTS loans (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            employee_id VARCHAR(50),
-            total_amount DECIMAL(15,2),
-            reason TEXT,
-            status VARCHAR(20) DEFAULT 'Pending',
-            date_granted TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )`,
-        `CREATE TABLE IF NOT EXISTS leaves (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            employee_id VARCHAR(50),
-            leave_type VARCHAR(50),
-            start_date DATE,
-            days INT,
-            reason TEXT,
-            status VARCHAR(20) DEFAULT 'Pending'
-        )`,
-        `CREATE TABLE IF NOT EXISTS discussions (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            title VARCHAR(255),
-            message TEXT,
-            senderName VARCHAR(255),
-            senderId VARCHAR(50),
-            date DATETIME
-        )`
-    ];
-
-    for (let sql of tables) {
-        await db.promise().query(sql).catch(e => console.log("Init Note:", e.message));
-    }
-
-    // 2. Column Migrations
-    const columns = [
-        'loan_opening_balance DECIMAL(15,2) DEFAULT 0',
-        'eidi DECIMAL(15,2) DEFAULT 0',
-        'insurance DECIMAL(15,2) DEFAULT 0',
-        'others_deduction DECIMAL(15,2) DEFAULT 0',
-        'extra_leaves_deduction DECIMAL(15,2) DEFAULT 0'
-    ];
-
-    for (let col of columns) {
-        try {
-            await db.promise().query(`ALTER TABLE employees ADD COLUMN ${col}`);
-        } catch (e) {
-            // Field already exists
-        }
-    }
-
-    // 3. DATA VERIFIER LOG (Check if old data is actually seen by the code)
-    try {
-        const [empCount] = await db.promise().query("SELECT COUNT(*) as count FROM employees");
-        const [loanCount] = await db.promise().query("SELECT COUNT(*) as count FROM loans");
-        console.log(`LSAFHR Status: Found ${empCount[0].count} employees in database '${dbConfig.database}'.`);
-        console.log(`LSAFHR Status: Found ${loanCount[0].count} loan records.`);
-        if(empCount[0].count === 0) {
-            console.warn("WARNING: No data found. You might be connected to an empty database.");
-        }
-    } catch (e) {
-        console.error("Verification Query Failed:", e.message);
-    }
-
-    console.log("LSAFHR: Database Schema Synchronized.");
-};
-
-initSystem();
-
-// --- EMPLOYEE / STAFF HUB ROUTES ---
-
-app.get('/api/employees', (req, res) => {
-    db.query('SELECT * FROM employees ORDER BY id ASC', (err, results) => {
-        if (err) return res.status(500).json({ error: "Fetch Error", details: err.message });
-        res.json(results || []);
-    });
-});
-
-app.post('/api/employees', (req, res) => {
-    db.query('INSERT INTO employees SET ?', req.body, (err) => {
-        if (err) return res.status(500).json({ error: "Create Error", details: err.message });
-        res.json({ success: true });
-    });
-});
-
-app.put('/api/employees/:id', (req, res) => {
-    const data = req.body;
-    const fields = [
-        'name', 'role', 'email', 'password', 'basic_salary', 'invigilation', 
-        't_payment', 'increment', 'extra_leaves_deduction', 'tax', 
-        'loan_deduction', 'insurance', 'others_deduction', 
-        'leave_annual', 'leave_casual', 'loan_opening_balance', 'eidi'
-    ];
-    const updates = [];
-    const values = [];
-    fields.forEach(f => {
-        if (data[f] !== undefined) {
-            updates.push(`${f} = ?`);
-            values.push(data[f]);
-        }
-    });
-    if (updates.length === 0) return res.json({ success: true, message: "No data provided" });
-    db.query(`UPDATE employees SET ${updates.join(', ')} WHERE id = ?`, [...values, req.params.id], (err) => {
-        if (err) return res.status(500).json({ error: "Update Error", details: err.message });
-        res.json({ success: true });
-    });
-});
-
-app.delete('/api/employees/:id', (req, res) => {
-    db.query('DELETE FROM employees WHERE id = ?', [req.params.id], (err) => {
-        if (err) return res.status(500).json({ error: "Delete Error", details: err.message });
-        res.json({ success: true });
-    });
-});
-
-// --- PAYROLL POSTING ---
+// --- PAYROLL POSTING ENDPOINTS ---
 
 app.get('/api/payroll-posted', (req, res) => {
     db.query('SELECT month_year FROM payroll_posts', (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.json((results || []).map(r => r.month_year));
+        res.json(results.map(r => r.month_year));
     });
 });
 
 app.post('/api/payroll-post', (req, res) => {
-    db.query('INSERT IGNORE INTO payroll_posts (month_year) VALUES (?)', [req.body.month], (err) => {
+    const { month } = req.body;
+    if (!month) return res.status(400).json({ error: "Month is required" });
+    
+    db.query('INSERT IGNORE INTO payroll_posts (month_year) VALUES (?)', [month], (err) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.json({ success: true });
+        res.json({ success: true, message: `Month ${month} published.` });
     });
 });
 
 app.delete('/api/payroll-post/:month', (req, res) => {
     db.query('DELETE FROM payroll_posts WHERE month_year = ?', [req.params.month], (err) => {
         if (err) return res.status(500).json({ error: err.message });
+        res.json({ success: true, message: `Month ${req.params.month} unpublished.` });
+    });
+});
+
+// --- EMPLOYEE HUB ROUTES ---
+
+app.get('/api/employees', (req, res) => {
+    db.query('SELECT * FROM employees ORDER BY id ASC', (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(results || []);
+    });
+});
+
+app.post('/api/employees', (req, res) => {
+    db.query('INSERT INTO employees SET ?', req.body, (err) => {
+        if (err) return res.status(500).json({ error: err.message });
         res.json({ success: true });
     });
 });
 
-// --- ATTENDANCE ---
+app.put('/api/employees/:id', (req, res) => {
+    const data = req.body;
+    
+    // Explicitly define all fields that can be updated for Staff Hub and Salary Hub
+    const fields = [
+        'name', 'role', 'email', 'password', 
+        'basic_salary', 'invigilation', 't_payment', 'increment', 'eidi',
+        'extra_leaves_deduction', 'tax', 'loan_deduction', 'insurance', 'others_deduction',
+        'leave_annual', 'leave_casual', 'loan_opening_balance'
+    ];
+    
+    const updates = [];
+    const values = [];
+    
+    fields.forEach(field => {
+        if (data[field] !== undefined) {
+            updates.push(`${field} = ?`);
+            values.push(data[field]);
+        }
+    });
+
+    if (updates.length === 0) return res.json({ message: "No fields to update" });
+
+    db.query(`UPDATE employees SET ${updates.join(', ')} WHERE id = ?`, [...values, req.params.id], (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (results.affectedRows === 0) return res.status(404).json({ error: "Employee not found" });
+        res.json({ success: true });
+    });
+});
+
+app.delete('/api/employees/:id', (req, res) => {
+    db.query('DELETE FROM employees WHERE id = ?', [req.params.id], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ success: true });
+    });
+});
+
+// --- ATTENDANCE ROUTES ---
 
 app.get('/api/attendance/:id', (req, res) => {
     db.query('SELECT * FROM attendance WHERE employee_id = ? ORDER BY date_str DESC', [req.params.id], (err, results) => {
@@ -230,7 +159,7 @@ app.post('/api/attendance', (req, res) => {
     });
 });
 
-// --- LOANS ---
+// --- LOAN ROUTES ---
 
 app.get('/api/loans', (req, res) => {
     db.query('SELECT l.*, e.name as employee_name FROM loans l JOIN employees e ON l.employee_id = e.id ORDER BY l.id DESC', (err, results) => {
@@ -241,49 +170,18 @@ app.get('/api/loans', (req, res) => {
 
 app.post('/api/loans', (req, res) => {
     const { employeeId, totalAmount, reason } = req.body;
-    db.query('INSERT INTO loans (employee_id, total_amount, reason) VALUES (?, ?, ?)', [employeeId, totalAmount, reason], (err) => {
+    db.query('INSERT INTO loans (employee_id, total_amount, reason, status, date_granted) VALUES (?, ?, ?, "Pending", NOW())', 
+    [employeeId, totalAmount, reason], (err) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json({ success: true });
     });
 });
 
-// --- LEAVES ---
-
-app.get('/api/leaves', (req, res) => {
-    db.query('SELECT lv.*, e.name as employee_name FROM leaves lv JOIN employees e ON lv.employee_id = e.id ORDER BY lv.id DESC', (err, results) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json(results || []);
-    });
-});
-
-app.get('/api/leaves/:id', (req, res) => {
-    db.query('SELECT * FROM leaves WHERE employee_id = ? ORDER BY start_date DESC', [req.params.id], (err, results) => {
-        if (err) return res.status(500).json(err);
-        res.json(results || []);
-    });
-});
-
-app.post('/api/leaves', (req, res) => {
-    const { employeeId, type, startDate, days, reason } = req.body;
-    db.query('INSERT INTO leaves (employee_id, leave_type, start_date, days, reason) VALUES (?, ?, ?, ?, ?)', 
-    [employeeId, type, startDate, days, reason], (err) => {
-        if (err) return res.status(500).json(err);
-        res.json({ success: true });
-    });
-});
-
-app.put('/api/leaves/:id', (req, res) => {
-    db.query('UPDATE leaves SET status = ? WHERE id = ?', [req.body.status, req.params.id], (err) => {
-        if (err) return res.status(500).json(err);
-        res.json({ success: true });
-    });
-});
-
-// --- DISCUSSIONS / BOARD ---
+// --- DISCUSSIONS (BOARD) ---
 
 app.get('/api/discussions', (req, res) => {
     db.query('SELECT * FROM discussions ORDER BY id DESC', (err, results) => {
-        if (err) return res.status(500).json(err);
+        if (err) return res.status(500).json({ error: err.message });
         res.json(results || []);
     });
 });
@@ -292,12 +190,12 @@ app.post('/api/discussions', (req, res) => {
     const { title, message, senderName, senderId, date } = req.body;
     db.query('INSERT INTO discussions (title, message, senderName, senderId, date) VALUES (?, ?, ?, ?, ?)', 
     [title, message, senderName, senderId, date], (err) => {
-        if (err) return res.status(500).json(err);
+        if (err) return res.status(500).json({ error: err.message });
         res.json({ success: true });
     });
 });
 
-// START SERVER
+// Start Server
 const PORT = 5050;
 app.listen(PORT, () => {
     console.log(`-------------------------------------------`);
