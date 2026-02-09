@@ -42,7 +42,7 @@
             <div class="text-center mb-10">
                 <img src="UOL-Green-V1.png" alt="Logo" class="h-20 mx-auto mb-4 object-contain" onerror="this.src='https://placehold.co/150x150?text=LSAFHR'">
                 <h1 class="text-2xl font-black text-slate-800 leading-tight uppercase tracking-widest leading-none font-sans">Lahore School of Accountancy</h1>
-                <p class="text-slate-400 text-xs font-bold mt-2 uppercase tracking-widest font-sans">Administrative Hub v6.7.5</p>
+                <p class="text-slate-400 text-xs font-bold mt-2 uppercase tracking-widest font-sans">Administrative Hub v6.8.0</p>
             </div>
             <form id="login-form" class="space-y-5 text-left font-sans">
                 <div class="space-y-1">
@@ -106,7 +106,8 @@
             payrollPostedMonths: [], currentTab: 'dashboard', 
             selectedMonth: new Date().toISOString().slice(0, 7),
             selectedAttendanceMonth: new Date().toISOString().slice(0, 7),
-            editingSalaryId: null, editingMemberId: null, map: null, leaveTab: 'apply'
+            selectedAdminEmployeeId: null,
+            editingSalaryId: null, editingMemberId: null, map: null
         };
 
         const NAV_ITEMS = [
@@ -115,7 +116,6 @@
             { id: 'payroll', label: 'Salary Hub', icon: 'dollar-sign', admin: false },
             { id: 'directory', label: 'Staff Hub', icon: 'users', admin: true },
             { id: 'loans', label: 'Loans', icon: 'wallet', admin: false },
-            { id: 'leaves', label: 'Leaves', icon: 'calendar', admin: false },
             { id: 'discussion', label: 'Board', icon: 'message-square', admin: false },
             { id: 'settings', label: 'Security', icon: 'shield-check', admin: false }
         ];
@@ -132,16 +132,21 @@
         function getInitial(name) { return name ? name.charAt(0).toUpperCase() : '?'; }
         function formatDate(d) { return d ? new Date(d).toLocaleDateString() : 'N/A'; }
 
-        function calculateSalaryMetrics(emp) {
-            if (!emp) return { totalAdd: 0, totalSub: 0, netPaid: 0 };
-            const basic = cleanNumber(emp.basic_salary);
-            const invig = cleanNumber(emp.invigilation);
-            const tpay = cleanNumber(emp.t_payment);
-            const incr = cleanNumber(emp.increment);
-            const eidi = cleanNumber(emp.eidi);
-            const totalAdd = basic + invig + tpay + incr + eidi;
-            const sub = cleanNumber(emp.extra_leaves_deduction) + cleanNumber(emp.tax) + cleanNumber(emp.loan_deduction) + cleanNumber(emp.insurance) + cleanNumber(emp.others_deduction);
-            return { totalAdd, totalSub: sub, netPaid: totalAdd - sub };
+        // Time difference calculator
+        function calculateWorkTime(inTime, outTime) {
+            if (!inTime || !outTime) return "0h 0m";
+            const parseTime = (tStr) => {
+                const [time, modifier] = tStr.split(' ');
+                let [hours, minutes] = time.split(':');
+                if (hours === '12') hours = '00';
+                if (modifier === 'PM') hours = parseInt(hours, 10) + 12;
+                return new Date(2000, 0, 1, hours, minutes);
+            };
+            const diff = parseTime(outTime) - parseTime(inTime);
+            if (diff < 0) return "0h 0m";
+            const h = Math.floor(diff / 3600000);
+            const m = Math.floor((diff % 3600000) / 60000);
+            return `${h}h ${m}m`;
         }
 
         async function init() {
@@ -175,10 +180,11 @@
                 if (state.user) {
                     const fresh = state.employees.find(e => String(e.id).toUpperCase() === String(state.user.id).toUpperCase());
                     if (fresh) state.user = fresh;
-                    const atRes = await fetch(`${API_BASE}/attendance/${state.user.id}`);
+                    
+                    // Fetch attendance for self OR selected employee if admin
+                    const targetId = (state.user.role === 'admin' && state.selectedAdminEmployeeId) ? state.selectedAdminEmployeeId : state.user.id;
+                    const atRes = await fetch(`${API_BASE}/attendance/${targetId}`);
                     if (atRes.ok) state.attendance = await atRes.json();
-                    const lvRes = await fetch(`${API_BASE}/leaves/${state.user.id}`);
-                    if (lvRes.ok) state.leaves = await lvRes.json();
                 }
             } catch (e) { console.warn("Matrix Sync Error."); }
         }
@@ -241,7 +247,7 @@
                         <div class="bg-green-700 p-8 rounded-[2rem] text-white shadow-xl relative overflow-hidden text-left font-sans font-sans">
                             <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
                             <p class="text-[10px] font-black uppercase opacity-60">Status</p>
-                            <p class="text-3xl font-black mt-2 uppercase tracking-tighter font-sans">ACTIVE SESSION</p>
+                            <p class="text-3xl font-black mt-2 uppercase tracking-tighter">ACTIVE SESSION</p>
                         </div>
                         <div class="bg-white p-8 rounded-[2rem] border shadow-sm text-left font-sans">
                             <p class="text-[10px] font-black text-slate-400 uppercase">Opening Debt Balance</p>
@@ -256,7 +262,7 @@
             `;
         }
 
-        // --- SALARY HUB VIEW ---
+        // --- SALARY HUB ---
         async function renderPayroll() {
             const container = document.getElementById('view-container');
             const isAdmin = state.user && String(state.user.role).toLowerCase() === 'admin';
@@ -292,7 +298,7 @@
                                     ${isAdmin ? `<th class="p-4 text-center font-sans font-sans font-sans font-sans font-sans font-sans">Action</th>` : ''}
                                 </tr>
                             </thead>
-                            <tbody class="divide-y font-bold font-sans text-left text-slate-800 font-sans font-sans font-sans font-sans font-sans">
+                            <tbody class="divide-y font-bold font-sans text-left text-slate-800 font-sans font-sans font-sans font-sans font-sans font-sans">
                 `;
 
                 const list = isAdmin ? state.employees : [state.employees.find(e => e.id === state.user.id) || state.user];
@@ -332,79 +338,154 @@
             container.innerHTML = content;
         }
 
-        // --- ATTENDANCE HUB VIEW ---
+        async function purgeMonthData() {
+            if (!confirm("DANGER: Wipe all financial records for this month?")) return;
+            const res = await fetch(`${API_BASE}/employees/wipe-ledger`, { method: 'POST' });
+            if (res.ok) { notify("Identity Matrix Purged."); await syncData(); renderPayroll(); setTimeout(() => location.reload(), 800); }
+            else alert("Matrix reset failed.");
+        }
+
+        async function resetIndividualSalary(id) {
+            if (!confirm("Zero out data for staff identity " + id + "?")) return;
+            const res = await fetch(`${API_BASE}/employees/reset-salary/${id}`, { method: 'POST' });
+            if (res.ok) { notify("Individual Zeroed."); await syncData(); renderPayroll(); }
+        }
+
+        async function saveSalary(id) {
+            const emp = state.employees.find(e => String(e.id) === String(id));
+            if (!emp) return;
+            const payload = {
+                ...emp,
+                basic_salary: document.getElementById('edit-basic').value,
+                invigilation: document.getElementById('edit-invig').value,
+                t_payment: document.getElementById('edit-tpay').value,
+                increment: document.getElementById('edit-incr').value,
+                tax: document.getElementById('edit-tax').value,
+                loan_deduction: document.getElementById('edit-loan').value,
+                insurance: document.getElementById('edit-ins').value
+            };
+            const res = await fetch(`${API_BASE}/employees/${id}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+            if (res.ok) { state.editingSalaryId = null; await syncData(); renderPayroll(); notify("Ledger Matrix Updated."); }
+        }
+
+        // --- ATTENDANCE HUB (V6.8.0) ---
         async function renderAttendance() {
             const container = document.getElementById('view-container');
             const isAdmin = state.user && String(state.user.role).toLowerCase() === 'admin';
             
-            const filteredLogs = (state.attendance || [])
-                .filter(l => l.date_str && l.date_str.startsWith(state.selectedAttendanceMonth))
-                .sort((a, b) => new Date(b.date_str + ' ' + b.time_str) - new Date(a.date_str + ' ' + a.time_str));
+            // 1. Group logs by date
+            const dailyLogs = {};
+            state.attendance.filter(l => l.date_str && l.date_str.startsWith(state.selectedAttendanceMonth)).forEach(l => {
+                if(!dailyLogs[l.date_str]) dailyLogs[l.date_str] = [];
+                dailyLogs[l.date_str].push(l);
+            });
+
+            const dateRows = Object.keys(dailyLogs).sort((a,b) => new Date(b) - new Date(a));
 
             container.innerHTML = `
-                <div class="animate-fade-in space-y-8 font-sans text-left text-slate-800 font-sans font-sans font-sans font-sans">
+                <div class="animate-fade-in space-y-8 font-sans text-left text-slate-800 font-sans">
                     <div class="flex flex-col md:flex-row justify-between items-center gap-4 border-b pb-4 border-slate-100">
-                        <h2 class="text-xl font-black uppercase tracking-widest text-left font-sans font-sans font-sans font-sans font-sans font-sans">Attendance Hub</h2>
-                        <div class="flex gap-2">
-                             <input type="month" value="${state.selectedAttendanceMonth}" onchange="updateAttendanceMonth(this.value)" class="p-2 border-2 rounded-xl font-black bg-white outline-none focus:border-green-500 font-sans font-sans font-sans font-sans">
-                             <button onclick="exportAttendanceCSV(false)" class="bg-green-50 text-green-700 px-6 py-2 rounded-xl font-black text-[10px] uppercase shadow-sm font-sans font-sans font-sans font-sans">Export My Logs</button>
-                             ${isAdmin ? `<button onclick="exportAttendanceCSV(true)" class="bg-slate-900 text-white px-6 py-2 rounded-xl font-black text-[10px] uppercase shadow-lg font-sans font-sans font-sans font-sans">Export All Staff Logs</button>` : ''}
+                        <h2 class="text-xl font-black uppercase tracking-widest text-left font-sans">Attendance Hub</h2>
+                        <div class="flex flex-wrap gap-2">
+                             ${isAdmin ? `
+                                <select onchange="updateAdminTarget(this.value)" class="p-2 border-2 rounded-xl font-black bg-white outline-none focus:border-green-500">
+                                    <option value="">Select Employee</option>
+                                    ${state.employees.map(e => `<option value="${e.id}" ${state.selectedAdminEmployeeId === e.id ? 'selected' : ''}>${e.name} (${e.id})</option>`).join('')}
+                                </select>
+                             ` : ''}
+                             <input type="month" value="${state.selectedAttendanceMonth}" onchange="updateAttendanceMonth(this.value)" class="p-2 border-2 rounded-xl font-black bg-white outline-none focus:border-green-500">
+                             <button onclick="exportAttendanceCSV(true)" class="bg-slate-900 text-white px-6 py-2 rounded-xl font-black text-[10px] uppercase shadow-lg font-sans">Export Master Logs</button>
                         </div>
                     </div>
 
-                    <div class="bg-white p-6 rounded-[2.5rem] border-2 shadow-sm font-sans font-sans font-sans font-sans">
+                    <div class="bg-white p-6 rounded-[2.5rem] border-2 shadow-sm font-sans">
                         <div class="flex justify-between items-center mb-4">
-                             <h3 class="font-black text-[10px] uppercase text-slate-400 tracking-widest font-sans font-sans font-sans">Location Matrix Map</h3>
-                             <span class="bg-green-100 text-green-700 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-tighter">Verified Pakistan Sync</span>
+                             <h3 class="font-black text-[10px] uppercase text-slate-400 tracking-widest">Location Matrix Map</h3>
+                             <span class="bg-green-100 text-green-700 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-tighter">Live Verification Sync</span>
                         </div>
                         <div id="attendance-map"></div>
                     </div>
 
-                    <div class="grid md:grid-cols-2 gap-6 font-sans font-sans font-sans font-sans">
-                        <div class="bg-white rounded-[2.5rem] py-12 flex flex-col items-center justify-center space-y-6 border-2 shadow-inner bg-slate-50/50 font-sans font-sans font-sans font-sans">
-                            <h3 class="text-6xl font-black text-slate-800 font-mono tracking-tighter font-sans font-sans font-sans font-sans">${getPktTime()}</h3>
-                            <p class="text-xs font-bold text-slate-400 uppercase tracking-[0.2em] font-sans font-sans font-sans font-sans font-sans font-sans">${getPktDate()}</p>
-                            <div class="w-full max-w-xs space-y-3 pt-6 font-sans text-left font-sans">
-                                <button onclick="handleClock('Clock In')" class="w-full py-5 rounded-2xl bg-green-700 text-white font-black shadow-lg hover:bg-green-800 transition-all active:scale-95 text-base font-sans font-sans font-sans font-sans font-sans">Clock In</button>
-                                <button onclick="handleClock('Clock Out')" class="w-full py-5 rounded-2xl bg-white border-2 text-slate-700 font-black hover:bg-slate-50 transition-all active:scale-95 text-base font-sans font-sans font-sans font-sans font-sans">Clock Out</button>
+                    <div class="grid md:grid-cols-2 gap-6 font-sans font-sans">
+                        <div class="bg-white rounded-[2.5rem] py-12 flex flex-col items-center justify-center space-y-6 border-2 shadow-inner bg-slate-50/50">
+                            <h3 class="text-6xl font-black text-slate-800 font-mono tracking-tighter font-sans">${getPktTime()}</h3>
+                            <p class="text-xs font-bold text-slate-400 uppercase tracking-[0.2em] font-sans">${getPktDate()}</p>
+                            <div class="w-full max-w-xs space-y-3 pt-6">
+                                <Button onClick="handleClock('Clock In')" class="w-full py-5 text-lg">Clock In</Button>
+                                <Button onClick="handleClock('Clock Out')" variant="secondary" class="w-full py-5 text-lg">Clock Out</Button>
                             </div>
                         </div>
-                        <div class="bg-white rounded-[2.5rem] p-10 border-2 text-center flex flex-col items-center justify-center font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
-                            <div class="bg-green-50 w-20 h-20 rounded-full flex items-center justify-center mb-6 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><i data-lucide="map-pin" class="text-green-600 animate-bounce"></i></div>
-                            <p class="text-xs font-black text-slate-600 uppercase tracking-widest leading-relaxed font-sans font-sans font-sans font-sans font-sans">Geofence Status: OK</p>
-                            <p class="text-[10px] text-slate-400 font-bold uppercase mt-2 font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Verification email active</p>
+                        <div class="bg-white rounded-[2.5rem] p-10 border-2 text-center flex flex-col items-center justify-center">
+                            <div class="bg-green-50 w-20 h-20 rounded-full flex items-center justify-center mb-6 font-sans"><i data-lucide="map-pin" class="text-green-600 animate-bounce"></i></div>
+                            <p class="text-xs font-black text-slate-600 uppercase tracking-widest leading-relaxed">Geofence Status: ACTIVE</p>
+                            <p class="text-[10px] text-slate-400 font-bold uppercase mt-2">Identity verified Pakistan Sync</p>
                         </div>
                     </div>
 
-                    <div class="bg-white rounded-3xl border shadow-sm mt-8 overflow-hidden font-sans font-sans font-sans font-sans">
-                        <div class="bg-slate-50 p-4 border-b flex justify-between items-center font-sans font-sans font-sans font-sans font-sans">
-                            <span class="font-black text-[10px] uppercase text-slate-400 tracking-widest font-sans font-sans font-sans font-sans font-sans">Identity Logs (${state.selectedAttendanceMonth})</span>
-                            <span class="text-[10px] font-bold text-slate-300 font-sans font-sans font-sans font-sans font-sans">Click entry to center Map</span>
+                    <div class="bg-white rounded-[2.5rem] border shadow-sm mt-8 overflow-hidden">
+                        <div class="bg-slate-50 p-6 border-b flex justify-between items-center">
+                            <span class="font-black text-xs uppercase text-slate-500 tracking-widest">Daily Identity Logs (${state.selectedAttendanceMonth})</span>
+                            <span class="text-[10px] font-black text-green-700 uppercase tracking-tighter">Verified Matrix</span>
                         </div>
-                        <div class="divide-y max-h-[400px] overflow-y-auto custom-scrollbar font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
-                            ${filteredLogs.length > 0 ? filteredLogs.map(log => `
-                                <div onclick="focusMap(${log.latitude}, ${log.longitude}, '${log.type}', '${log.time_str}')" class="p-5 flex justify-between items-center hover:bg-green-50 cursor-pointer transition-all group font-sans font-sans font-sans font-sans font-sans">
-                                    <div class="flex items-center gap-4 font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><div class="h-2 w-2 rounded-full ${log.type === 'Clock In' ? 'bg-green-500' : 'bg-red-500'} font-sans font-sans font-sans font-sans font-sans font-sans font-sans"></div><div><p class="text-xs font-black uppercase group-hover:text-green-700 font-sans font-sans font-sans font-sans font-sans font-sans">${log.type}</p><p class="text-[10px] text-slate-400 uppercase font-sans font-sans font-sans font-sans font-sans font-sans font-sans">${formatDate(log.date_str)}</p></div></div>
-                                    <div class="text-right font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
-                                        <p class="font-mono text-sm font-black text-slate-500 font-sans font-sans font-sans font-sans font-sans font-sans font-sans">${log.time_str}</p>
-                                        <p class="text-[8px] font-bold text-slate-300 uppercase font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Verified Coordinate</p>
-                                    </div>
-                                </div>
-                            `).join('') : `<div class="p-20 text-center text-slate-300 font-bold uppercase tracking-widest font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">No Records Detected</div>`}
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left font-sans">
+                                <thead class="bg-slate-50/50 text-[10px] font-black uppercase text-slate-400 tracking-widest border-b">
+                                    <tr>
+                                        <th class="p-5">Date</th>
+                                        <th class="p-5 text-center">Clock In</th>
+                                        <th class="p-5 text-center">Clock Out</th>
+                                        <th class="p-5 text-center">Total Hours</th>
+                                        <th class="p-5 text-center">Identity Maps</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y font-bold text-slate-800">
+                                    ${dateRows.map(date => {
+                                        const logs = dailyLogs[date];
+                                        const cin = logs.find(l => l.type === 'Clock In');
+                                        const cout = [...logs].reverse().find(l => l.type === 'Clock Out');
+                                        const total = calculateWorkTime(cin?.time_str, cout?.time_str);
+                                        return `
+                                            <tr class="hover:bg-slate-50 transition-colors">
+                                                <td class="p-5 font-mono text-sm">${date}</td>
+                                                <td class="p-5 text-center text-green-600">${cin ? cin.time_str : '--:--'}</td>
+                                                <td class="p-5 text-center text-red-600">${cout ? cout.time_str : '--:--'}</td>
+                                                <td class="p-5 text-center font-black">${total}</td>
+                                                <td class="p-5 text-center">
+                                                    <div class="flex justify-center gap-2">
+                                                        ${cin ? `<button onclick="focusMap(${cin.latitude}, ${cin.longitude}, 'IN', '${cin.time_str}')" class="text-[9px] bg-green-50 text-green-700 px-3 py-1 rounded-full uppercase border border-green-100 hover:bg-green-700 hover:text-white transition-all">Marked IN</button>` : ''}
+                                                        ${cout ? `<button onclick="focusMap(${cout.latitude}, ${cout.longitude}, 'OUT', '${cout.time_str}')" class="text-[9px] bg-red-50 text-red-700 px-3 py-1 rounded-full uppercase border border-red-100 hover:bg-red-700 hover:text-white transition-all">Marked OUT</button>` : ''}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        `;
+                                    }).join('')}
+                                    ${dateRows.length === 0 ? `<tr><td colspan="5" class="p-20 text-center text-slate-300 font-black uppercase tracking-widest">No Logs Detected</td></tr>` : ''}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>`;
             
             lucide.createIcons();
             
-            // Map Initialization logic
+            // Map Start Logic
             navigator.geolocation.getCurrentPosition((p) => {
                 initMap(p.coords.latitude, p.coords.longitude, "Detection Area");
             }, () => {
-                if (filteredLogs[0]) initMap(filteredLogs[0].latitude, filteredLogs[0].longitude, "Last Mark");
-                else initMap(31.5204, 74.3587, "LSAFHR Center");
+                if (dateRows.length > 0) {
+                    const first = dailyLogs[dateRows[0]][0];
+                    initMap(first.latitude, first.longitude, "Last Position");
+                } else initMap(31.5204, 74.3587, "LSAFHR Center");
             });
         }
+
+        async function updateAdminTarget(id) {
+            state.selectedAdminEmployeeId = id;
+            await syncData();
+            renderAttendance();
+        }
+
+        function updateAttendanceMonth(val) { state.selectedAttendanceMonth = val; renderAttendance(); }
 
         function initMap(lat, lng, label) {
             const mapContainer = document.getElementById('attendance-map');
@@ -412,19 +493,19 @@
             if (state.map) state.map.remove();
             state.map = L.map('attendance-map').setView([lat, lng], 15);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: 'LSAFHR' }).addTo(state.map);
-            L.marker([lat, lng]).addTo(state.map).bindPopup(`<p class="font-black uppercase text-[10px] font-sans font-sans font-sans">${label}</p>`).openPopup();
+            L.marker([lat, lng]).addTo(state.map).bindPopup(`<p class="font-black uppercase text-[10px] font-sans font-sans">${label}</p>`).openPopup();
         }
 
         function focusMap(lat, lng, type, time) {
             if (!state.map || !lat || !lng) return;
             state.map.setView([lat, lng], 17);
-            L.marker([lat, lng]).addTo(state.map).bindPopup(`<p class="font-black uppercase text-[10px] font-sans font-sans font-sans font-sans">${type}<br/>${time}</p>`).openPopup();
-            window.scrollTo({ top: 100, behavior: 'smooth' });
+            L.marker([lat, lng]).addTo(state.map).bindPopup(`<p class="font-black uppercase text-[10px] font-sans">${type}<br/>${time}</p>`).openPopup();
+            window.scrollTo({ top: 150, behavior: 'smooth' });
         }
 
         async function handleClock(type) {
             notify("Processing GPS identity verification...");
-            const options = { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 };
+            const opt = { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 };
             
             navigator.geolocation.getCurrentPosition(async (pos) => {
                 try {
@@ -442,12 +523,30 @@
                         body: JSON.stringify(payload) 
                     });
                     if(res.ok) { 
-                        notify(`${type} Verified. Identity Email Dispatched.`); 
+                        notify(`${type} Verified. Identity Email Sent.`); 
                         await syncData(); 
                         if(state.currentTab === 'attendance') renderAttendance(); 
                     } else notify("Matrix Sync Error. Protocol mismatch.");
                 } catch (e) { notify("Matrix Link Offline."); }
-            }, (err) => notify("Location required for marking. Enable GPS."), options);
+            }, (err) => notify("Location required for marking. Enable GPS."), opt);
+        }
+
+        async function exportAttendanceCSV(all = false) {
+            if (all) {
+                notify("Fetching Global Matrix Records...");
+                let allLogs = [];
+                for(let emp of state.employees) {
+                    const res = await fetch(`${API_BASE}/attendance/${emp.id}`);
+                    if (res.ok) {
+                        const logs = await res.json();
+                        logs.forEach(l => allLogs.push({ "Employee ID": emp.id, "Staff Name": emp.name, "Date": l.date_str, "Time": l.time_str, "Status": l.type, "Location": `${l.latitude}, ${l.longitude}` }));
+                    }
+                }
+                exportToCSV(allLogs, `LSAF_Global_Attendance_${getPktDate()}.csv`);
+            } else {
+                const myLogs = state.attendance.map(l => ({ Date: l.date_str, Time: l.time_str, Status: l.type, Location: `${l.latitude}, ${l.longitude}` }));
+                exportToCSV(myLogs, `LSAF_My_Attendance_${state.user.id}.csv`);
+            }
         }
 
         // --- LEAVES HUB VIEW ---
@@ -456,7 +555,7 @@
             const userLeaves = (state.leaves || []).sort((a, b) => new Date(b.start_date) - new Date(a.start_date));
             
             container.innerHTML = `
-                <div class="animate-fade-in space-y-8 font-sans text-left font-sans font-sans font-sans font-sans">
+                <div class="animate-fade-in space-y-8 font-sans text-left">
                     <div class="flex bg-slate-200 p-1.5 rounded-2xl max-w-xs mx-auto mb-10 shadow-inner">
                         <button onclick="state.leaveTab='apply'; renderLeaves()" class="flex-1 py-2.5 text-[10px] font-black rounded-xl uppercase transition-all font-sans ${state.leaveTab === 'apply' ? 'bg-white text-green-700 shadow-sm' : 'text-slate-500'}">Apply</button>
                         <button onclick="state.leaveTab='history'; renderLeaves()" class="flex-1 py-2.5 text-[10px] font-black rounded-xl uppercase transition-all font-sans ${state.leaveTab === 'history' ? 'bg-white text-green-700 shadow-sm' : 'text-slate-500'}">History</button>
@@ -465,15 +564,15 @@
                     ${state.leaveTab === 'apply' ? `
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto font-sans">
                             <div class="bg-white p-8 rounded-[3rem] shadow-2xl border-2 border-slate-50 animate-slide-up text-left">
-                                <h3 class="font-black text-xl mb-6 uppercase tracking-tight font-sans font-sans font-sans font-sans font-sans">Identity Request</h3>
+                                <h3 class="font-black text-xl mb-6 uppercase tracking-tight font-sans">Identity Request</h3>
                                 <form onsubmit="handleLeaveApply(event)" class="space-y-6 text-left">
-                                    <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans font-sans font-sans">Type</label><select id="lv-type" class="w-full p-4 rounded-xl border-2 font-black bg-slate-50 outline-none focus:bg-white focus:border-green-500 font-sans font-sans font-sans"><option>Annual Leave</option><option>Casual Leave</option><option>Sick Leave</option><option>WOP Leave</option></select></div>
+                                    <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans">Type</label><select id="lv-type" class="w-full p-4 rounded-xl border-2 font-black bg-slate-50 outline-none focus:bg-white focus:border-green-500 font-sans"><option>Annual Leave</option><option>Casual Leave</option><option>Sick Leave</option><option>WOP Leave</option></select></div>
                                     <div class="grid grid-cols-2 gap-4">
-                                        <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans font-sans">Start Date</label><input type="date" id="lv-date" class="w-full p-4 rounded-xl border-2 font-black bg-slate-50 outline-none focus:bg-white font-sans font-sans font-sans font-sans font-sans" required></div>
-                                        <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans font-sans font-sans">Days</label><input type="number" id="lv-days" class="w-full p-4 rounded-xl border-2 font-black bg-slate-50 outline-none focus:bg-white font-sans font-sans font-sans font-sans font-sans font-sans" placeholder="Qty" required></div>
+                                        <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans">Start Date</label><input type="date" id="lv-date" class="w-full p-4 rounded-xl border-2 font-black bg-slate-50 outline-none focus:bg-white font-sans" required></div>
+                                        <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans">Days</label><input type="number" id="lv-days" class="w-full p-4 rounded-xl border-2 font-black bg-slate-50 outline-none focus:bg-white font-sans" placeholder="Qty" required></div>
                                     </div>
-                                    <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans font-sans font-sans font-sans">Reason</label><textarea id="lv-rsn" class="w-full p-4 rounded-xl border-2 font-bold h-24 bg-slate-50 outline-none focus:bg-white font-sans font-sans font-sans font-sans font-sans" placeholder="..." required></textarea></div>
-                                    <button type="submit" class="w-full py-5 bg-green-700 text-white font-black rounded-2xl uppercase tracking-widest shadow-xl font-sans font-sans font-sans font-sans font-sans font-sans">Transmit application</button>
+                                    <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans">Reason</label><textarea id="lv-rsn" class="w-full p-4 rounded-xl border-2 font-bold h-24 bg-slate-50 outline-none focus:bg-white font-sans" placeholder="..." required></textarea></div>
+                                    <button type="submit" class="w-full py-5 bg-green-700 text-white font-black rounded-2xl uppercase tracking-widest shadow-xl font-sans">Transmit application</button>
                                 </form>
                             </div>
                             <div class="space-y-6">
@@ -489,8 +588,8 @@
                         <div class="space-y-4 max-w-2xl mx-auto font-sans font-sans">
                             ${userLeaves.map(l => `
                                 <div class="bg-white p-6 rounded-2xl border-2 flex justify-between items-center text-left text-slate-800 font-sans font-sans font-sans font-sans">
-                                    <div><h4 class="font-black uppercase font-sans font-sans font-sans font-sans font-sans font-sans">${l.leave_type}</h4><p class="text-xs text-slate-400 font-bold uppercase mt-1 font-sans font-sans font-sans font-sans font-sans font-sans">${formatDate(l.start_date)} • ${l.days} Days</p></div>
-                                    <span class="text-[10px] font-black uppercase px-3 py-1 rounded-lg ${l.status === 'Approved' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'} font-sans font-sans font-sans font-sans font-sans font-sans">${l.status}</span>
+                                    <div><h4 class="font-black uppercase font-sans font-sans">${l.leave_type}</h4><p class="text-xs text-slate-400 font-bold uppercase mt-1 font-sans font-sans">${formatDate(l.start_date)} • ${l.days} Days</p></div>
+                                    <span class="text-[10px] font-black uppercase px-3 py-1 rounded-lg ${l.status === 'Approved' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'} font-sans font-sans font-sans">${l.status}</span>
                                 </div>
                             `).join('')}
                             ${userLeaves.length === 0 ? '<div class="p-20 text-center text-slate-300 font-bold uppercase tracking-widest font-sans font-sans font-sans font-sans font-sans">No Records Found</div>' : ''}
@@ -560,12 +659,7 @@
 
         async function handleStaffSubmit(e) {
             e.preventDefault();
-            const payload = { 
-                id: document.getElementById('s-id').value.toUpperCase(), name: document.getElementById('s-name').value, 
-                email: document.getElementById('s-email').value, role: document.getElementById('s-role').value,
-                password: document.getElementById('s-pass').value, loan_opening_balance: document.getElementById('s-loan-open').value,
-                leave_annual: document.getElementById('s-leave-annual').value, leave_casual: document.getElementById('s-leave-casual').value
-            };
+            const payload = { id: document.getElementById('s-id').value.toUpperCase(), name: document.getElementById('s-name').value, email: document.getElementById('s-email').value, role: document.getElementById('s-role').value, password: document.getElementById('s-pass').value, loan_opening_balance: document.getElementById('s-loan-open').value, leave_annual: document.getElementById('s-leave-annual').value, leave_casual: document.getElementById('s-leave-casual').value };
             const method = state.editingMemberId ? 'PUT' : 'POST';
             const url = state.editingMemberId ? `${API_BASE}/employees/${state.editingMemberId}` : `${API_BASE}/employees`;
             const res = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
@@ -576,26 +670,7 @@
         function logout() { localStorage.removeItem('hr_user'); location.reload(); }
         function updateMonth(val) { state.selectedMonth = val; renderPayroll(); }
         function editSalaryMode(id) { state.editingSalaryId = id; renderPayroll(); }
-        function updateAttendanceMonth(val) { state.selectedAttendanceMonth = val; renderAttendance(); }
         function editStaff(id) { const emp = state.employees.find(e => String(e.id).toUpperCase() === String(id).toUpperCase()); if(emp) toggleStaffForm(emp); }
-
-        async function exportAttendanceCSV(all = false) {
-            if (all) {
-                notify("Fetching Global Matrix Records...");
-                let allLogs = [];
-                for(let emp of state.employees) {
-                    const res = await fetch(`${API_BASE}/attendance/${emp.id}`);
-                    if (res.ok) {
-                        const logs = await res.json();
-                        logs.forEach(l => allLogs.push({ "Employee ID": emp.id, "Staff Name": emp.name, "Date": l.date_str, "Time": l.time_str, "Status": l.type, "Location": `${l.latitude}, ${l.longitude}` }));
-                    }
-                }
-                exportToCSV(allLogs, `LSAF_Global_Roster_${getPktDate()}.csv`);
-            } else {
-                const myLogs = state.attendance.map(l => ({ Date: l.date_str, Time: l.time_str, Status: l.type, Location: `${l.latitude}, ${l.longitude}` }));
-                exportToCSV(myLogs, `LSAF_My_Logs_${state.user.id}.csv`);
-            }
-        }
 
         async function togglePublish(currentlyPosted) {
             const method = currentlyPosted ? 'DELETE' : 'POST';
