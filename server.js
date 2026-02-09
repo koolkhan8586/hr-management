@@ -36,9 +36,16 @@ const transporter = nodemailer.createTransport({
     }
 });
 
+// Logger middleware for debugging sync issues
+app.use((req, res, next) => {
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+        console.warn("LSAFHR Matrix: Warning - Email credentials missing in .env");
+    }
+    next();
+});
+
 /**
  * --- DATABASE AUTO-MIGRATION ---
- * Defence against missing columns. catching errors for universal MySQL support.
  */
 const runMigrations = () => {
     console.log("LSAFHR: Synchronizing Full Identity Matrix...");
@@ -97,7 +104,7 @@ app.post('/api/attendance', (req, res) => {
                     from: `"LSAFHR System" <${process.env.EMAIL_USER}>`,
                     to: emp.email,
                     subject: `Attendance Mark Verified: ${type}`,
-                    html: `<h3>Identity Verified</h3><p>Hello ${emp.name}, your ${type} at ${time_str} has been logged.</p>`
+                    html: `<h3>Identity Verified</h3><p>Hello ${emp.name}, your ${type} at ${time_str} has been logged in the LSAFHR matrix.</p>`
                 };
                 transporter.sendMail(mailOptions);
             }
@@ -143,9 +150,20 @@ app.post('/api/employees', (req, res) => {
 
 app.put('/api/employees/:id', (req, res) => {
     const id = req.params.id;
-    const { name, email, role, password, loan_opening_balance, leave_annual, leave_casual } = req.body;
-    const sql = `UPDATE employees SET name=?, email=?, role=?, password=?, loan_opening_balance=?, leave_annual=?, leave_casual=? WHERE id=?`;
-    db.query(sql, [name, email, role, password, loan_opening_balance, leave_annual, leave_casual, id], (err) => {
+    const { name, email, role, password, loan_opening_balance, leave_annual, leave_casual, basic_salary, invigilation, t_payment, increment, eidi, tax, loan_deduction, insurance, others_deduction, extra_leaves_deduction } = req.body;
+    
+    // Comprehensive update query to handle all matrix columns
+    const sql = `UPDATE employees SET 
+        name=?, email=?, role=?, password=?, loan_opening_balance=?, leave_annual=?, leave_casual=?,
+        basic_salary=?, invigilation=?, t_payment=?, increment=?, eidi=?, tax=?, loan_deduction=?, 
+        insurance=?, others_deduction=?, extra_leaves_deduction=? 
+        WHERE id=?`;
+        
+    db.query(sql, [
+        name, email, role, password, loan_opening_balance, leave_annual, leave_casual,
+        basic_salary, invigilation, t_payment, increment, eidi, tax, loan_deduction,
+        insurance, others_deduction, extra_leaves_deduction, id
+    ], (err) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json({ success: true });
     });
@@ -153,16 +171,24 @@ app.put('/api/employees/:id', (req, res) => {
 
 app.delete('/api/employees/:id', (req, res) => {
     const id = req.params.id;
+    // Sequential deletion to maintain integrity
     db.query('DELETE FROM attendance WHERE employee_id = ?', [id], () => {
         db.query('DELETE FROM loans WHERE employee_id = ?', [id], () => {
             db.query('DELETE FROM leaves WHERE employee_id = ?', [id], () => {
-                db.query('DELETE FROM employees WHERE id = ?', [id], (err) => res.json({ success: true }));
+                db.query('DELETE FROM employees WHERE id = ?', [id], (err) => {
+                    if (err) return res.status(500).json({ error: err.message });
+                    res.json({ success: true });
+                });
             });
         });
     });
 });
 
 // --- LEAVES HUB MODULE ---
+
+app.get('/api/leaves', (req, res) => {
+    db.query('SELECT * FROM leaves ORDER BY id DESC', (err, r) => res.json(r || []));
+});
 
 app.get('/api/leaves/:id', (req, res) => {
     db.query('SELECT * FROM leaves WHERE employee_id = ? ORDER BY id DESC', [req.params.id], (err, r) => res.json(r || []));
@@ -178,7 +204,7 @@ app.put('/api/admin/leaves/:id', (req, res) => {
     const leaveId = req.params.id;
 
     db.query('SELECT * FROM leaves WHERE id = ?', [leaveId], (err, results) => {
-        if (err || results.length === 0) return res.status(404).json({ error: "Request not found" });
+        if (err || results.length === 0) return res.status(404).json({ error: "Matrix Request not found" });
         const leave = results[0];
 
         db.query('UPDATE leaves SET status = ? WHERE id = ?', [status, leaveId], (err) => {
@@ -194,7 +220,7 @@ app.put('/api/admin/leaves/:id', (req, res) => {
                         from: `"LSAFHR System"`, to: emp.email,
                         subject: `Leave Request Update: ${status}`,
                         html: `<p>Hello ${emp.name}, your request for ${leave.leave_type} has been <b>${status}</b>.</p>
-                               <p>Remaining: ${emp.leave_annual} Annual / ${emp.leave_casual} WOP days.</p>`
+                               <p>Remaining Balance: ${emp.leave_annual} Annual / ${emp.leave_casual} WOP days.</p>`
                     });
                 }
             });
@@ -206,6 +232,7 @@ app.put('/api/admin/leaves/:id', (req, res) => {
 app.post('/api/leaves', (req, res) => {
     const { employeeId, type, startDate, days, reason } = req.body;
     db.query('INSERT INTO leaves (employee_id, leave_type, start_date, days, reason) VALUES (?, ?, ?, ?, ?)', [employeeId, type, startDate, days, reason], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
         const mailOptions = {
             from: `"LSAFHR System"`,
             to: process.env.ADMIN_EMAIL || process.env.EMAIL_USER,
@@ -218,6 +245,10 @@ app.post('/api/leaves', (req, res) => {
 });
 
 // --- LOAN HUB MODULE ---
+
+app.get('/api/loans', (req, res) => {
+    db.query('SELECT * FROM loans ORDER BY id DESC', (err, r) => res.json(r || []));
+});
 
 app.get('/api/loans/:id', (req, res) => {
     db.query('SELECT * FROM loans WHERE employee_id = ? ORDER BY id DESC', [req.params.id], (err, r) => res.json(r || []));
