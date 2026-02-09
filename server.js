@@ -15,16 +15,17 @@ app.use(cors({ origin: '*' }));
 app.use(express.json());
 
 // --- DATABASE CONFIGURATION ---
-// IMPORTANT: Verify these match your aaPanel / MySQL settings
-const db = mysql.createPool({
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '', 
-    database: process.env.DB_NAME || 'hr_management',
+// IMPORTANT: If your old data is not showing, it means the 'database' name below 
+// might be different from your previous setup (e.g., 'nexus_db' or 'lsaf_db').
+const dbConfig = {
+    host: 'localhost',
+    user: 'root',
+    password: '', // If you set a password in aaPanel, enter it here
+    database: 'hr_management', 
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0
-});
+};
 
 const db = mysql.createPool(dbConfig);
 
@@ -41,7 +42,6 @@ const initSystem = async () => {
     } catch (err) {
         console.error("CRITICAL: Database connection failed! Data will not show.");
         console.error("Error Detail:", err.message);
-        console.log("Action: Please verify 'password' and 'database' in server.js match your MySQL settings.");
         return;
     }
 
@@ -110,7 +110,7 @@ const initSystem = async () => {
         await db.promise().query(sql).catch(e => console.log("Init Note:", e.message));
     }
 
-    // 2. Column Migrations (Ensure existing databases get the new fields without loss)
+    // 2. Column Migrations
     const columns = [
         'loan_opening_balance DECIMAL(15,2) DEFAULT 0',
         'eidi DECIMAL(15,2) DEFAULT 0',
@@ -123,9 +123,23 @@ const initSystem = async () => {
         try {
             await db.promise().query(`ALTER TABLE employees ADD COLUMN ${col}`);
         } catch (e) {
-            // Field already exists, which is good.
+            // Field already exists
         }
     }
+
+    // 3. DATA VERIFIER LOG (Check if old data is actually seen by the code)
+    try {
+        const [empCount] = await db.promise().query("SELECT COUNT(*) as count FROM employees");
+        const [loanCount] = await db.promise().query("SELECT COUNT(*) as count FROM loans");
+        console.log(`LSAFHR Status: Found ${empCount[0].count} employees in database '${dbConfig.database}'.`);
+        console.log(`LSAFHR Status: Found ${loanCount[0].count} loan records.`);
+        if(empCount[0].count === 0) {
+            console.warn("WARNING: No data found. You might be connected to an empty database.");
+        }
+    } catch (e) {
+        console.error("Verification Query Failed:", e.message);
+    }
+
     console.log("LSAFHR: Database Schema Synchronized.");
 };
 
