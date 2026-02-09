@@ -156,6 +156,42 @@ app.delete('/api/employees/:id', (req, res) => {
     });
 });
 
+// --- UPDATED LOAN POST WITH ADMIN NOTIFICATION ---
+app.post('/api/loans', (req, res) => {
+    const { employeeId, amount, reason } = req.body;
+    db.query('INSERT INTO loans (employee_id, amount, reason) VALUES (?, ?, ?)', [employeeId, amount, reason], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+
+        // Notify Admin
+        const mailOptions = {
+            from: `"LSAFHR System" <${process.env.EMAIL_USER}>`,
+            to: process.env.ADMIN_EMAIL || process.env.EMAIL_USER, // Sends to admin
+            subject: `Matrix Alert: New Loan Request from ${employeeId}`,
+            html: `<h3>Loan Oversight Required</h3><p>Employee <b>${employeeId}</b> has requested <b>Rs. ${amount}</b>.</p><p>Reason: ${reason}</p>`
+        };
+        transporter.sendMail(mailOptions);
+        res.json({ success: true });
+    });
+});
+
+// --- UPDATED LEAVE POST WITH ADMIN NOTIFICATION ---
+app.post('/api/leaves', (req, res) => {
+    const { employeeId, type, startDate, days, reason } = req.body;
+    db.query('INSERT INTO leaves (employee_id, leave_type, start_date, days, reason) VALUES (?, ?, ?, ?, ?)', [employeeId, type, startDate, days, reason], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+
+        // Notify Admin
+        const mailOptions = {
+            from: `"LSAFHR System" <${process.env.EMAIL_USER}>`,
+            to: process.env.ADMIN_EMAIL || process.env.EMAIL_USER,
+            subject: `Matrix Alert: Leave Request from ${employeeId}`,
+            html: `<h3>Leave Oversight Required</h3><p>Employee <b>${employeeId}</b> requested <b>${days} days</b> of <b>${type}</b> starting <b>${startDate}</b>.</p>`
+        };
+        transporter.sendMail(mailOptions);
+        res.json({ success: true });
+    });
+});
+
 // --- LEAVES MODULE ---
 
 app.get('/api/leaves/:id', (req, res) => {
