@@ -171,6 +171,33 @@ app.delete('/api/employees/:id', (req, res) => {
     });
 });
 
+// --- STAFF HUB AUDIT ROUTES ---
+
+// Update existing employee data
+app.put('/api/employees/:id', (req, res) => {
+    const employeeId = req.params.id;
+    // We remove the ID from the body to prevent primary key modification errors
+    const data = { ...req.body };
+    delete data.id; 
+
+    db.query('UPDATE employees SET ? WHERE id = ?', [data, employeeId], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ success: true, message: "Identity Matrix Updated" });
+    });
+});
+
+// Delete employee (and their logs to prevent foreign key errors)
+app.delete('/api/employees/:id', (req, res) => {
+    const id = req.params.id;
+    // First wipe attendance logs to maintain database integrity
+    db.query('DELETE FROM attendance WHERE employee_id = ?', [id], () => {
+        db.query('DELETE FROM employees WHERE id = ?', [id], (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ success: true, message: "Identity Purged" });
+        });
+    });
+});
+
 /**
  * BULK WIPE ROUTE
  * Zeros out all financial columns for every employee in one transaction.
