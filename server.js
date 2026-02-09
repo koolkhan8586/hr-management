@@ -1,5 +1,5 @@
 /**
- * LSAF-HR MANAGEMENT SYSTEM - COMPLETE BACKEND SERVER (v7.3.0)
+ * LSAF-HR MANAGEMENT SYSTEM - COMPLETE BACKEND SERVER (v7.3.1)
  * Core Logic: Staff Hub, Geofence Attendance, Payroll Ledger, WOP Leaves, Loans, Board
  * Dependencies: express, mysql2, cors, nodemailer, dotenv
  */
@@ -38,34 +38,36 @@ const transporter = nodemailer.createTransport({
 
 /**
  * --- DATABASE AUTO-MIGRATION ---
+ * Defence against missing columns. catching errors for universal MySQL support.
  */
 const runMigrations = () => {
     console.log("LSAFHR: Synchronizing Full Identity Matrix...");
 
     const columnMigrations = [
-        `ALTER TABLE employees ADD COLUMN IF NOT EXISTS email VARCHAR(255)`,
-        `ALTER TABLE employees ADD COLUMN IF NOT EXISTS password VARCHAR(255)`,
-        `ALTER TABLE employees ADD COLUMN IF NOT EXISTS role VARCHAR(50) DEFAULT 'employee'`,
-        `ALTER TABLE employees ADD COLUMN IF NOT EXISTS loan_opening_balance DECIMAL(15,2) DEFAULT 0`,
-        `ALTER TABLE employees ADD COLUMN IF NOT EXISTS leave_annual INT DEFAULT 14`,
-        `ALTER TABLE employees ADD COLUMN IF NOT EXISTS leave_casual INT DEFAULT 10`,
-        `ALTER TABLE employees ADD COLUMN IF NOT EXISTS basic_salary DECIMAL(15,2) DEFAULT 0`,
-        `ALTER TABLE employees ADD COLUMN IF NOT EXISTS invigilation DECIMAL(15,2) DEFAULT 0`,
-        `ALTER TABLE employees ADD COLUMN IF NOT EXISTS t_payment DECIMAL(15,2) DEFAULT 0`,
-        `ALTER TABLE employees ADD COLUMN IF NOT EXISTS increment DECIMAL(15,2) DEFAULT 0`,
-        `ALTER TABLE employees ADD COLUMN IF NOT EXISTS eidi DECIMAL(15,2) DEFAULT 0`,
-        `ALTER TABLE employees ADD COLUMN IF NOT EXISTS tax DECIMAL(15,2) DEFAULT 0`,
-        `ALTER TABLE employees ADD COLUMN IF NOT EXISTS loan_deduction DECIMAL(15,2) DEFAULT 0`,
-        `ALTER TABLE employees ADD COLUMN IF NOT EXISTS insurance DECIMAL(15,2) DEFAULT 0`,
-        `ALTER TABLE employees ADD COLUMN IF NOT EXISTS others_deduction DECIMAL(15,2) DEFAULT 0`,
-        `ALTER TABLE employees ADD COLUMN IF NOT EXISTS extra_leaves_deduction DECIMAL(15,2) DEFAULT 0`,
-        `ALTER TABLE attendance ADD COLUMN IF NOT EXISTS latitude DECIMAL(10,8)`,
-        `ALTER TABLE attendance ADD COLUMN IF NOT EXISTS longitude DECIMAL(11,8)`
+        `ALTER TABLE employees ADD COLUMN email VARCHAR(255)`,
+        `ALTER TABLE employees ADD COLUMN password VARCHAR(255)`,
+        `ALTER TABLE employees ADD COLUMN role VARCHAR(50) DEFAULT 'employee'`,
+        `ALTER TABLE employees ADD COLUMN loan_opening_balance DECIMAL(15,2) DEFAULT 0`,
+        `ALTER TABLE employees ADD COLUMN leave_annual INT DEFAULT 14`,
+        `ALTER TABLE employees ADD COLUMN leave_casual INT DEFAULT 10`,
+        `ALTER TABLE employees ADD COLUMN basic_salary DECIMAL(15,2) DEFAULT 0`,
+        `ALTER TABLE employees ADD COLUMN invigilation DECIMAL(15,2) DEFAULT 0`,
+        `ALTER TABLE employees ADD COLUMN t_payment DECIMAL(15,2) DEFAULT 0`,
+        `ALTER TABLE employees ADD COLUMN increment DECIMAL(15,2) DEFAULT 0`,
+        `ALTER TABLE employees ADD COLUMN eidi DECIMAL(15,2) DEFAULT 0`,
+        `ALTER TABLE employees ADD COLUMN tax DECIMAL(15,2) DEFAULT 0`,
+        `ALTER TABLE employees ADD COLUMN loan_deduction DECIMAL(15,2) DEFAULT 0`,
+        `ALTER TABLE employees ADD COLUMN insurance DECIMAL(15,2) DEFAULT 0`,
+        `ALTER TABLE employees ADD COLUMN others_deduction DECIMAL(15,2) DEFAULT 0`,
+        `ALTER TABLE employees ADD COLUMN extra_leaves_deduction DECIMAL(15,2) DEFAULT 0`,
+        `ALTER TABLE attendance ADD COLUMN latitude DECIMAL(10,8)`,
+        `ALTER TABLE attendance ADD COLUMN longitude DECIMAL(11,8)`
     ];
 
     columnMigrations.forEach(sql => {
         db.query(sql, (err) => {
-            if (err && err.code !== 'ER_DUP_FIELDNAME') console.log("LSAFHR Sync Note:", err.message);
+            // Ignore error if column already exists (Error code 1060)
+            if (err && err.errno !== 1060) console.log("LSAFHR Sync Note:", err.message);
         });
     });
 
@@ -120,7 +122,7 @@ app.put('/api/attendance-entry/:id', (req, res) => {
     db.query('UPDATE attendance SET time_str = ?, type = ? WHERE id = ?', [time_str, type, req.params.id], (err) => res.json({ success: true }));
 });
 
-// --- STAFF HUB MODULE ---
+// --- STAFF HUB MODULE (Robust Update & Delete) ---
 
 app.get('/api/employees', (req, res) => {
     db.query('SELECT * FROM employees ORDER BY id ASC', (err, r) => res.json(r || []));
@@ -141,17 +143,29 @@ app.post('/api/employees', (req, res) => {
 });
 
 app.put('/api/employees/:id', (req, res) => {
-    const data = { ...req.body };
-    delete data.id; 
-    db.query('UPDATE employees SET ? WHERE id = ?', [data, req.params.id], (err) => {
-        if (err) return res.status(500).json({ error: err.message });
+    const id = req.params.id;
+    const { name, email, role, password, loan_opening_balance, leave_annual, leave_casual } = req.body;
+    
+    // Explicit assignment to prevent "Sync Failure" caused by extra object keys
+    const sql = `UPDATE employees SET name=?, email=?, role=?, password=?, loan_opening_balance=?, leave_annual=?, leave_casual=? WHERE id=?`;
+    db.query(sql, [name, email, role, password, loan_opening_balance, leave_annual, leave_casual, id], (err) => {
+        if (err) {
+            console.error("Sync Failure:", err.message);
+            return res.status(500).json({ error: err.message });
+        }
         res.json({ success: true });
     });
 });
 
 app.delete('/api/employees/:id', (req, res) => {
-    db.query('DELETE FROM attendance WHERE employee_id = ?', [req.params.id], () => {
-        db.query('DELETE FROM employees WHERE id = ?', [req.params.id], (err) => res.json({ success: true }));
+    const id = req.params.id;
+    // Step 1: Purge related logs to maintain foreign key integrity
+    db.query('DELETE FROM attendance WHERE employee_id = ?', [id], () => {
+        // Step 2: Delete the actual staff identity
+        db.query('DELETE FROM employees WHERE id = ?', [id], (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ success: true });
+        });
     });
 });
 
@@ -215,15 +229,16 @@ app.get('/api/discussions', (req, res) => {
 
 app.post('/api/discussions', (req, res) => {
     db.query('INSERT INTO discussions SET ?', req.body, (err) => {
-        // Send alert to all employees for board updates
         db.query('SELECT email FROM employees', (err, emps) => {
             if (!err) {
                 const emails = emps.map(e => e.email).filter(e => e).join(',');
-                transporter.sendMail({
-                    from: `"LSAFHR Board"`, to: emails,
-                    subject: `New Board Broadcast`,
-                    html: `<p><b>${req.body.author_name}:</b> ${req.body.message}</p>`
-                });
+                if (emails) {
+                    transporter.sendMail({
+                        from: `"LSAFHR Board"`, to: emails,
+                        subject: `New Board Broadcast`,
+                        html: `<p><b>${req.body.author_name}:</b> ${req.body.message}</p>`
+                    });
+                }
             }
         });
         res.json({ success: true });
