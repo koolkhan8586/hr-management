@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LSAFHR Management System - v9.2.0</title>
+    <title>LSAFHR Management System - v9.3.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <!-- Leaflet Map Assets -->
@@ -189,6 +189,26 @@
             { id: 'directory', label: 'Staff Hub', icon: 'users', admin: true }
         ];
 
+        // --- CORE UTILS ---
+        function notify(msg) {
+            const t = document.getElementById('status-toast');
+            if (!t) return;
+            t.innerText = msg; t.style.opacity = '1'; t.style.transform = 'translateY(0) translateX(-50%)';
+            setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateY(-20px) translateX(-50%)'; }, 4000);
+        }
+        function getPktTime() { return new Date().toLocaleTimeString('en-US', { timeZone: 'Asia/Karachi', hour: '2-digit', minute: '2-digit', hour12: true }); }
+        function getPktDate() { return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Karachi' }); }
+        function cleanNumber(val) { 
+            if (val === undefined || val === null || val === '' || isNaN(val)) return 0;
+            return parseFloat(val);
+        }
+        function formatDate(d) { 
+            if (!d) return 'N/A';
+            const date = new Date(d);
+            return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+        }
+        function getInitial(name) { return name ? String(name).charAt(0).toUpperCase() : '?'; }
+
         // --- CORE LOGIC ---
         async function init() {
             const saved = localStorage.getItem('hr_user');
@@ -223,7 +243,7 @@
                 if (resArr[1].status === 'fulfilled' && resArr[1].value.ok) state.payrollPostedMonths = await resArr[1].value.json();
                 if (resArr[2].status === 'fulfilled' && resArr[2].value.ok) state.discussions = await resArr[2].value.json();
                 if (resArr[3].status === 'fulfilled' && resArr[3].value.ok) state.attendance = await resArr[3].value.json();
-                if (resArr[4].status === 'fulfilled' && resArr[4].value.ok) state.leaves = await resArr[4].value.json();
+                if (resArr[4].status === 'fulfilled' && resArr[4].value.ok) state.userLeaves = await resArr[4].value.json();
                 if (resArr[5].status === 'fulfilled' && resArr[5].value.ok) state.userLoans = await resArr[5].value.json();
                 
                 if (isAdmin) {
@@ -347,7 +367,7 @@
                             <div class="flex-1 overflow-y-auto max-h-[450px] custom-scrollbar">
                                 <table class="w-full text-left">
                                     <thead class="bg-slate-50/50 text-[11px] font-black uppercase text-slate-400 tracking-widest border-b">
-                                        <tr><th class="p-8">Date</th><th class="p-8 text-center">In (Fly)</th><th class="p-8 text-center">Out (Fly)</th><th class="p-8 text-right">Total Work</th></tr>
+                                        <tr><th class="p-8">Date</th><th class="p-8 text-center">In (Fly)</th><th class="p-8 text-center">Out (Fly)</th><th class="p-8 text-right">Work</th></tr>
                                     </thead>
                                     <tbody class="divide-y divide-slate-100 font-bold">
                                         ${dateRows.map(date => {
@@ -456,7 +476,7 @@
         }
 
         // --- LOANS HUB ---
-        function renderLoans(container) {
+        function renderLoansView(container) {
             const isAdmin = state.user && state.user.role === 'admin';
             const targetUser = state.employees.find(e => e.id === state.user.id) || state.user;
             const totalApproved = (state.userLoans || []).filter(ln => ln.status === 'Approved').reduce((acc, curr) => acc + cleanNumber(curr.amount), 0);
@@ -520,8 +540,8 @@
                                             <td class="p-6 text-right font-mono font-black text-slate-900 text-lg">Rs. ${cleanNumber(ln.amount).toLocaleString()}</td>
                                             <td class="p-8"><span class="status-badge ${ln.status==='Approved'?'status-approved': ln.status==='Rejected' ? 'status-rejected' : 'status-pending'}">${ln.status}</span></td>
                                             <td class="p-8 flex justify-center gap-4">
-                                                <button onclick="approveLoanRequest('${ln.id}', 'Approved')" class="bg-green-700 text-white px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest">Approve</button>
-                                                <button onclick="approveLoanRequest('${ln.id}', 'Rejected')" class="bg-red-600 text-white px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest">Reject</button>
+                                                <button onclick="updateLoanStatus('${ln.id}', 'Approved')" class="bg-green-700 text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest">Approve</button>
+                                                <button onclick="updateLoanStatus('${ln.id}', 'Rejected')" class="bg-red-600 text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest">Reject</button>
                                             </td>
                                         </tr>`).join('')}
                                 </tbody>
@@ -562,7 +582,7 @@
             } catch(e) { notify("Error: Connection Failed."); }
         }
 
-        async function approveLoanRequest(id, status) {
+        async function updateLoanStatus(id, status) {
             const res = await fetch(`${API_BASE}/admin/loans/${id}`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ status }) });
             if(res.ok) { notify(`Success: Request ${status}. Status updated in matrix.`); await syncData(); renderView(); }
         }
@@ -603,8 +623,8 @@
                                             <td class="p-10 text-center font-black">${lv.days}</td>
                                             <td class="p-10 font-sans"><span class="status-badge ${lv.status==='Approved'?'status-approved': lv.status==='Rejected' ? 'status-rejected' : 'status-pending'}">${lv.status}</span></td>
                                             <td class="p-10 flex justify-center gap-4">
-                                                <button onclick="approveLeaveRequest('${lv.id}', 'Approved')" class="bg-green-700 text-white px-8 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest shadow-xl">Approve</button>
-                                                <button onclick="approveLeaveRequest('${lv.id}', 'Rejected')" class="bg-red-600 text-white px-8 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest shadow-xl font-sans">Reject</button>
+                                                <button onclick="updateLeaveStatus('${lv.id}', 'Approved')" class="bg-green-700 text-white px-8 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest shadow-xl">Approve</button>
+                                                <button onclick="updateLeaveStatus('${lv.id}', 'Rejected')" class="bg-red-600 text-white px-8 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest shadow-xl font-sans">Reject</button>
                                             </td>
                                         </tr>`;
                                     }).join('')}
@@ -620,7 +640,7 @@
                                     <div class="space-y-4 font-sans"><label class="text-[12px] font-black uppercase text-slate-400 ml-6 tracking-widest">Start Date</label><input type="date" id="lv-date-input" class="w-full p-8 rounded-[2.5rem] border-2 font-black bg-slate-50 focus:bg-white outline-none transition-all" required /></div>
                                     <div class="space-y-4 font-sans"><label class="text-[12px] font-black uppercase text-slate-400 ml-6 tracking-widest">Total Days</label><input type="number" id="lv-days-input" class="w-full p-8 rounded-[2.5rem] border-2 font-black bg-slate-50 focus:bg-white outline-none transition-all" placeholder="0" required /></div>
                                 </div>
-                                <div class="space-y-4 font-sans"><label class="text-[12px] font-black uppercase text-slate-400 ml-6 tracking-widest">Reasoning</label><textarea id="lv-rsn-input" class="w-full p-8 rounded-[2.5rem] border-2 font-bold h-48 bg-slate-50 focus:bg-white focus:border-green-600 outline-none text-lg" placeholder="Describe the reason..." required></textarea></div>
+                                <div class="space-y-4 font-sans"><label class="text-[12px] font-black uppercase text-slate-400 ml-6 tracking-widest">Reasoning</label><textarea id="lv-rsn-input" class="w-full p-8 rounded-[2.5rem] border-2 font-bold h-32 bg-slate-50 focus:bg-white focus:border-green-600 outline-none text-lg" placeholder="Describe the reason..." required></textarea></div>
                                 <button type="submit" class="w-full py-10 bg-green-700 text-white rounded-[3rem] font-black uppercase tracking-[0.4em] shadow-green-200 shadow-2xl hover:bg-green-800 transition-all font-sans">Transmit Identity Request</button>
                             </form>
                         </div>` : `
@@ -631,7 +651,7 @@
                                         <tr><th class="p-10 font-sans">Period Start</th><th class="p-10 font-sans">Category</th><th class="p-10 font-sans">Duration</th><th class="p-10 text-right">Matrix Status</th></tr>
                                     </thead>
                                     <tbody class="divide-y divide-slate-100 font-bold text-slate-800 font-sans">
-                                        ${state.leaves.map(l => `
+                                        ${state.userLeaves.map(l => `
                                             <tr class="hover:bg-slate-50 transition-all">
                                                 <td class="p-10 font-mono text-slate-500 uppercase">${formatDate(l.start_date)}</td>
                                                 <td class="p-10 font-black uppercase text-slate-700 font-sans">${l.leave_type}</td>
@@ -645,18 +665,7 @@
                 </div>`;
         }
 
-        async function handleLeaveApply(e) {
-            e.preventDefault();
-            const type = document.getElementById('lv-type-input').value;
-            const date = document.getElementById('lv-date-input').value;
-            const days = document.getElementById('lv-days-input').value;
-            const rsn = document.getElementById('lv-rsn-input').value;
-            const payload = { employeeId: state.user.id, type, startDate: date, days: cleanNumber(days), reason: rsn };
-            const res = await fetch(`${API_BASE}/leaves`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
-            if(res.ok) { notify("Leave request dispatched hub matrix. Admin updated via email hub."); state.leaveTab = 'history'; await syncData(); renderView(); }
-        }
-
-        async function approveLeaveRequest(id, status) {
+        async function updateLeaveStatus(id, status) {
             const res = await fetch(`${API_BASE}/admin/leaves/${id}`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ status }) });
             if(res.ok) { notify("Leave matrix updated. Balance adjusted and employee notified hub matrix hub."); await syncData(); renderView(); }
         }
@@ -687,7 +696,7 @@
         }
 
         // --- MATRIX BOARD ---
-        function renderDiscussion(container) {
+        function renderDiscussionView(container) {
             container.innerHTML = `
                 <div class="animate-fade-in space-y-12 text-left max-w-6xl mx-auto font-sans">
                     <div class="border-b pb-8 border-slate-100 font-sans"><h2 class="text-5xl font-black uppercase tracking-tighter text-slate-800">Identity Matrix Board</h2></div>
