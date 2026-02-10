@@ -1683,74 +1683,488 @@
             }
         }
 
-        async function handleLoanApply(e) {
-            e.preventDefault();
+        // --- LOANS HUB - FIXED FUNCTIONS ---
+async function handleLoanApply(e) {
+    e.preventDefault();
+    
+    const amountEl = document.getElementById('ln-amt-val-hub');
+    const reasonEl = document.getElementById('ln-rsn-val-hub');
+    
+    if (!amountEl || !reasonEl) {
+        notify("Form elements not found");
+        return;
+    }
+    
+    const amount = cleanNumber(amountEl.value);
+    const reason = reasonEl.value.trim();
+    
+    // Validation
+    if (amount <= 0) {
+        notify("Please enter a valid amount greater than 0");
+        amountEl.focus();
+        return;
+    }
+    
+    if (reason.length < 10) {
+        notify("Please provide a detailed reason (minimum 10 characters)");
+        reasonEl.focus();
+        return;
+    }
+    
+    // Show loading state
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<i data-lucide="loader" class="animate-spin"></i> Processing...';
+    submitBtn.disabled = true;
+    
+    try {
+        const payload = {
+            employeeId: state.user.id,
+            employeeName: state.user.name,
+            amount: amount,
+            reason: reason,
+            applied_at: new Date().toISOString()
+        };
+        
+        console.log("Sending loan application:", payload);
+        
+        const response = await fetch(`${API_BASE}/loans`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            notify("✓ Loan application submitted successfully!");
             
-            const amountEl = document.getElementById('ln-amt-val-hub');
-            const reasonEl = document.getElementById('ln-rsn-val-hub');
+            // Clear form
+            amountEl.value = '';
+            reasonEl.value = '';
             
-            if (!amountEl || !reasonEl) return;
-            
-            const amount = cleanNumber(amountEl.value);
-            const reason = reasonEl.value.trim();
-            
-            if (amount <= 0) {
-                notify("Please enter a valid amount");
-                return;
-            }
-            
-            if (reason.length < 10) {
-                notify("Please provide a detailed reason (minimum 10 characters)");
-                return;
-            }
-            
-            const payload = {
-                employeeId: state.user.id,
-                amount: amount,
-                reason: reason
-            };
-            
+            // Switch to history tab and refresh data
+            state.loanTab = 'history';
+            await syncData();
+            renderLoans();
+        } else {
+            // Handle API error response
+            const errorMessage = result.message || result.error || `Server error: ${response.status}`;
+            console.error("Loan application failed:", errorMessage);
+            notify(`✗ ${errorMessage}`);
+        }
+    } catch (error) {
+        console.error("Network error:", error);
+        notify("✗ Network error. Please check your connection and try again.");
+        
+        // Fallback to localStorage for offline demo
+        if (confirm("You're offline. Save application locally?")) {
+            saveLoanOffline(amount, reason);
+        }
+    } finally {
+        // Restore button state
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+        lucide.createIcons();
+    }
+}
+
+// Offline fallback function
+function saveLoanOffline(amount, reason) {
+    try {
+        const offlineLoans = JSON.parse(localStorage.getItem('offline_loans') || '[]');
+        
+        const offlineLoan = {
+            id: 'offline_' + Date.now(),
+            employeeId: state.user.id,
+            employeeName: state.user.name,
+            amount: amount,
+            reason: reason,
+            status: 'Pending',
+            applied_at: new Date().toISOString(),
+            offline: true
+        };
+        
+        offlineLoans.push(offlineLoan);
+        localStorage.setItem('offline_loans', JSON.stringify(offlineLoans));
+        
+        // Add to state for display
+        if (!state.userLoans) state.userLoans = [];
+        state.userLoans.push(offlineLoan);
+        
+        notify("✓ Application saved offline. Will sync when back online.");
+        
+        // Switch to history tab
+        state.loanTab = 'history';
+        renderLoans();
+    } catch (error) {
+        console.error("Failed to save offline:", error);
+        notify("✗ Failed to save application offline.");
+    }
+}
+
+// Add this function to sync offline loans when back online
+async function syncOfflineLoans() {
+    try {
+        const offlineLoans = JSON.parse(localStorage.getItem('offline_loans') || '[]');
+        
+        if (offlineLoans.length === 0) return;
+        
+        notify(`Syncing ${offlineLoans.length} offline loan applications...`);
+        
+        for (const loan of offlineLoans) {
             try {
-                const res = await fetch(`${API_BASE}/loans`, {
+                const payload = {
+                    employeeId: loan.employeeId,
+                    employeeName: loan.employeeName,
+                    amount: loan.amount,
+                    reason: loan.reason,
+                    applied_at: loan.applied_at
+                };
+                
+                const response = await fetch(`${API_BASE}/loans`, {
                     method: 'POST',
-                    headers: {'Content-Type':'application/json'},
+                    headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify(payload)
                 });
                 
-                if (res.ok) {
-                    notify("Loan application submitted successfully");
-                    amountEl.value = '';
-                    reasonEl.value = '';
-                    state.loanTab = 'history';
-                    await syncData();
-                    renderLoans();
-                } else {
-                    notify("Failed to submit application");
+                if (response.ok) {
+                    // Remove from offline storage
+                    const index = offlineLoans.indexOf(loan);
+                    offlineLoans.splice(index, 1);
                 }
             } catch (error) {
-                notify("Network error. Please try again.");
+                console.error("Failed to sync loan:", error);
             }
         }
+        
+        // Update localStorage
+        localStorage.setItem('offline_loans', JSON.stringify(offlineLoans));
+        
+        if (offlineLoans.length === 0) {
+            notify("✓ All offline loans synced successfully!");
+        } else {
+            notify(`⚠ ${offlineLoans.length} loans still pending sync`);
+        }
+    } catch (error) {
+        console.error("Sync offline loans error:", error);
+    }
+}
 
-        async function approveLoan(id, status) {
-            try {
-                const res = await fetch(`${API_BASE}/admin/loans/${id}`, {
-                    method: 'PUT',
-                    headers: {'Content-Type':'application/json'},
-                    body: JSON.stringify({ status })
-                });
+// Update the renderLoanContent function to show offline loans
+function renderLoanContent(isAdmin, netOutstanding) {
+    if (state.loanTab === 'oversight' && isAdmin) {
+        return `
+            <div class="bg-white dark:bg-slate-800 rounded-[2rem] border-2 border-slate-100 dark:border-slate-700 shadow-2xl overflow-hidden">
+                <div class="bg-slate-50 dark:bg-slate-900 p-8 border-b dark:border-slate-700 flex justify-between items-center">
+                    <span class="font-black text-xs uppercase text-slate-500 dark:text-slate-400 tracking-widest">Loan Applications</span>
+                    <div class="flex gap-2">
+                        <button onclick="exportToCSV(state.allLoans, 'Loans_Oversight_Report.csv')" 
+                                class="bg-slate-900 dark:bg-slate-700 text-white px-4 py-2 rounded-xl font-black text-[10px] uppercase shadow-lg">
+                            Export CSV
+                        </button>
+                        <button onclick="syncOfflineLoans()" 
+                                class="bg-blue-600 text-white px-4 py-2 rounded-xl font-black text-[10px] uppercase shadow-lg">
+                            Sync Offline
+                        </button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-[10px] font-bold">
+                        <thead class="bg-slate-50 dark:bg-slate-900 border-b dark:border-slate-700 font-black uppercase text-slate-400 dark:text-slate-500">
+                            <tr>
+                                <th class="p-6">Employee</th>
+                                <th class="p-6">Date</th>
+                                <th class="p-6 text-right">Amount</th>
+                                <th class="p-6">Status</th>
+                                <th class="p-6">Source</th>
+                                <th class="p-6 text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y dark:divide-slate-700">
+                            ${(state.allLoans || []).map(ln => `
+                                <tr class="hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors">
+                                    <td class="p-6 font-black uppercase">${ln.name || ln.employeeName} (${ln.employee_id || ln.employeeId})</td>
+                                    <td class="p-6 font-mono text-slate-400 dark:text-slate-500 uppercase">${formatDate(ln.applied_at)}</td>
+                                    <td class="p-6 text-right font-mono font-black">Rs. ${cleanNumber(ln.amount).toLocaleString()}</td>
+                                    <td class="p-6">
+                                        <span class="status-badge ${ln.status === 'Approved' ? 'status-approved' : ln.status === 'Rejected' ? 'status-rejected' : 'status-pending'}">
+                                            ${ln.status || 'Pending'}
+                                        </span>
+                                    </td>
+                                    <td class="p-6">
+                                        ${ln.offline ? 
+                                            '<span class="text-orange-500 text-xs font-bold">OFFLINE</span>' : 
+                                            '<span class="text-green-500 text-xs font-bold">ONLINE</span>'}
+                                    </td>
+                                    <td class="p-6 flex justify-center gap-3">
+                                        ${!ln.offline ? `
+                                            <button onclick="approveLoan('${ln.id}', 'Approved')" 
+                                                    class="bg-green-700 text-white px-5 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg hover:bg-green-800 transition-all">
+                                                Approve
+                                            </button>
+                                            <button onclick="approveLoan('${ln.id}', 'Rejected')" 
+                                                    class="bg-red-600 text-white px-5 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg hover:bg-red-700 transition-all">
+                                                Reject
+                                            </button>
+                                        ` : `
+                                            <span class="text-slate-400 text-xs">Sync required</span>
+                                        `}
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>`;
+    } else if (state.loanTab === 'apply') {
+        return `
+            <div class="bg-white dark:bg-slate-800 p-12 rounded-[3.5rem] max-w-2xl mx-auto border-2 border-slate-100 dark:border-slate-700 shadow-2xl animate-slide-up relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-2 h-full bg-green-700"></div>
+                <h3 class="font-black text-3xl mb-10 uppercase tracking-tight text-center">Loan Application</h3>
                 
-                if (res.ok) {
-                    notify(`Loan ${status.toLowerCase()} successfully`);
-                    await syncData();
-                    renderLoans();
-                } else {
-                    notify("Failed to update loan status");
-                }
-            } catch (error) {
-                notify("Network error. Please try again.");
+                <div class="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
+                    <div class="flex items-center gap-2 text-blue-700 dark:text-blue-400">
+                        <i data-lucide="info" size="18"></i>
+                        <p class="text-sm font-bold">Loan Eligibility</p>
+                    </div>
+                    <p class="text-xs text-blue-600 dark:text-blue-300 mt-1">
+                        Max loan amount: Rs. ${Math.floor(cleanNumber(state.user.basic_salary) * 3).toLocaleString()}
+                    </p>
+                </div>
+                
+                <form id="loan-application-form" onsubmit="handleLoanApply(event)" class="space-y-8">
+                    <div>
+                        <label class="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 ml-2 mb-2 block">
+                            Requested Amount (Rs.)
+                            <span class="text-red-500">*</span>
+                        </label>
+                        <input type="number" id="ln-amt-val-hub" 
+                               class="w-full p-5 rounded-[1.5rem] border-2 font-black bg-slate-50 dark:bg-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:border-green-600 outline-none text-2xl transition-all"
+                               placeholder="0.00"
+                               min="1000"
+                               max="${Math.floor(cleanNumber(state.user.basic_salary) * 3)}"
+                               step="1000"
+                               required>
+                        <p class="text-xs text-slate-400 dark:text-slate-500 mt-2">
+                            Minimum: Rs. 1,000 | Maximum: 3x Basic Salary
+                        </p>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 ml-2 mb-2 block">
+                            Reason for Loan
+                            <span class="text-red-500">*</span>
+                        </label>
+                        <textarea id="ln-rsn-val-hub" 
+                                  class="w-full p-5 rounded-[1.5rem] border-2 font-bold h-32 bg-slate-50 dark:bg-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 transition-all text-base"
+                                  placeholder="Please describe the reason for this loan in detail..."
+                                  minlength="10"
+                                  maxlength="500"
+                                  required></textarea>
+                        <div class="flex justify-between text-xs text-slate-400 dark:text-slate-500 mt-2">
+                            <span>Minimum 10 characters</span>
+                            <span id="char-count">0/500</span>
+                        </div>
+                    </div>
+                    <div class="p-4 bg-slate-50 dark:bg-slate-900 rounded-xl">
+                        <div class="flex items-center gap-2 mb-2">
+                            <i data-lucide="calculator" size="18" class="text-green-600"></i>
+                            <p class="font-bold text-sm">Estimated Monthly Deduction</p>
+                        </div>
+                        <p class="text-2xl font-black text-green-700 dark:text-green-400" id="estimated-deduction">
+                            Rs. 0
+                        </p>
+                        <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                            Based on 12-month repayment plan
+                        </p>
+                    </div>
+                    <button type="submit" 
+                            class="w-full py-6 bg-green-700 text-white rounded-[1.5rem] font-black uppercase tracking-widest shadow-lg hover:bg-green-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            id="loan-submit-btn">
+                        Submit Application
+                    </button>
+                </form>
+            </div>`;
+    } else {
+        // Combine online and offline loans for history
+        const allUserLoans = [...(state.userLoans || [])];
+        
+        // Add offline loans if any
+        try {
+            const offlineLoans = JSON.parse(localStorage.getItem('offline_loans') || '[]')
+                .filter(loan => loan.employeeId === state.user.id);
+            allUserLoans.push(...offlineLoans);
+        } catch (e) {
+            console.error("Error loading offline loans:", e);
+        }
+        
+        // Sort by date
+        allUserLoans.sort((a, b) => new Date(b.applied_at) - new Date(a.applied_at));
+        
+        return `
+            <div class="space-y-6 max-w-4xl mx-auto">
+                <div class="overflow-hidden rounded-[2.5rem] border-2 border-slate-100 dark:border-slate-700 shadow-xl">
+                    <table class="w-full text-left">
+                        <thead class="bg-slate-50 dark:bg-slate-900 border-b dark:border-slate-700 font-black uppercase text-[10px] text-slate-400 dark:text-slate-500 tracking-widest">
+                            <tr>
+                                <th class="p-6">Applied Date</th>
+                                <th class="p-6">Loan Amount</th>
+                                <th class="p-6">Status</th>
+                                <th class="p-6">Source</th>
+                                <th class="p-6 text-right">Remaining Balance</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y dark:divide-slate-700 font-bold text-slate-800 dark:text-slate-200">
+                            ${allUserLoans.map(ln => `
+                                <tr class="hover:bg-slate-50 dark:hover:bg-slate-900">
+                                    <td class="p-6 font-mono text-slate-400 dark:text-slate-500">${formatDate(ln.applied_at)}</td>
+                                    <td class="p-6 font-black uppercase">Rs. ${cleanNumber(ln.amount).toLocaleString()}</td>
+                                    <td class="p-6">
+                                        <span class="status-badge ${ln.status === 'Approved' ? 'status-approved' : ln.status === 'Rejected' ? 'status-rejected' : 'status-pending'}">
+                                            ${ln.status || 'Pending'}
+                                            ${ln.offline ? ' (Offline)' : ''}
+                                        </span>
+                                    </td>
+                                    <td class="p-6">
+                                        ${ln.offline ? 
+                                            '<span class="text-orange-500 text-xs font-bold">OFFLINE</span>' : 
+                                            '<span class="text-green-500 text-xs font-bold">ONLINE</span>'}
+                                    </td>
+                                    <td class="p-6 text-right font-mono text-slate-400 dark:text-slate-500">
+                                        Rs. ${netOutstanding.toLocaleString()}
+                                    </td>
+                                </tr>
+                            `).join('')}
+                            ${allUserLoans.length === 0 ? `
+                                <tr>
+                                    <td colspan="5" class="p-20 text-center font-black text-slate-300 dark:text-slate-600 uppercase tracking-widest">
+                                        No Loan History
+                                    </td>
+                                </tr>
+                            ` : ''}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Offline loans notice -->
+                ${(() => {
+                    try {
+                        const offlineLoans = JSON.parse(localStorage.getItem('offline_loans') || '[]')
+                            .filter(loan => loan.employeeId === state.user.id && loan.status === 'Pending');
+                        
+                        if (offlineLoans.length > 0) {
+                            return `
+                                <div class="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-2xl p-6">
+                                    <div class="flex items-center gap-3">
+                                        <i data-lucide="wifi-off" class="text-orange-600 dark:text-orange-400" size="24"></i>
+                                        <div>
+                                            <p class="font-bold text-orange-800 dark:text-orange-300">
+                                                ${offlineLoans.length} offline application${offlineLoans.length > 1 ? 's' : ''} pending sync
+                                            </p>
+                                            <p class="text-sm text-orange-600 dark:text-orange-400 mt-1">
+                                                Applications will be sent when you're back online
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                        return '';
+                    } catch (e) {
+                        return '';
+                    }
+                })()}
+            </div>`;
+    }
+}
+
+// Add character counter for loan reason
+document.addEventListener('input', function(e) {
+    if (e.target && e.target.id === 'ln-rsn-val-hub') {
+        const charCount = e.target.value.length;
+        const counter = document.getElementById('char-count');
+        if (counter) {
+            counter.textContent = `${charCount}/500`;
+            if (charCount > 500) {
+                counter.classList.add('text-red-500');
+            } else if (charCount > 400) {
+                counter.classList.add('text-orange-500');
+            } else {
+                counter.classList.remove('text-red-500', 'text-orange-500');
             }
         }
+    }
+    
+    // Calculate estimated deduction
+    if (e.target && e.target.id === 'ln-amt-val-hub') {
+        const amount = cleanNumber(e.target.value);
+        const estimated = document.getElementById('estimated-deduction');
+        if (estimated && amount > 0) {
+            const monthlyDeduction = Math.ceil(amount / 12);
+            estimated.textContent = `Rs. ${monthlyDeduction.toLocaleString()}`;
+        }
+    }
+});
+
+// Also update the approveLoan function
+async function approveLoan(id, status) {
+    if (!confirm(`Are you sure you want to ${status.toLowerCase()} this loan?`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE}/admin/loans/${id}`, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ status })
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            notify(`✓ Loan ${status.toLowerCase()} successfully`);
+            await syncData();
+            renderLoans();
+        } else {
+            const errorMessage = result.message || result.error || `Server error: ${response.status}`;
+            notify(`✗ Failed: ${errorMessage}`);
+        }
+    } catch (error) {
+        console.error("Approve loan error:", error);
+        notify("✗ Network error. Please try again.");
+    }
+}
+
+// Update syncData function to include offline loans in userLoans
+async function syncData() {
+    if (!state.user) return;
+    
+    try {
+        // ... existing sync code ...
+        
+        // Load offline loans for current user
+        try {
+            const offlineLoans = JSON.parse(localStorage.getItem('offline_loans') || '[]')
+                .filter(loan => loan.employeeId === state.user.id);
+            
+            if (state.userLoans) {
+                state.userLoans = [...state.userLoans, ...offlineLoans];
+            } else {
+                state.userLoans = offlineLoans;
+            }
+        } catch (e) {
+            console.error("Error loading offline loans:", e);
+        }
+        
+        // ... rest of sync code ...
+    } catch (e) {
+        console.warn("Sync Error", e);
+        notify("⚠ Sync failed. Using cached data.");
+    }
+}
 
         // --- LEAVES HUB ---
         async function renderLeaves() {
