@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LSAFHR Management System - v9.5.0</title>
+    <title>LSAFHR Management System - v9.6.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
@@ -22,14 +22,12 @@
             background-color: #f8fafc;
         }
 
-        /* Animations for smoother transitions */
         .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         
-        .animate-slide-up { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        .animate-slide-up { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* Custom Scrollbar for better UX */
         .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
@@ -46,7 +44,6 @@
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
         }
 
-        /* Button and UI Component Styles */
         .btn-clock-in {
             background-color: #15803d;
             color: white;
@@ -91,6 +88,13 @@
 
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
+        const { 
+            MapPin, Clock, Calendar, User, Home, LogOut, CheckCircle2, 
+            AlertCircle, ChevronRight, Briefcase, Menu, X, DollarSign, 
+            Heart, Users, Search, FileText, Download, Shield, Activity,
+            Upload, FileSpreadsheet, Table, Eye, Wallet, ArrowLeft, Pencil, Trash2, Lock, Key, ShieldAlert, Save, Mail, MessageSquare, Send, Bell, Filter, RefreshCw
+        } = lucide;
+
         const API_BASE = '/api'; 
 
         /**
@@ -160,7 +164,7 @@
         };
 
         /**
-         * --- SHARED UI COMPONENTS ---
+         * --- SHARED COMPONENTS ---
          */
         const Card = ({ children, className = "" }) => (
             <div className={`bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm transition-all hover:shadow-md ${className}`}>{children}</div>
@@ -176,7 +180,7 @@
             };
             return (
                 <button type={type} onClick={onClick} disabled={disabled} className={`${base} ${styles[variant]} ${className}`}>
-                    {Icon && <lucide.Icon name={Icon} size={14} />}{children}
+                    {Icon && <Icon size={14} />}{children}
                 </button>
             );
         };
@@ -192,6 +196,38 @@
         };
 
         /**
+         * --- MODULE: LOGIN ---
+         */
+        function LoginView({ onLogin, loading }) {
+            const [id, setId] = useState('');
+            const [pass, setPass] = useState('');
+
+            return (
+                <div className="min-h-screen flex items-center justify-center bg-slate-100 w-full">
+                    <Card className="w-full max-w-md p-12 shadow-2xl animate-slide-up">
+                        <div className="text-center mb-10">
+                            <img src="/UOL-Green-V1.png" className="h-20 mx-auto mb-6" alt="LSAFHR" />
+                            <h1 className="text-3xl font-black text-slate-800 uppercase tracking-widest">Login Matrix</h1>
+                        </div>
+                        <form onSubmit={(e) => { e.preventDefault(); onLogin(id, pass); }} className="space-y-6">
+                            <div>
+                                <label className="block text-[10px] font-black text-slate-400 uppercase ml-2 mb-1">Employee ID</label>
+                                <input value={id} onChange={e=>setId(e.target.value)} className="w-full p-5 rounded-3xl border-2 font-black uppercase bg-slate-50 focus:bg-white focus:border-green-600 outline-none" placeholder="Enter ID" required />
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-black text-slate-400 uppercase ml-2 mb-1">Access Key</label>
+                                <input type="password" value={pass} onChange={e=>setPass(e.target.value)} className="w-full p-5 rounded-3xl border-2 font-black bg-slate-50 focus:bg-white focus:border-green-600 outline-none" placeholder="••••••••" required />
+                            </div>
+                            <Button type="submit" className="w-full py-6 text-base" disabled={loading}>
+                                {loading ? "Authorizing..." : "Enter Hub"}
+                            </Button>
+                        </form>
+                    </Card>
+                </div>
+            );
+        }
+
+        /**
          * --- MODULE: ATTENDANCE ---
          */
         function AttendanceHub({ user, attendance, fetchData }) {
@@ -205,21 +241,22 @@
                     mapRef.current = map;
                     navigator.geolocation.getCurrentPosition((p) => {
                         map.setView([p.coords.latitude, p.coords.longitude], 16);
-                        window.L.marker([p.coords.latitude, p.coords.longitude]).addTo(map).bindPopup("<b>Verified Location</b>").openPopup();
+                        window.L.marker([p.coords.latitude, p.coords.longitude]).addTo(map).bindPopup("<b>Verified Entry</b>").openPopup();
                     });
                 }
             }, []);
 
-            const focusOnMap = (lat, lng, label) => {
+            const focusOnMap = (lat, lng, label, time) => {
                 if (mapRef.current && lat && lng) {
                     mapRef.current.setView([lat, lng], 17);
-                    window.L.marker([lat, lng]).addTo(mapRef.current).bindPopup(`<b>${label}</b>`).openPopup();
+                    window.L.marker([lat, lng]).addTo(mapRef.current).bindPopup(`<b>\${label}: \${time}</b>`).openPopup();
                     window.scrollTo({ top: 100, behavior: 'smooth' });
+                    notify(`Centering Map: \${time}`);
                 }
             };
 
             const handleClock = async (type) => {
-                notify("Requesting GPS Verification...");
+                notify("Verifying Geolocation...");
                 navigator.geolocation.getCurrentPosition(async (pos) => {
                     const res = await fetch(`${API_BASE}/attendance`, {
                         method: 'POST',
@@ -229,7 +266,7 @@
                             latitude: pos.coords.latitude, longitude: pos.coords.longitude
                         })
                     });
-                    if (res.ok) { notify(`${type} Confirmed.`); fetchData(); }
+                    if (res.ok) { notify(`\${type} Confirmed.`); fetchData(); }
                 });
             };
 
@@ -254,10 +291,10 @@
                              <h3 class="text-6xl font-black text-slate-800 font-mono mb-10">{getPktTime()}</h3>
                              <div class="flex flex-col gap-4 w-full max-w-xs">
                                 <button onClick={() => handleClock('Clock In')} className="btn-clock-in w-full py-5 text-lg uppercase">Clock In</button>
-                                <button onClick={() => handleClock('Clock Out')} className="btn-clock-out w-full py-5 text-lg uppercase">Clock Out</button>
+                                <button onClick={() => handleClock('Clock Out')} className="btn-clock-out w-full py-5 text-lg uppercase border-2">Clock Out</button>
                              </div>
                         </Card>
-                        <Card className="!p-0 flex flex-col max-h-[500px] border-2">
+                        <Card className="!p-0 flex flex-col max-h-[520px] border-2">
                             <div class="p-6 border-b bg-slate-50 font-black text-xs uppercase text-slate-400">Monthly Shift Logs</div>
                             <div class="flex-1 overflow-y-auto divide-y custom-scrollbar">
                                 {Object.keys(grouped).sort((a,b) => new Date(b)-new Date(a)).map(date => {
@@ -267,11 +304,11 @@
                                         <div key={date} class="p-6 flex justify-between items-center hover:bg-slate-50">
                                             <div>
                                                 <p class="font-black text-slate-800 text-sm">{date}</p>
-                                                <p class="text-[10px] text-slate-400 font-bold uppercase">Work: {calculateWorkTime(cin?.time_str, cout?.time_str)}</p>
+                                                <p class="text-[10px] text-slate-400 font-bold uppercase">Duration: {calculateWorkTime(cin?.time_str, cout?.time_str)}</p>
                                             </div>
                                             <div class="flex gap-4">
-                                                {cin && <button onClick={() => focusMap(cin.latitude, cin.longitude, 'In', cin.time_str)} class="text-green-600 font-black text-xs border-b border-green-200">{cin.time_str} IN</button>}
-                                                {cout && <button onClick={() => focusMap(cout.latitude, cout.longitude, 'Out', cout.time_str)} class="text-red-600 font-black text-xs border-b border-red-200">{cout.time_str} OUT</button>}
+                                                {cin && <button onClick={() => focusOnMap(cin.latitude, cin.longitude, 'Clock In', cin.time_str)} class="text-green-600 font-black text-xs border-b border-green-200">{cin.time_str} IN</button>}
+                                                {cout && <button onClick={() => focusOnMap(cout.latitude, cout.longitude, 'Clock Out', cout.time_str)} class="text-red-600 font-black text-xs border-b border-red-200">{cout.time_str} OUT</button>}
                                             </div>
                                         </div>
                                     )
@@ -319,11 +356,12 @@
                         <h2 class="text-3xl font-black uppercase tracking-tighter">Financial Matrix</h2>
                         <div class="flex gap-2">
                              <input type="month" value={month} onChange={e=>setMonth(e.target.value)} class="p-3 border-2 rounded-2xl font-black bg-white" />
-                             {isAdmin && <button onClick={() => exportToCSV(employees, 'Payroll.csv')} class="bg-white border-2 px-6 py-2 rounded-xl font-black text-[10px] uppercase">Export Ledger</button>}
+                             {isAdmin && <Button variant="secondary" onClick={() => exportToCSV(employees, 'LSAF_Payroll.csv')} icon={Download}>Export</Button>}
                         </div>
                     </div>
                     {!isAdmin && !isPosted ? (
                         <Card className="py-40 text-center flex flex-col items-center border-dashed border-2">
+                            <Lock size={64} class="text-slate-200 mb-6" />
                             <p class="text-slate-400 font-black uppercase text-xs">Access Restricted - Pending Admin Release</p>
                         </Card>
                     ) : (
@@ -350,19 +388,19 @@
                                                 <tr key={e.id} class="hover:bg-slate-50">
                                                     <td class="p-5 font-mono text-slate-500">{e.id}</td>
                                                     <td class="p-5 uppercase">{e.name}</td>
-                                                    <td class="p-5 text-right">{edit ? <input id={`eb-${e.id}`} class="w-20 border rounded p-1" defaultValue={e.basic_salary}/> : e.basic_salary.toLocaleString()}</td>
-                                                    <td class="p-5 text-right">{edit ? <input id={`ei-${e.id}`} class="w-16 border rounded p-1" defaultValue={e.invigilation}/> : e.invigilation.toLocaleString()}</td>
-                                                    <td class="p-5 text-right">{edit ? <input id={`et-${e.id}`} class="w-16 border rounded p-1" defaultValue={e.t_payment}/> : e.t_payment.toLocaleString()}</td>
-                                                    <td class="p-4 text-right">{edit ? <input id={`en-${e.id}`} class="w-16 border rounded p-1" defaultValue={e.increment}/> : e.increment.toLocaleString()}</td>
-                                                    <td class="p-4 text-right">{edit ? <input id={`ed-${e.id}`} class="w-16 border rounded p-1" defaultValue={e.eidi}/> : e.eidi.toLocaleString()}</td>
-                                                    <td class="p-4 text-right text-slate-400">{edit ? <input id={`ex-${e.id}`} class="w-16 border rounded p-1" defaultValue={e.tax}/> : e.tax.toLocaleString()}</td>
-                                                    <td class="p-4 text-right text-slate-400">{edit ? <input id={`el-${e.id}`} class="w-16 border rounded p-1" defaultValue={e.loan_deduction}/> : e.loan_deduction.toLocaleString()}</td>
-                                                    <td class="p-4 text-right text-slate-400">{edit ? <input id={`es-${e.id}`} class="w-16 border rounded p-1" defaultValue={e.insurance}/> : e.insurance.toLocaleString()}</td>
-                                                    <td class="p-4 text-right text-slate-400">{edit ? <input id={`eo-${e.id}`} class="w-16 border rounded p-1" defaultValue={e.others_deduction}/> : e.others_deduction.toLocaleString()}</td>
-                                                    <td class="p-4 text-right text-red-500">{edit ? <input id={`eld-${e.id}`} class="w-16 border rounded p-1" defaultValue={e.extra_leaves_deduction}/> : e.extra_leaves_deduction.toLocaleString()}</td>
+                                                    <td class="p-5 text-right font-mono">{edit ? <input id={`eb-${e.id}`} class="w-20 border rounded p-1" defaultValue={e.basic_salary}/> : e.basic_salary.toLocaleString()}</td>
+                                                    <td class="p-5 text-right font-mono">{edit ? <input id={`ei-${e.id}`} class="w-16 border rounded p-1" defaultValue={e.invigilation}/> : e.invigilation.toLocaleString()}</td>
+                                                    <td class="p-5 text-right font-mono">{edit ? <input id={`et-${e.id}`} class="w-16 border rounded p-1" defaultValue={e.t_payment}/> : e.t_payment.toLocaleString()}</td>
+                                                    <td class="p-4 text-right font-mono">{edit ? <input id={`en-${e.id}`} class="w-16 border rounded p-1" defaultValue={e.increment}/> : e.increment.toLocaleString()}</td>
+                                                    <td class="p-4 text-right font-mono">{edit ? <input id={`ed-${e.id}`} class="w-16 border rounded p-1" defaultValue={e.eidi}/> : e.eidi.toLocaleString()}</td>
+                                                    <td class="p-4 text-right font-mono text-slate-400">{edit ? <input id={`ex-${e.id}`} class="w-16 border rounded p-1" defaultValue={e.tax}/> : e.tax.toLocaleString()}</td>
+                                                    <td class="p-4 text-right font-mono text-slate-400">{edit ? <input id={`el-${e.id}`} class="w-16 border rounded p-1" defaultValue={e.loan_deduction}/> : e.loan_deduction.toLocaleString()}</td>
+                                                    <td class="p-4 text-right font-mono text-slate-400">{edit ? <input id={`es-${e.id}`} class="w-16 border rounded p-1" defaultValue={e.insurance}/> : e.insurance.toLocaleString()}</td>
+                                                    <td class="p-4 text-right font-mono text-slate-400">{edit ? <input id={`eo-${e.id}`} class="w-16 border rounded p-1" defaultValue={e.others_deduction}/> : e.others_deduction.toLocaleString()}</td>
+                                                    <td class="p-4 text-right font-mono text-red-500">{edit ? <input id={`eld-${e.id}`} class="w-16 border rounded p-1" defaultValue={e.extra_leaves_deduction}/> : e.extra_leaves_deduction.toLocaleString()}</td>
                                                     <td class="p-5 text-right font-black bg-slate-50 text-slate-900">Rs. {m.netPaid.toLocaleString()}</td>
                                                     {isAdmin && <td class="p-5 text-center">
-                                                        {edit ? <button onClick={() => saveSalary(e.id)} class="text-green-600"><i data-lucide="save" size="18"></i></button> : <button onClick={()=>setEditingId(e.id)} class="text-blue-500"><i data-lucide="pencil" size="18"></i></button>}
+                                                        {edit ? <button onClick={() => handleSave(e.id)} class="text-green-600"><Save size={18}/></button> : <button onClick={()=>setEditingId(e.id)} class="text-blue-500"><Pencil size={18}/></button>}
                                                     </td>}
                                                 </tr>
                                             )
@@ -395,36 +433,36 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ employeeId: user.id, amount: amt, reason: rsn })
                 });
-                if(res.ok) { notify("Request sent successfully."); setTab('history'); fetchData(); }
-                else notify("Server Error (500)");
+                if(res.ok) { notify("Request sent. Pending Admin Review."); setTab('history'); fetchData(); }
+                else notify("Error 500: Server Communication Failure.");
             };
 
             const decide = async (id, status) => {
                 await fetch(`${API_BASE}/admin/loans/${id}`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ status }) });
-                notify("Decision recorded."); fetchData();
+                notify(`Loan \${status}.`); fetchData();
             };
 
             return (
                 <div class="space-y-8 animate-fade-in">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div class="bg-white p-10 rounded-[3rem] border-2 border-slate-50 shadow-sm">
+                        <Card className="border-2 border-slate-100 shadow-sm">
                             <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Opening Debt</p>
-                            <p class="text-5xl font-black mt-4 font-mono text-slate-800">Rs. ${cleanNumber(targetUser.loan_opening_balance).toLocaleString()}</p>
-                        </div>
-                        <div class="bg-red-50 p-10 rounded-[3rem] border-red-100 border-2 shadow-sm">
+                            <p class="text-5xl font-black mt-4 font-mono text-slate-800">Rs. {cleanNumber(targetUser.loan_opening_balance).toLocaleString()}</p>
+                        </Card>
+                        <Card class="bg-red-50 border-red-100 border-2">
                             <p class="text-[10px] font-black text-red-400 uppercase tracking-widest">Current Balance</p>
-                            <p class="text-5xl font-black mt-4 font-mono text-red-600">Rs. ${netOutstanding.toLocaleString()}</p>
-                        </div>
+                            <p class="text-5xl font-black mt-4 font-mono text-red-600">Rs. {netOutstanding.toLocaleString()}</p>
+                        </Card>
                     </div>
 
-                    <div class="flex bg-slate-200 p-2 rounded-[2rem] max-w-sm mx-auto shadow-inner">
-                        <button onClick={()=>setTab('apply')} class="flex-1 py-3 text-[10px] font-black rounded-2xl uppercase ${tab==='apply'?'bg-white text-green-700 shadow-lg':'text-slate-500'}">Apply</button>
-                        <button onClick={()=>setTab('history')} class="flex-1 py-3 text-[10px] font-black rounded-2xl uppercase ${tab==='history'?'bg-white text-green-700 shadow-lg':'text-slate-500'}">History</button>
-                        {isAdmin && <button onClick={()=>setTab('oversight')} class="flex-1 py-3 text-[10px] font-black rounded-2xl uppercase ${tab==='oversight'?'bg-white text-green-700 shadow-lg':'text-slate-500'}">Oversight</button>}
+                    <div class="flex bg-slate-200 p-2 rounded-3xl max-w-sm mx-auto shadow-inner">
+                        <button onClick={()=>setTab('apply')} class={\`flex-1 py-3 text-[10px] font-black rounded-2xl uppercase \${tab==='apply'?'bg-white text-green-700 shadow-lg':'text-slate-500'}\`}>Apply</button>
+                        <button onClick={()=>setTab('history')} class={\`flex-1 py-3 text-[10px] font-black rounded-2xl uppercase \${tab==='history'?'bg-white text-green-700 shadow-lg':'text-slate-500'}\`}>History</button>
+                        {isAdmin && <button onClick={()=>setTab('oversight')} class={\`flex-1 py-3 text-[10px] font-black rounded-2xl uppercase \${tab==='oversight'?'bg-white text-green-700 shadow-lg':'text-slate-500'}\`}>Oversight</button>}
                     </div>
 
                     {tab === 'apply' ? (
-                        <div class="bg-white p-16 rounded-[4rem] max-w-2xl mx-auto border-2 border-slate-50 shadow-2xl animate-slide-up relative">
+                        <Card className="max-w-2xl mx-auto shadow-2xl !p-12 relative overflow-hidden">
                             <div class="absolute top-0 left-0 w-2 h-full bg-green-700"></div>
                             <h3 class="font-black text-2xl mb-8 uppercase text-slate-800">New Application</h3>
                             <form onSubmit={handleApply} class="space-y-6">
@@ -432,9 +470,9 @@
                                 <textarea id="ln-rsn-val-hub" placeholder="Provide reason..." class="w-full p-6 rounded-2xl border-2 font-bold h-32 bg-slate-50" required></textarea>
                                 <button type="submit" class="w-full py-6 bg-green-700 text-white rounded-2xl font-black uppercase tracking-widest shadow-2xl">SUBMIT TO ADMIN</button>
                             </form>
-                        </div>
+                        </Card>
                     ) : tab === 'oversight' ? (
-                        <div class="bg-white rounded-[3rem] border-2 overflow-hidden shadow-2xl">
+                        <Card className="!p-0 border-2 overflow-hidden shadow-2xl">
                              <table class="w-full text-left text-xs">
                                 <thead class="bg-slate-50 border-b font-black uppercase text-slate-400">
                                     <tr><th class="p-6">Staff</th><th class="p-6">Date</th><th class="p-6 text-right">Amount</th><th class="p-6">Action</th></tr>
@@ -442,9 +480,9 @@
                                 <tbody class="divide-y font-bold">
                                     {allLoans.map(l => (
                                         <tr key={l.id} class="hover:bg-slate-50">
-                                            <td class="p-6 uppercase">${l.name}</td>
-                                            <td class="p-6 font-mono">${formatDate(l.applied_at)}</td>
-                                            <td class="p-6 text-right font-black">Rs. ${cleanNumber(l.amount).toLocaleString()}</td>
+                                            <td class="p-6 uppercase">{l.name}</td>
+                                            <td class="p-6 font-mono">{formatDate(l.applied_at)}</td>
+                                            <td class="p-6 text-right font-black">Rs. {cleanNumber(l.amount).toLocaleString()}</td>
                                             <td class="p-6 flex gap-2">
                                                 <button onClick={()=>decide(l.id, 'Approved')} class="bg-green-700 text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase">Approve</button>
                                                 <button onClick={()=>decide(l.id, 'Rejected')} class="bg-red-600 text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase">Reject</button>
@@ -453,17 +491,17 @@
                                     ))}
                                 </tbody>
                              </table>
-                        </div>
+                        </Card>
                     ) : (
-                        <div class="space-y-4 max-w-4xl mx-auto">
-                            {userLoans.map(l => (
-                                <div class="bg-white p-8 rounded-[2.5rem] border-2 border-slate-50 shadow-sm flex justify-between items-center transition-all">
-                                    <div><p class="font-black text-2xl">Rs. ${cleanNumber(l.amount).toLocaleString()}</p><p class="text-[10px] text-slate-400 uppercase font-black">${formatDate(l.applied_at)}</p></div>
+                        <div class="space-y-4 max-w-3xl mx-auto">
+                            {userLoans.map((l, i) => (
+                                <Card key={i} className="flex justify-between items-center border-2 border-slate-100">
+                                    <div><p class="font-black text-lg">Rs. {cleanNumber(l.amount).toLocaleString()}</p><p class="text-[10px] text-slate-400 uppercase font-black">{formatDate(l.applied_at)}</p></div>
                                     <div class="text-right">
-                                        <span class="status-badge ${l.status==='Approved'?'status-approved': 'status-pending'}">${l.status}</span>
-                                        <p class="text-[9px] text-slate-300 font-bold mt-2 uppercase">Balance: Rs. ${netOutstanding.toLocaleString()}</p>
+                                        <span class={\`status-badge \${l.status==='Approved'?'status-approved': 'status-pending'}\`}>{l.status}</span>
+                                        <p class="text-[9px] text-slate-300 font-bold mt-2 uppercase">Balance After: Rs. {netOutstanding.toLocaleString()}</p>
                                     </div>
-                                </div>
+                                </Card>
                             ))}
                         </div>
                     )}
@@ -489,7 +527,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ employeeId: user.id, type, startDate: date, days, reason: 'System' })
                 });
-                if(res.ok) { notify("Request sent."); setTab('history'); fetchData(); }
+                if(res.ok) { notify("Leave request sent."); setTab('history'); fetchData(); }
             };
 
             const decide = async (id, status) => {
@@ -504,9 +542,9 @@
                         <div class="bg-white p-10 rounded-[3rem] border-2 border-slate-50 shadow-sm"><p class="text-[10px] font-black text-slate-400 uppercase">WOP / Casual</p><p class="text-6xl font-black mt-4">${targetUser.leave_casual || 0}d</p></div>
                     </div>
                     <div class="flex bg-slate-200 p-2 rounded-[2rem] max-w-sm mx-auto shadow-inner">
-                        <button onClick={()=>setTab('apply')} class="flex-1 py-3 text-[10px] font-black rounded-2xl uppercase ${tab==='apply'?'bg-white text-green-700':'text-slate-500'}">Apply</button>
-                        <button onClick={()=>setTab('history')} class="flex-1 py-3 text-[10px] font-black rounded-2xl uppercase ${tab==='history'?'bg-white text-green-700':'text-slate-500'}">History</button>
-                        {isAdmin && <button onClick={()=>setTab('oversight')} class="flex-1 py-3 text-[10px] font-black rounded-2xl uppercase ${tab==='oversight'?'bg-white text-green-700':'text-slate-500'}">Oversight</button>}
+                        <button onClick={()=>setTab('apply')} class={\`flex-1 py-3 text-[10px] font-black rounded-2xl uppercase \${tab==='apply'?'bg-white text-green-700':'text-slate-500'}\`}>Apply</button>
+                        <button onClick={()=>setTab('history')} class={\`flex-1 py-3 text-[10px] font-black rounded-2xl uppercase \${tab==='history'?'bg-white text-green-700':'text-slate-500'}\`}>History</button>
+                        {isAdmin && <button onClick={()=>setTab('oversight')} class={\`flex-1 py-3 text-[10px] font-black rounded-2xl uppercase \${tab==='oversight'?'bg-white text-green-700':'text-slate-500'}\`}>Oversight</button>}
                     </div>
 
                     {tab === 'apply' ? (
@@ -522,7 +560,7 @@
                         <div class="bg-white rounded-[3rem] border-2 overflow-hidden shadow-2xl">
                              <table class="w-full text-left text-xs">
                                 <thead class="bg-slate-50 border-b font-black uppercase text-slate-400">
-                                    <tr><th class="p-6">Staff</th><th class="p-6">Allowance</th><th class="p-6">Days</th><th class="p-6">Action</th></tr>
+                                    <tr><th class="p-6">Staff</th><th class="p-6">Allowance (Ann/WOP)</th><th class="p-6">Days</th><th class="p-6">Action</th></tr>
                                 </thead>
                                 <tbody class="divide-y font-bold">
                                     {allLeaves.map(l => {
@@ -556,7 +594,7 @@
         }
 
         /**
-         * --- DIRECTORY & BOARD (Restored) ---
+         * --- DIRECTORY & BOARD ---
          */
         const DirectoryModule = ({ employees, fetchData }) => {
             return (
@@ -583,7 +621,7 @@
             return (
                 <div class="space-y-12 max-w-5xl mx-auto">
                     <div class="bg-slate-900 p-12 rounded-[5rem] shadow-2xl relative">
-                        <form onSubmit={post} class="flex gap-6 mt-4"><input value={val} onChange={e=>setVal(e.target.value)} class="flex-1 bg-white/5 border-2 border-white/10 rounded-[3rem] p-10 font-bold text-white text-2xl outline-none" placeholder="Initialize broadcast..." required /><button type="submit" class="bg-green-600 p-10 rounded-[3rem] text-white"><i data-lucide="send" size="48"></i></button></form>
+                        <form onSubmit={post} class="flex gap-6 mt-4 font-sans"><input value={val} onChange={e=>setVal(e.target.value)} class="flex-1 bg-white/5 border-2 border-white/10 rounded-[3rem] p-10 font-bold text-white text-2xl outline-none" placeholder="Initialize broadcast..." required /><button type="submit" class="bg-green-600 p-10 rounded-[3rem] text-white"><i data-lucide="send" size="48"></i></button></form>
                     </div>
                     <div class="space-y-12">
                         {discussions.map((d, i) => (
@@ -643,7 +681,12 @@
                 <div class="bg-white p-12 rounded-[4rem] shadow-2xl text-center w-full max-w-md">
                     <img src="/UOL-Green-V1.png" class="h-24 mx-auto mb-6" />
                     <h1 class="text-3xl font-black mb-8 uppercase tracking-widest">Login Matrix</h1>
-                    <form id="login-form-main" class="space-y-6 text-left">
+                    <form id="login-form-main" class="space-y-6 text-left" onSubmit={(e)=>{
+                        e.preventDefault();
+                        const id = document.getElementById('l-id').value;
+                        const pass = document.getElementById('l-pass').value;
+                        handleLogin(id, pass);
+                    }}>
                         <input id="l-id" class="w-full p-6 rounded-3xl border-2 font-black uppercase" placeholder="Employee ID" />
                         <input id="l-pass" type="password" class="w-full p-6 rounded-3xl border-2 font-black" placeholder="Key" />
                         <button type="submit" class="w-full py-6 bg-green-700 text-white rounded-3xl font-black uppercase tracking-widest">Enter Hub</button>
@@ -651,13 +694,24 @@
                 </div>
             </div>;
 
+            const handleLogin = async (id, pass) => {
+                setLoading(true);
+                try {
+                    const r = await fetch(`${API_BASE}/employees`);
+                    const list = await r.json();
+                    const found = list.find(e => String(e.id).toUpperCase() === String(id).toUpperCase() && String(e.password) === String(pass));
+                    if(found) { setUser(found); localStorage.setItem('hr_user', JSON.stringify(found)); } 
+                    else alert("Access Denied.");
+                } catch(e) { alert("Offline."); } finally { setLoading(false); }
+            };
+
             return (
                 <div class="min-h-screen bg-slate-50 flex text-slate-900 font-sans">
-                    <aside class="hidden md:flex flex-col w-72 bg-white border-r fixed h-full z-50 shadow-sm">
+                    <aside class="hidden md:flex flex-col w-72 bg-white border-r fixed h-full z-50 shadow-sm text-left">
                         <div class="p-10 border-b text-center"><img src="/UOL-Green-V1.png" class="h-12 mx-auto mb-3" /><span class="text-[10px] font-black text-green-700 uppercase tracking-widest">Identity Hub</span></div>
                         <nav class="flex-1 p-6 space-y-2">
                             {NAV_ITEMS.filter(n => !n.admin || user.role === 'admin').map(n => (
-                                <button key={n.id} onClick={()=>setView(n.id)} class={`w-full flex items-center gap-5 p-5 rounded-3xl font-black transition-all \${state.currentTab===n.id?'bg-green-700 text-white shadow-2xl scale-105':'text-slate-500 hover:bg-slate-50'}`}>
+                                <button key={n.id} onClick={()=>setView(n.id)} class={`w-full flex items-center gap-5 p-5 rounded-3xl font-black transition-all ${view===n.id?'bg-green-700 text-white shadow-2xl scale-105':'text-slate-500 hover:bg-slate-50'}`}>
                                     <i data-lucide={n.icon} size="20"></i><span class="text-[11px] uppercase tracking-widest text-left">{n.label}</span>
                                 </button>
                             ))}
@@ -678,6 +732,7 @@
                             }
                         })()}
                     </div></main>
+                    <div id="status-toast" class="fixed top-12 left-1/2 -translate-x-1/2 z-[1000] bg-slate-900 text-white px-10 py-5 rounded-[1.5rem] font-black uppercase text-[11px] tracking-widest shadow-2xl opacity-0 pointer-events-none transition-all duration-300 transform translate-y-[-20px] text-center">Status Matrix Updated</div>
                 </div>
             );
         }
