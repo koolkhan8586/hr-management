@@ -44,7 +44,6 @@
         .btn-clock-out:hover { background-color: #f8fafc; }
         .matrix-row:hover { background-color: #f8fafc; }
         
-        /* Status Badge Definitions */
         .status-badge { font-weight: 900; text-transform: uppercase; font-size: 9px; padding: 4px 10px; border-radius: 8px; letter-spacing: 0.05em; display: inline-block; }
         .status-pending { background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
         .status-approved { background-color: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
@@ -143,10 +142,10 @@
             { id: 'directory', label: 'Staff Hub', icon: 'users', admin: true },
             { id: 'loans', label: 'Loans Hub', icon: 'wallet', admin: false },
             { id: 'leaves', label: 'Leaves Hub', icon: 'calendar', admin: false },
-            { id: 'discussion', label: 'Matrix Board', icon: 'message-square', admin: false }
+            { id: 'discussion', label: 'Board', icon: 'message-square', admin: false }
         ];
 
-        // --- UTILS ---
+        // --- CORE UTILS ---
         function notify(msg) {
             const t = document.getElementById('status-toast'); if (!t) return;
             t.innerText = msg; t.style.opacity = '1'; t.style.transform = 'translateY(0) translateX(-50%)';
@@ -202,8 +201,7 @@
                 const isAdmin = state.user.role === 'admin';
                 const endpoints = [
                     fetch(`${API_BASE}/employees`), fetch(`${API_BASE}/payroll-posted`), fetch(`${API_BASE}/discussions`), 
-                    fetch(`${API_BASE}/attendance/${(isAdmin && state.selectedAdminEmployeeId) ? state.selectedAdminEmployeeId : state.user.id}`),
-                    fetch(`${API_BASE}/leaves/${state.user.id}`), fetch(`${API_BASE}/loans/${state.user.id}`),
+                    fetch(`${API_BASE}/attendance/${state.user.id}`), fetch(`${API_BASE}/leaves/${state.user.id}`), fetch(`${API_BASE}/loans/${state.user.id}`),
                     isAdmin ? fetch(`${API_BASE}/admin/leaves`) : Promise.resolve({ ok: true, json: () => [] }),
                     isAdmin ? fetch(`${API_BASE}/admin/loans`) : Promise.resolve({ ok: true, json: () => [] })
                 ];
@@ -289,7 +287,7 @@
                             <p class="text-4xl font-black text-red-500 mt-2 font-mono font-sans font-sans font-sans">Rs. ${cleanNumber(state.user.loan_opening_balance - state.user.loan_deduction).toLocaleString()}</p>
                         </div>
                         <div class="bg-white p-10 rounded-[2.5rem] border shadow-sm text-left font-sans font-sans">
-                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Identity Level Hub</p>
+                            <p class="text-[10px] font-black text-slate-400 uppercase font-sans tracking-widest">Identity Level Hub</p>
                             <p class="text-2xl font-black text-slate-800 mt-2 capitalize font-sans font-sans">${state.user.role}</p>
                         </div>
                     </div>
@@ -303,7 +301,7 @@
             const isPosted = state.payrollPostedMonths.includes(state.selectedMonth);
 
             let content = `
-                <div class="animate-fade-in space-y-6 font-sans text-left text-slate-800 font-sans font-sans">
+                <div class="animate-fade-in space-y-6 font-sans text-left text-slate-800 font-sans font-sans font-sans">
                     <div class="flex flex-col md:flex-row justify-between items-center gap-4 border-b pb-4 border-slate-100 text-left font-sans font-sans font-sans">
                         <h2 class="text-xl font-black uppercase tracking-widest text-slate-800">Salary Matrix Hub</h2>
                         <div class="flex flex-wrap gap-2 justify-center font-sans font-sans font-sans">
@@ -331,7 +329,7 @@
                                     <th class="p-4 text-right font-sans font-sans">Eidi hub</th><th class="p-4 text-right text-slate-500 font-sans font-sans">Tax Hub hub</th>
                                     <th class="p-4 text-right text-slate-500 font-sans font-sans">Loan hub</th><th class="p-4 text-right text-slate-500 font-sans font-sans font-sans">Ins. Hub matrix</th>
                                     <th class="p-4 text-right text-slate-500">Others matrix</th><th class="p-4 text-right text-red-500 font-sans font-sans">L.Ded hub</th>
-                                    <th class="p-4 text-right font-black text-slate-900 uppercase font-mono text-xs bg-slate-100/50">Net Paid Matrix</th>
+                                    <th class="p-4 text-right font-black text-slate-900 uppercase font-mono text-xs bg-slate-100/50">Net Paid Ledger</th>
                                     ${isAdmin ? `<th class="p-4 text-center font-sans font-sans">Action Hub</th>` : ''}
                                 </tr>
                             </thead>
@@ -467,14 +465,14 @@
                                 <button onclick="handleClock('Clock Out')" class="w-full py-5 btn-clock-out text-base uppercase font-sans tracking-widest font-sans font-sans font-sans">Mark Clock Out Matrix Hub</button>
                             </div>
                         </div>
-                        <div class="bg-white rounded-[2.5rem] p-12 border-2 border-slate-50 text-center flex flex-col items-center justify-center font-sans font-sans">
+                        <div class="bg-white rounded-[2.5rem] p-12 border-2 border-slate-50 text-center flex flex-col items-center justify-center font-sans font-sans font-sans font-sans">
                             <div class="bg-green-50 w-24 h-24 rounded-full flex items-center justify-center mb-8 font-sans font-sans font-sans"><i data-lucide="map-pin" class="text-green-600 animate-bounce" size="40"></i></div>
                             <p class="text-xs font-black text-slate-600 uppercase tracking-widest font-sans font-sans font-sans">Geofence Hub Verified hub Matrix</p>
                         </div>
                     </div>
 
                     <div class="bg-white rounded-[2.5rem] border shadow-sm mt-8 overflow-hidden font-sans font-sans font-sans">
-                        <div class="bg-slate-50 p-6 border-b flex justify-between items-center font-sans font-sans">
+                        <div class="bg-slate-50 p-8 border-b flex justify-between items-center font-sans font-sans">
                             <span class="font-black text-xs uppercase text-slate-500 tracking-widest font-sans font-sans">Shift identity log summary Matrix hub hub</span>
                             <span class="text-[10px] font-black text-green-700 uppercase tracking-tighter font-sans font-sans">Verified Pairs Matrix Hub</span>
                         </div>
@@ -495,14 +493,14 @@
                                                     ${cin ? `<button onclick="focusMap(${(cin.latitude || 0)}, ${(cin.longitude || 0)}, 'IN HUB MATRIX', '${cin.time_str}')" class="text-green-600 border-b-2 border-green-200 uppercase text-[10px] font-black font-sans font-sans font-sans font-sans font-sans font-sans">${cin.time_str}</button>` : '<span class="text-slate-200">--:--</span>'}
                                                 </td>
                                                 <td class="p-6 text-center font-sans font-sans font-sans">
-                                                    ${cout ? `<button onclick="focusMap(${(cout.latitude || 0)}, ${(cout.longitude || 0)}, 'OUT HUB MATRIX', '${cout.time_str}')" class="text-red-600 border-b-2 border-red-100 uppercase text-[10px] font-black font-sans font-sans font-sans font-sans font-sans font-sans font-sans">${cout.time_str}</button>` : '<span class="text-slate-200 font-sans font-sans font-sans font-sans font-sans font-sans font-sans">--:--</span>'}
+                                                    ${cout ? `<button onclick="focusMap(${(cout.latitude || 0)}, ${(cout.longitude || 0)}, 'OUT HUB MATRIX', '${cout.time_str}')" class="text-red-600 border-b-2 border-red-100 uppercase text-[10px] font-black font-sans font-sans font-sans font-sans font-sans font-sans">${cout.time_str}</button>` : '<span class="text-slate-200 font-sans font-sans font-sans font-sans font-sans font-sans font-sans">--:--</span>'}
                                                 </td>
                                                 <td class="p-6 text-center font-black font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">${calculateWorkTime(cin?.time_str, cout?.time_str)}</td>
                                                 <td class="p-6 text-center font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
                                                     <div class="flex justify-center gap-4">
                                                         ${isAdmin ? `
-                                                            <button onclick="wipeDateAttendance('${date}')" class="bg-red-50 text-red-600 p-3 rounded-2xl hover:bg-red-600 hover:text-white transition-all font-sans font-sans font-sans font-sans"><i data-lucide="trash-2" size="18"></i></button>
-                                                        ` : `<span class="status-badge status-approved font-sans font-sans font-sans font-sans font-sans font-sans">Verified hub matrix</span>`}
+                                                            <button onclick="wipeDateAttendance('${date}')" class="bg-red-50 text-red-600 p-3 rounded-2xl hover:bg-red-600 transition-all hover:text-white font-sans font-sans font-sans font-sans"><i data-lucide="trash-2" size="18"></i></button>
+                                                        ` : `<span class="status-badge status-verified font-sans font-sans font-sans font-sans font-sans font-sans">Verified hub matrix</span>`}
                                                     </div>
                                                 </td>
                                             </tr>`;
@@ -565,7 +563,7 @@
                                 </div>
                                 <div class="flex gap-2 justify-center opacity-0 group-hover:opacity-100 transition-all">
                                     <button onclick="editStaff('${emp.id}')" class="text-blue-500 p-2 font-sans font-sans font-sans font-sans font-sans font-sans"><i data-lucide="pencil" size="18"></i></button>
-                                    <button onclick="deleteStaff('${emp.id}')" class="text-red-400 p-2 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><i data-lucide="trash-2" size="18"></i></button>
+                                    <button onclick="deleteStaff('${emp.id}')" class="text-red-400 p-2 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><i data-lucide="trash-2" size="18"></i></button>
                                 </div>
                             </div>`).join('')}
                     </div>
@@ -631,65 +629,65 @@
             container.innerHTML = `
                 <div class="animate-fade-in space-y-10 font-sans text-left text-slate-800 font-sans font-sans font-sans font-sans">
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10 font-sans font-sans font-sans font-sans font-sans font-sans">
-                        <div class="bg-white p-8 rounded-[2.5rem] border-2 shadow-sm text-left"><p class="text-[9px] font-black text-slate-400 uppercase tracking-widest font-sans font-sans font-sans font-sans font-sans">Opening Debt Hub Hub Hub</p><p class="text-2xl font-black mt-2 font-mono font-sans font-sans font-sans">Rs. ${cleanNumber(targetUser.loan_opening_balance).toLocaleString()}</p></div>
+                        <div class="bg-white p-8 rounded-[2.5rem] border-2 shadow-sm text-left font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><p class="text-[9px] font-black text-slate-400 uppercase tracking-widest font-sans font-sans font-sans font-sans font-sans font-sans">Opening Debt Hub Hub Hub</p><p class="text-2xl font-black mt-2 font-mono font-sans font-sans font-sans font-sans">Rs. ${cleanNumber(targetUser.loan_opening_balance).toLocaleString()}</p></div>
                         <div class="bg-green-50 p-8 rounded-[2.5rem] border-2 border-green-100 text-left font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><p class="text-[9px] font-black text-green-700 uppercase tracking-widest font-sans font-sans font-sans font-sans font-sans">Approved matrix sum Hub Hub</p><p class="text-2xl font-black mt-2 font-mono text-green-800 font-sans font-sans font-sans font-sans">Rs. ${totalApprovedLoans.toLocaleString()}</p></div>
-                        <div class="bg-white p-8 rounded-[2.5rem] border-2 shadow-sm text-left font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><p class="text-[9px] font-black text-slate-400 uppercase tracking-widest font-sans font-sans font-sans font-sans font-sans font-sans">Monthly Deductions Matrix Hub Hub</p><p class="text-2xl font-black mt-2 font-mono font-sans font-sans font-sans font-sans">Rs. ${cleanNumber(targetUser.loan_deduction).toLocaleString()}</p></div>
-                        <div class="bg-red-50 p-8 rounded-[2.5rem] border-2 border-red-100 text-left font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><p class="text-[9px] font-black text-red-600 uppercase tracking-widest font-sans font-sans font-sans font-sans font-sans">Net Hub Matrix balance hub hub hub</p><p class="text-2xl font-black mt-2 font-mono text-red-600 font-sans font-sans font-sans font-sans font-sans">Rs. ${currentNetBalance.toLocaleString()}</p></div>
+                        <div class="bg-white p-8 rounded-[2.5rem] border-2 shadow-sm text-left font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><p class="text-[9px] font-black text-slate-400 uppercase tracking-widest font-sans font-sans font-sans font-sans font-sans font-sans">Monthly Deductions Matrix Hub Hub</p><p class="text-2xl font-black mt-2 font-mono font-sans font-sans font-sans font-sans">Rs. ${cleanNumber(targetUser.loan_deduction).toLocaleString()}</p></div>
+                        <div class="bg-red-50 p-8 rounded-[2.5rem] border-2 border-red-100 text-left font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><p class="text-[9px] font-black text-red-600 uppercase tracking-widest font-sans font-sans font-sans font-sans font-sans">Net Hub Matrix balance hub hub hub</p><p class="text-2xl font-black mt-2 font-mono text-red-600 font-sans font-sans font-sans font-sans font-sans">Rs. ${currentNetBalance.toLocaleString()}</p></div>
                     </div>
 
-                    <div class="flex bg-slate-200 p-2 rounded-[2rem] max-w-sm mx-auto mb-10 shadow-inner font-sans font-sans font-sans font-sans">
+                    <div class="flex bg-slate-200 p-2 rounded-[2rem] max-w-sm mx-auto mb-10 shadow-inner font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
                         <button onclick="state.loanTab='apply'; renderLoans()" class="flex-1 py-3 text-[10px] font-black rounded-2xl uppercase tracking-widest transition-all ${state.loanTab === 'apply' ? 'bg-white text-green-700 shadow-xl font-sans font-sans font-sans' : 'text-slate-500 font-sans font-sans font-sans'}">Apply Matrix Hub</button>
                         <button onclick="state.loanTab='history'; renderLoans()" class="flex-1 py-3 text-[10px] font-black rounded-2xl uppercase tracking-widest transition-all ${state.loanTab === 'history' ? 'bg-white text-green-700 shadow-xl font-sans font-sans font-sans' : 'text-slate-500 font-sans font-sans font-sans'}">History Matrix Hub</button>
-                        ${isAdmin ? `<button onclick="state.loanTab='oversight'; renderLoans()" class="flex-1 py-3 text-[10px] font-black rounded-2xl uppercase transition-all ${state.loanTab === 'oversight' ? 'bg-white text-green-700 shadow-xl font-sans font-sans font-sans font-sans font-sans' : 'text-slate-500 font-sans font-sans font-sans'}">Oversight hub HUB</button>` : ''}
+                        ${isAdmin ? `<button onclick="state.loanTab='oversight'; renderLoans()" class="flex-1 py-3 text-[10px] font-black rounded-2xl uppercase transition-all ${state.loanTab === 'oversight' ? 'bg-white text-green-700 shadow-xl font-sans font-sans font-sans font-sans font-sans' : 'text-slate-500 font-sans font-sans font-sans'} font-sans font-sans">Oversight hub HUB</button>` : ''}
                     </div>
 
                     ${state.loanTab === 'oversight' ? `
-                        <div class="bg-white rounded-[2rem] border-2 border-slate-50 shadow-2xl overflow-hidden font-sans font-sans font-sans font-sans">
+                        <div class="bg-white rounded-[2rem] border-2 border-slate-50 shadow-2xl overflow-hidden font-sans font-sans font-sans font-sans font-sans font-sans">
                             <div class="bg-slate-50 p-8 border-b flex justify-between items-center font-sans font-sans font-sans font-sans font-sans">
                                 <span class="font-black text-xs uppercase text-slate-500 tracking-widest font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Loan audit matrix oversight Hub Hub Hub</span>
                                 <button onclick="exportToCSV(state.allLoans, 'Loans_Audit_Report_Final.csv')" class="bg-slate-900 text-white px-8 py-2.5 rounded-xl font-black text-[10px] uppercase shadow-lg font-sans font-sans font-sans font-sans font-sans">Export Ledger Matrix Hub</button>
                             </div>
-                            <div class="overflow-x-auto font-sans font-sans font-sans font-sans font-sans font-sans"><table class="w-full text-left text-[11px] font-bold font-sans">
-                                <thead class="bg-slate-50 border-b font-black uppercase text-slate-400 font-sans font-sans font-sans font-sans font-sans font-sans"><tr><th class="p-6 font-sans font-sans font-sans">Requester identity hub matrix</th><th class="p-6 font-sans font-sans font-sans font-sans">Matrix Date Hub Matrix</th><th class="p-6 text-right font-sans font-sans font-sans font-sans">Amount Matrix Hub matrix</th><th class="p-6 font-sans font-sans font-sans font-sans font-sans font-sans">Status hub hub matrix</th><th class="p-6 text-center font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Audit Action Hub Hub</th></tr></thead>
-                                <tbody class="divide-y divide-slate-50 font-sans font-sans font-sans font-sans font-sans font-sans">
+                            <div class="overflow-x-auto font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><table class="w-full text-left text-[11px] font-bold font-sans">
+                                <thead class="bg-slate-50 border-b font-black uppercase text-slate-400 font-sans font-sans font-sans font-sans font-sans font-sans"><tr><th class="p-6 font-sans font-sans font-sans">Requester identity hub matrix</th><th class="p-6 font-sans font-sans font-sans font-sans font-sans font-sans">Matrix Date Hub Matrix</th><th class="p-6 text-right font-sans font-sans font-sans font-sans font-sans font-sans">Amount Matrix Hub matrix</th><th class="p-6 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Status hub hub matrix</th><th class="p-6 text-center font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Audit Action Hub Hub</th></tr></thead>
+                                <tbody class="divide-y divide-slate-50 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
                                     ${(state.allLoans || []).map(ln => `
-                                        <tr class="hover:bg-slate-50 transition-colors font-sans font-sans font-sans font-sans">
+                                        <tr class="hover:bg-slate-50 transition-colors font-sans font-sans font-sans font-sans font-sans font-sans">
                                             <td class="p-6 font-black uppercase">${ln.name} (${ln.employee_id})</td>
-                                            <td class="p-6 font-mono text-slate-400 uppercase font-sans font-sans font-sans font-sans font-sans font-sans font-sans">${formatDate(ln.applied_at)}</td>
-                                            <td class="p-6 text-right font-mono font-black text-slate-900 font-sans font-sans font-sans font-sans font-sans">Rs. ${cleanNumber(ln.amount).toLocaleString()}</td>
-                                            <td class="p-6 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><span class="status-badge ${ln.status==='Approved'?'status-approved':'status-pending'}">${ln.status}</span></td>
+                                            <td class="p-6 font-mono text-slate-400 uppercase font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">${formatDate(ln.applied_at)}</td>
+                                            <td class="p-6 text-right font-mono font-black text-slate-900 font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Rs. ${cleanNumber(ln.amount).toLocaleString()}</td>
+                                            <td class="p-6 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><span class="status-badge ${ln.status==='Approved'?'status-approved':'status-pending'} font-sans font-sans font-sans font-sans font-sans font-sans">${ln.status}</span></td>
                                             <td class="p-6 flex justify-center gap-3 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
-                                                <button onclick="approveLoan('${ln.id}', 'Approved')" class="bg-green-700 text-white px-5 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg font-sans font-sans font-sans font-sans">Approve</button>
-                                                <button onclick="approveLoan('${ln.id}', 'Rejected')" class="bg-red-600 text-white px-5 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg font-sans font-sans font-sans font-sans font-sans">Reject</button>
+                                                <button onclick="approveLoan('${ln.id}', 'Approved')" class="bg-green-700 text-white px-5 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg font-sans font-sans font-sans font-sans font-sans font-sans">Approve</button>
+                                                <button onclick="approveLoan('${ln.id}', 'Rejected')" class="bg-red-600 text-white px-5 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg font-sans font-sans font-sans font-sans font-sans font-sans">Reject</button>
                                             </td>
                                         </tr>`).join('')}
                                 </tbody>
                             </table></div>
                         </div>` : (state.loanTab === 'apply' ? `
-                        <div class="bg-white p-12 rounded-[3.5rem] max-w-2xl mx-auto border-2 border-slate-100 shadow-2xl animate-slide-up relative overflow-hidden font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
-                            <div class="absolute top-0 left-0 w-2 h-full bg-green-700 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"></div>
-                            <h3 class="font-black text-3xl mb-10 uppercase tracking-tight text-center font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Matrix identity Loan Hub Request Hub</h3>
-                            <form id="loan-form-hub-dispatch-final" onsubmit="handleLoanApply(event)" class="space-y-8 font-sans font-sans font-sans font-sans font-sans font-sans">
-                                <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2 tracking-widest font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Matrix Hub amount matrix hub (Rs.)</label><input type="number" id="ln-amt-val-hub-final" class="w-full p-5 rounded-[1.5rem] border-2 font-black bg-slate-50 focus:bg-white focus:border-green-600 outline-none text-2xl transition-all" placeholder="0.00" required /></div>
-                                <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Identity application reason hub hub hub</label><textarea id="ln-rsn-val-hub-final" class="w-full p-5 rounded-[1.5rem] border-2 font-bold h-32 bg-slate-50 focus:bg-white transition-all text-base font-sans font-sans font-sans font-sans font-sans" placeholder="..." required></textarea></div>
-                                <button type="submit" class="w-full py-6 bg-green-700 text-white rounded-[1.5rem] font-black uppercase tracking-widest shadow-green-200 shadow-2xl hover:bg-green-800 transition-all font-sans font-sans font-sans font-sans font-sans">SUBMIT IDENTITY REQUEST Hub</button>
+                        <div class="bg-white p-12 rounded-[3.5rem] max-w-2xl mx-auto border-2 border-slate-100 shadow-2xl animate-slide-up relative overflow-hidden font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
+                            <div class="absolute top-0 left-0 w-2 h-full bg-green-700 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"></div>
+                            <h3 class="font-black text-3xl mb-10 uppercase tracking-tight text-center font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Matrix identity Loan Hub Request Hub</h3>
+                            <form id="loan-form-hub-dispatch-final" onsubmit="handleLoanApply(event)" class="space-y-8 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
+                                <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2 tracking-widest font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Matrix Hub amount matrix hub (Rs.)</label><input type="number" id="ln-amt-val-hub-final" class="w-full p-5 rounded-[1.5rem] border-2 font-black bg-slate-50 focus:bg-white focus:border-green-600 outline-none text-2xl transition-all font-sans font-sans font-sans font-sans" placeholder="0.00" required /></div>
+                                <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Identity application reason hub hub hub</label><textarea id="ln-rsn-val-hub-final" class="w-full p-5 rounded-[1.5rem] border-2 font-bold h-32 bg-slate-50 focus:bg-white transition-all text-base font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans" placeholder="..." required></textarea></div>
+                                <button type="submit" class="w-full py-6 bg-green-700 text-white rounded-[1.5rem] font-black uppercase tracking-widest shadow-green-200 shadow-2xl hover:bg-green-800 transition-all font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">SUBMIT IDENTITY REQUEST Hub</button>
                             </form>
                         </div>` : `
-                        <div class="space-y-6 max-w-4xl mx-auto font-sans font-sans font-sans font-sans font-sans">
-                            <div class="overflow-hidden rounded-[2.5rem] border-2 shadow-xl font-sans font-sans font-sans font-sans font-sans font-sans">
-                                <table class="w-full text-left font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
-                                    <thead class="bg-slate-50 border-b font-black uppercase text-[10px] text-slate-400 tracking-widest font-sans font-sans font-sans font-sans font-sans font-sans">
-                                        <tr><th class="p-6 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Matrix Hub date hub</th><th class="p-6 font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Matrix amount hub hub hub</th><th class="p-6 font-sans font-sans font-sans font-sans font-sans font-sans">Identity hub Status matrix hub</th><th class="p-6 text-right font-sans font-sans font-sans font-sans font-sans">Net Context matrix hub hub</th></tr>
+                        <div class="space-y-6 max-w-4xl mx-auto font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
+                            <div class="overflow-hidden rounded-[2.5rem] border-2 shadow-xl font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
+                                <table class="w-full text-left font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
+                                    <thead class="bg-slate-50 border-b font-black uppercase text-[10px] text-slate-400 tracking-widest font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
+                                        <tr><th class="p-6 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Matrix Hub date hub</th><th class="p-6 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Matrix amount hub hub hub</th><th class="p-6 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Identity hub Status matrix hub</th><th class="p-6 text-right font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Net Context matrix hub hub</th></tr>
                                     </thead>
-                                    <tbody class="divide-y font-bold text-slate-800 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
+                                    <tbody class="divide-y font-bold text-slate-800 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
                                         ${(state.userLoans || []).map(ln => `
-                                            <tr class="hover:bg-slate-50 font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
-                                                <td class="p-6 font-mono text-slate-400 font-sans font-sans font-sans font-sans font-sans font-sans font-sans">${formatDate(ln.applied_at)}</td>
-                                                <td class="p-6 font-black uppercase font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Rs. ${cleanNumber(ln.amount).toLocaleString()}</td>
-                                                <td class="p-6 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><span class="status-badge ${ln.status === 'Approved' ? 'status-approved' : 'status-pending'}">${ln.status}</span></td>
-                                                <td class="p-6 text-right font-mono text-slate-400 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Net Hub Rs. ${currentNetBalance.toLocaleString()}</td>
+                                            <tr class="hover:bg-slate-50 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
+                                                <td class="p-6 font-mono text-slate-400 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">${formatDate(ln.applied_at)}</td>
+                                                <td class="p-6 font-black uppercase font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Rs. ${cleanNumber(ln.amount).toLocaleString()}</td>
+                                                <td class="p-6 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><span class="status-badge ${ln.status === 'Approved' ? 'status-approved' : 'status-pending'} font-sans font-sans font-sans font-sans font-sans font-sans font-sans">${ln.status}</span></td>
+                                                <td class="p-6 text-right font-mono text-slate-400 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Net Hub Rs. ${currentNetBalance.toLocaleString()}</td>
                                             </tr>`).join('')}
-                                        ${state.userLoans.length===0 ? '<tr><td colspan="4" class="p-20 text-center font-black text-slate-200 uppercase tracking-widest font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">No Records Found hub HUB Matrix Hub Matrix Hub</td></tr>' : ''}
+                                        ${state.userLoans.length===0 ? '<tr><td colspan="4" class="p-20 text-center font-black text-slate-200 uppercase tracking-widest font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">No Records Found hub HUB Matrix Hub Matrix Hub</td></tr>' : ''}
                                     </tbody>
                                 </table>
                             </div>
@@ -731,65 +729,73 @@
             
             container.innerHTML = `
                 <div class="animate-fade-in space-y-10 font-sans text-left text-slate-800 font-sans font-sans font-sans">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
-                        <div class="bg-green-700 text-white shadow-2xl p-10 rounded-[3rem] text-left relative overflow-hidden font-sans font-sans font-sans font-sans font-sans font-sans"><p class="text-[10px] font-black uppercase opacity-60 font-sans font-sans font-sans font-sans font-sans font-sans">Annual Balance Hub Matrix hub hub matrix hub</p><p class="text-6xl font-black mt-4 font-mono font-sans font-sans font-sans font-sans font-sans font-sans">${targetUser.leave_annual || 0} <span class="text-lg opacity-40 uppercase">Days Matrix Hub</span></p></div>
-                        <div class="bg-white border-2 border-slate-50 shadow-sm p-10 rounded-[3rem] text-left font-sans font-sans font-sans font-sans font-sans font-sans"><p class="text-[10px] font-black text-slate-400 uppercase font-sans font-sans font-sans font-sans font-sans font-sans font-sans">WOP matrix balance Hub Hub Hub Matrix Hub</p><p class="text-6xl font-black mt-4 font-mono text-slate-800 font-sans font-sans font-sans font-sans font-sans font-sans">${targetUser.leave_casual || 0} <span class="text-lg text-slate-200 uppercase font-sans font-sans font-sans font-sans font-sans">Days hub matrix</span></p></div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
+                        <div class="bg-green-700 text-white shadow-2xl p-10 rounded-[3rem] text-left relative overflow-hidden font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><p class="text-[10px] font-black uppercase opacity-60 font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Annual Balance Hub Matrix hub hub matrix hub</p><p class="text-6xl font-black mt-4 font-mono font-sans font-sans font-sans font-sans font-sans font-sans">${targetUser.leave_annual || 0} <span class="text-lg opacity-40 uppercase font-sans font-sans font-sans">Days Matrix Hub</span></p></div>
+                        <div class="bg-white border-2 border-slate-50 shadow-sm p-10 rounded-[3rem] text-left font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><p class="text-[10px] font-black text-slate-400 uppercase font-sans font-sans font-sans font-sans font-sans font-sans font-sans">WOP matrix balance Hub Hub Hub Matrix Hub</p><p class="text-6xl font-black mt-4 font-mono text-slate-800 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">${targetUser.leave_casual || 0} <span class="text-lg text-slate-200 uppercase font-sans font-sans font-sans">Days hub matrix</span></p></div>
                     </div>
 
-                    <div class="flex bg-slate-200 p-2 rounded-[2rem] max-w-sm mx-auto mb-10 shadow-inner font-sans font-sans font-sans font-sans font-sans">
-                        <button onclick="state.leaveTab='apply'; renderLeaves()" class="flex-1 py-3 text-[10px] font-black rounded-2xl uppercase tracking-widest transition-all ${state.leaveTab === 'apply' ? 'bg-white text-green-700 shadow-xl font-sans' : 'text-slate-500 font-sans'} font-sans font-sans">Apply matrix hub</button>
-                        <button onclick="state.leaveTab='history'; renderLeaves()" class="flex-1 py-3 text-[10px] font-black rounded-2xl uppercase tracking-widest transition-all ${state.leaveTab === 'history' ? 'bg-white text-green-700 shadow-xl font-sans' : 'text-slate-500 font-sans'} font-sans font-sans">History matrix Hub</button>
-                        ${isAdmin ? `<button onclick="state.leaveTab='oversight'; renderLeaves()" class="flex-1 py-3 text-[10px] font-black rounded-2xl uppercase transition-all ${state.leaveTab === 'oversight' ? 'bg-white text-green-700 shadow-xl font-sans' : 'text-slate-500 font-sans'} font-sans font-sans font-sans">Oversight matrix hub</button>` : ''}
+                    <div class="flex bg-slate-200 p-2 rounded-[2rem] max-w-sm mx-auto mb-10 shadow-inner font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
+                        <button onclick="state.leaveTab='apply'; renderLeaves()" class="flex-1 py-3 text-[10px] font-black rounded-2xl uppercase tracking-widest transition-all ${state.leaveTab === 'apply' ? 'bg-white text-green-700 shadow-xl font-sans font-sans font-sans font-sans' : 'text-slate-500 font-sans font-sans font-sans font-sans'} font-sans font-sans font-sans font-sans">Apply matrix hub</button>
+                        <button onclick="state.leaveTab='history'; renderLeaves()" class="flex-1 py-3 text-[10px] font-black rounded-2xl uppercase tracking-widest transition-all ${state.leaveTab === 'history' ? 'bg-white text-green-700 shadow-xl' : 'text-slate-500 font-sans font-sans font-sans font-sans'} font-sans font-sans font-sans font-sans font-sans font-sans">History matrix Hub</button>
+                        ${isAdmin ? `<button onclick="state.leaveTab='oversight'; renderLeaves()" class="flex-1 py-3 text-[10px] font-black rounded-2xl uppercase transition-all ${state.leaveTab === 'oversight' ? 'bg-white text-green-700 shadow-xl' : 'text-slate-500 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans'} font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Oversight matrix hub</button>` : ''}
                     </div>
 
                     ${state.leaveTab === 'oversight' ? `
-                        <div class="bg-white rounded-[2.5rem] border-2 border-slate-50 shadow-2xl overflow-hidden font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
-                            <div class="bg-slate-50 p-8 border-b flex justify-between items-center font-sans font-sans font-sans font-sans font-sans">
-                                <span class="font-black text-xs uppercase text-slate-600 tracking-widest font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Leaves Audit matrix oversight Matrix HUB</span>
-                                <button onclick="exportLeaveOversightCSV()" class="bg-slate-900 text-white px-8 py-2.5 rounded-xl font-black text-[10px] uppercase shadow-lg font-sans font-sans font-sans font-sans">Export Ledger matrix hub</button>
+                        <div class="bg-white rounded-[2.5rem] border-2 border-slate-50 shadow-2xl overflow-hidden font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
+                            <div class="bg-slate-50 p-8 border-b flex justify-between items-center font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
+                                <span class="font-black text-xs uppercase text-slate-600 tracking-widest font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Leaves Audit matrix oversight Matrix HUB</span>
+                                <button onclick="exportLeaveOversightCSV()" class="bg-slate-900 text-white px-8 py-2.5 rounded-xl font-black text-[10px] uppercase shadow-lg font-sans font-sans font-sans font-sans font-sans font-sans">Export Ledger matrix hub</button>
                             </div>
-                            <div class="overflow-x-auto font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><table class="w-full text-left text-[11px] font-bold font-sans font-sans font-sans">
-                                <thead class="bg-slate-50 border-b font-black uppercase text-slate-400 font-sans font-sans font-sans font-sans"><tr><th class="p-6 font-sans font-sans font-sans font-sans">Identity Requester hub matrix</th><th class="p-6 font-sans font-sans font-sans font-sans font-sans">Remaining Matrix Bal (Ann/WOP)</th><th class="p-6 font-sans font-sans font-sans font-sans">Type matrix hub matrix</th><th class="p-6 text-center font-sans font-sans">Days Matrix Hub</th><th class="p-6 font-sans font-sans font-sans font-sans font-sans">Status Matrix hub</th><th class="p-6 text-center font-sans font-sans font-sans font-sans font-sans">Audit Action Hub Hub</th></tr></thead>
-                                <tbody class="divide-y divide-slate-100 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
+                            <div class="overflow-x-auto font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><table class="w-full text-left text-[11px] font-bold font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
+                                <thead class="bg-slate-50 border-b font-black uppercase text-slate-400 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><tr><th class="p-6 font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Identity Requester hub matrix</th><th class="p-6 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Remaining Matrix Bal (Ann/WOP)</th><th class="p-6 font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Type matrix hub matrix</th><th class="p-6 text-center font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Days Matrix Hub</th><th class="p-6 font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Status Matrix hub</th><th class="p-6 text-center font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Audit Action Hub Hub</th></tr></thead>
+                                <tbody class="divide-y divide-slate-100 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
                                     ${(state.allLeaves || []).map(lv => {
                                         const r = state.employees.find(e => e.id === lv.employee_id) || {};
-                                        return `<tr class="hover:bg-slate-50 transition-colors font-sans font-sans font-sans">
-                                            <td class="p-6 font-black uppercase font-sans font-sans font-sans font-sans font-sans">${lv.name} (${lv.employee_id})</td>
-                                            <td class="p-6 font-mono text-green-700 font-black text-[10px] font-sans font-sans font-sans font-sans">${r.leave_annual || 0} ANN / ${r.leave_casual || 0} WOP hub hub matrix</td>
-                                            <td class="p-6 uppercase text-slate-500 font-sans font-sans font-sans font-sans font-sans">${lv.leave_type} hub Hub</td>
-                                            <td class="p-6 text-center font-black font-sans font-sans font-sans font-sans font-sans font-sans font-sans">${lv.days} matrix</td>
-                                            <td class="p-6 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><span class="status-badge ${lv.status==='Approved'?'status-approved':'status-pending'} font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">${lv.status}</span></td>
-                                            <td class="p-6 flex justify-center gap-3 font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
-                                                <button onclick="approveLeave('${lv.id}', 'Approved')" class="bg-green-700 text-white px-5 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg font-sans font-sans font-sans font-sans">Approve Hub Matrix</button>
-                                                <button onclick="approveLeave('${lv.id}', 'Rejected')" class="bg-red-600 text-white px-5 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Reject matrix hub hub</button>
+                                        return `<tr class="hover:bg-slate-50 transition-colors font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
+                                            <td class="p-6 font-black uppercase font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">${lv.name} (${lv.employee_id})</td>
+                                            <td class="p-6 font-mono text-green-700 font-black text-[10px] font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">${r.leave_annual || 0} ANN / ${r.leave_casual || 0} WOP hub hub matrix</td>
+                                            <td class="p-6 uppercase text-slate-500 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">${lv.leave_type} hub Hub</td>
+                                            <td class="p-6 text-center font-black font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">${lv.days} matrix</td>
+                                            <td class="p-6 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><span class="status-badge ${lv.status==='Approved'?'status-approved':'status-pending'} font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">${lv.status}</span></td>
+                                            <td class="p-6 flex justify-center gap-3 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
+                                                <button onclick="approveLeave('${lv.id}', 'Approved')" class="bg-green-700 text-white px-5 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Approve Hub Matrix</button>
+                                                <button onclick="approveLeave('${lv.id}', 'Rejected')" class="bg-red-600 text-white px-5 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Reject matrix hub hub</button>
                                             </td>
                                         </tr>`;
                                     }).join('')}
                                 </tbody>
                             </table></div>
                         </div>` : (state.leaveTab === 'apply' ? `
-                        <div class="bg-white p-12 rounded-[3.5rem] max-w-2xl mx-auto border-2 border-slate-100 shadow-2xl animate-slide-up relative overflow-hidden font-sans font-sans font-sans font-sans font-sans">
-                            <div class="absolute top-0 left-0 w-2 h-full bg-green-700 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"></div>
-                            <h3 class="font-black text-3xl mb-10 uppercase tracking-tight text-center font-sans font-sans font-sans font-sans">Leave Matrix Identity Request HUB hub matrix</h3>
-                            <form id="leave-form-dispatch-hub-matrix-final" onsubmit="handleLeaveApply(event)" class="space-y-6 font-sans font-sans font-sans font-sans font-sans">
-                                <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans font-sans font-sans font-sans">Type Matrix hub hub HUB</label><select id="lv-type-input-hub-final-val" class="w-full p-5 rounded-[1.5rem] border-2 font-black bg-slate-50 outline-none focus:bg-white focus:border-green-600 transition-all font-sans font-sans font-sans font-sans"><option>Annual Leave</option><option>WOP (Without Pay)</option><option>Sick Leave</option></select></div>
-                                <div class="grid grid-cols-2 gap-6">
-                                    <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans font-sans font-sans">Start Matrix date hub HUB HUB</label><input type="date" id="lv-date-input-hub-final-val" class="w-full p-5 rounded-[1.5rem] border-2 font-black bg-slate-50 focus:bg-white outline-none font-sans font-sans font-sans" required /></div>
-                                    <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans font-sans font-sans font-sans font-sans">Matrix qty hub (Days Matrix) Matrix Hub</label><input type="number" id="lv-days-input-hub-final-val" class="w-full p-5 rounded-[1.5rem] border-2 font-black bg-slate-50 focus:bg-white outline-none font-sans font-sans font-sans font-sans font-sans font-sans" required /></div>
+                        <div class="bg-white p-12 rounded-[3rem] max-w-2xl mx-auto border-2 border-slate-100 shadow-2xl animate-slide-up relative overflow-hidden font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
+                            <div class="absolute top-0 left-0 w-2 h-full bg-green-700 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"></div>
+                            <h3 class="font-black text-3xl mb-10 uppercase tracking-tight text-center font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Leave Matrix Identity Request HUB hub matrix</h3>
+                            <form id="leave-form-dispatch-hub-matrix-final" onsubmit="handleLeaveApply(event)" class="space-y-6 font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
+                                <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Type Matrix hub hub HUB</label><select id="lv-type-input-hub-final-val" class="w-full p-5 rounded-[1.5rem] border-2 font-black bg-slate-50 outline-none focus:bg-white focus:border-green-600 transition-all font-sans font-sans font-sans font-sans font-sans"><option>Annual Leave</option><option>WOP (Without Pay)</option><option>Sick Leave</option></select></div>
+                                <div class="grid grid-cols-2 gap-6 font-sans font-sans font-sans font-sans">
+                                    <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans font-sans font-sans font-sans font-sans font-sans">Start Matrix date hub HUB HUB</label><input type="date" id="lv-date-input-hub-final-val" class="w-full p-5 rounded-[1.5rem] border-2 font-black bg-slate-50 focus:bg-white outline-none font-sans font-sans font-sans font-sans font-sans" required /></div>
+                                    <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Matrix qty hub (Days Matrix) Matrix Hub</label><input type="number" id="lv-days-input-hub-final-val" class="w-full p-5 rounded-[1.5rem] border-2 font-black bg-slate-50 focus:bg-white outline-none font-sans font-sans font-sans font-sans font-sans" required /></div>
                                 </div>
-                                <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans font-sans font-sans font-sans">Reason Matrix hub hub matrix HUB</label><textarea id="lv-rsn-input-hub-final-val" class="w-full p-5 rounded-[1.5rem] border-2 font-bold h-24 bg-slate-50 focus:bg-white transition-all font-sans font-sans font-sans font-sans font-sans" required></textarea></div>
-                                <button type="submit" class="w-full py-6 bg-green-700 text-white rounded-[1.5rem] font-black uppercase tracking-widest shadow-xl font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Transmit Identity application hub HUB HUB</button>
+                                <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans font-sans font-sans font-sans font-sans font-sans">Reason Matrix hub hub matrix HUB</label><textarea id="lv-rsn-input-hub-final-val" class="w-full p-5 rounded-[1.5rem] border-2 font-bold h-24 bg-slate-50 focus:bg-white transition-all font-sans font-sans font-sans font-sans font-sans" required></textarea></div>
+                                <button type="submit" class="w-full py-6 bg-green-700 text-white rounded-[1.5rem] font-black uppercase tracking-widest shadow-xl font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Transmit Identity application hub HUB HUB</button>
                             </form>
                         </div>` : `
-                        <div class="space-y-6 max-w-4xl mx-auto font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
-                            ${(state.userLeaves || []).map(lv => `
-                                <div class="bg-white p-8 rounded-[2.5rem] border-2 border-slate-50 shadow-sm flex justify-between items-center hover:border-green-200 transition-all font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
-                                    <div class="flex items-center gap-6 font-sans font-sans font-sans font-sans">
-                                        <div class="bg-slate-50 p-5 rounded-2xl text-slate-400 font-sans font-sans font-sans font-sans font-sans"><i data-lucide="calendar"></i></div>
-                                        <div class="font-sans font-sans font-sans font-sans"><h4 class="font-black uppercase text-slate-800 text-lg leading-tight font-sans font-sans font-sans font-sans">${lv.leave_type} Matrix hub HUB</h4><p class="text-[10px] text-slate-400 font-bold uppercase mt-2 tracking-widest font-sans font-sans font-sans font-sans">Applied Matrix Hub date hub: ${formatDate(lv.start_date)} • ${lv.days} Days Matrix Hub matrix</p></div>
-                                    </div>
-                                    <span class="status-badge ${lv.status==='Approved'?'status-approved':'status-pending'} font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">${lv.status}</span>
-                                </div>`).join('')}
+                        <div class="space-y-6 max-w-4xl mx-auto font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
+                            <div class="overflow-hidden rounded-[2.5rem] border-2 shadow-xl font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
+                                <table class="w-full text-left font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
+                                    <thead class="bg-slate-50 border-b font-black uppercase text-[10px] text-slate-400 tracking-widest font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
+                                        <tr><th class="p-6 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Applied matrix Hub date hub hub hub</th><th class="p-6 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Applied Matrix HUB Days hub hub</th><th class="p-6 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Identity Status matrix hub hub hub</th><th class="p-6 text-right font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Context hub matrix matrix hub</th></tr>
+                                    </thead>
+                                    <tbody class="divide-y font-bold text-slate-800 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
+                                        ${(state.userLeaves || []).map(lv => `
+                                            <tr class="hover:bg-slate-50 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
+                                                <td class="p-6 font-mono text-slate-400 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">${formatDate(lv.start_date)}</td>
+                                                <td class="p-6 font-black uppercase font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">${lv.days} Days</td>
+                                                <td class="p-6 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><span class="status-badge ${lv.status==='Approved'?'status-approved':'status-pending'} font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">${lv.status}</span></td>
+                                                <td class="p-6 text-right font-mono text-slate-400 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Verified hub matrix matrix hub</td>
+                                            </tr>`).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>`)}
                 </div>`;
             lucide.createIcons();
@@ -803,38 +809,38 @@
             const rsn = document.getElementById('lv-rsn-input-hub-final-val').value;
             const payload = { employeeId: state.user.id, type, startDate: date, days: cleanNumber(days), reason: rsn };
             const res = await fetch(`${API_BASE}/leaves`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
-            if(res.ok) { notify("Leave request dispatched hub matrix. You will receive an email update once processed."); state.leaveTab = 'history'; await syncData(); renderLeaves(); }
+            if(res.ok) { notify("Leave request dispatched hub matrix hub hub matrix hub. You will receive an email update once processed."); state.leaveTab = 'history'; await syncData(); renderLeaves(); }
         }
 
         async function approveLeave(id, status) {
             const res = await fetch(`${API_BASE}/admin/leaves/${id}`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ status }) });
-            if(res.ok) { notify("Leave Hub Matrix record updated. Balance adjusted and employee notified hub matrix hub."); await syncData(); renderLeaves(); }
+            if(res.ok) { notify("Leave Hub Matrix record updated matrix hub matrix hub matrix. Balance adjusted and employee notified hub matrix hub matrix hub."); await syncData(); renderLeaves(); }
         }
 
         // --- DISCUSSION HUB ---
         function renderDiscussion() {
             const container = document.getElementById('view-container');
             container.innerHTML = `
-                <div class="animate-fade-in space-y-10 font-sans text-left max-w-5xl mx-auto font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
-                    <div class="border-b-2 pb-6 border-slate-100 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><h2 class="text-4xl font-black uppercase tracking-tighter text-slate-800 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Identity Matrix Board hub HUB Hub Matrix Hub Hub Hub Hub Hub Hub hub matrix</h2></div>
-                    <div class="bg-slate-900 p-10 rounded-[3rem] shadow-2xl relative font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
-                        <div class="absolute top-6 right-10 flex items-center gap-2 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><div class="h-3 w-3 rounded-full bg-green-500 animate-pulse font-sans font-sans font-sans font-sans font-sans"></div><span class="text-[9px] font-black text-slate-500 uppercase tracking-widest font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Live Matrix Broadcast Feed Hub Hub Matrix Hub Matrix Matrix Hub Matrix Matrix Matrix Hub Matrix Hub Matrix Matrix Hub Hub Matrix hub hub matrix</span></div>
-                        <form onsubmit="broadcastMessage(event)" class="flex gap-6 mt-8 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
-                            <input type="text" id="board-msg-input-final-final-val" placeholder="Broadcast identity hub update message matrix hub matrix hub matrix matrix hub matrix hub matrix..." class="flex-1 bg-white/5 border-2 border-white/10 rounded-2xl p-6 font-bold text-white text-lg outline-none focus:bg-white/10 focus:border-green-600 transition-all font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans" required />
-                            <button type="submit" class="bg-green-600 hover:bg-green-500 p-6 rounded-2xl transition-all shadow-green-900 shadow-xl text-white font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><i data-lucide="send" size="32"></i></button>
+                <div class="animate-fade-in space-y-10 font-sans text-left max-w-5xl mx-auto font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
+                    <div class="border-b-2 pb-6 border-slate-100 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><h2 class="text-4xl font-black uppercase tracking-tighter text-slate-800 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Identity Matrix Board hub HUB Hub Matrix Hub Hub Hub Hub Hub Hub hub matrix</h2></div>
+                    <div class="bg-slate-900 p-10 rounded-[3rem] shadow-2xl relative font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
+                        <div class="absolute top-6 right-10 flex items-center gap-2 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><div class="h-3 w-3 rounded-full bg-green-500 animate-pulse font-sans font-sans font-sans font-sans font-sans font-sans font-sans"></div><span class="text-[9px] font-black text-slate-500 uppercase tracking-widest font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Live Matrix Broadcast Feed Hub Hub Matrix Hub Matrix Matrix Hub Matrix Matrix Matrix Hub Matrix Hub Matrix Matrix Hub Hub Matrix hub hub matrix matrix hub matrix matrix hub matrix</span></div>
+                        <form onsubmit="broadcastMessage(event)" class="flex gap-6 mt-8 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
+                            <input type="text" id="board-msg-input-final-final-val" placeholder="Broadcast identity hub update message matrix hub matrix hub matrix matrix hub matrix hub matrix matrix hub matrix matrix hub..." class="flex-1 bg-white/5 border-2 border-white/10 rounded-2xl p-6 font-bold text-white text-lg outline-none focus:bg-white/10 focus:border-green-600 transition-all font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans" required />
+                            <button type="submit" class="bg-green-600 hover:bg-green-500 p-6 rounded-2xl transition-all shadow-green-900 shadow-xl text-white font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><i data-lucide="send" size="32"></i></button>
                         </form>
                     </div>
-                    <div class="space-y-8 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
+                    <div class="space-y-8 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
                         ${state.discussions.map(d => `
-                            <div class="bg-white p-10 rounded-[3rem] border-2 border-slate-50 shadow-sm hover:border-green-100 transition-all group font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
-                                <div class="flex justify-between items-center mb-6 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
-                                    <div class="flex items-center gap-4 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
-                                        <div class="h-12 w-12 rounded-xl bg-slate-50 flex items-center justify-center font-black text-slate-400 group-hover:bg-green-50 group-hover:text-green-600 transition-all font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">${getInitial(d.author_name)}</div>
-                                        <span class="font-black text-slate-800 uppercase text-sm font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">${d.author_name}</span>
+                            <div class="bg-white p-10 rounded-[3rem] border-2 border-slate-50 shadow-sm hover:border-green-100 transition-all group font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
+                                <div class="flex justify-between items-center mb-6 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
+                                    <div class="flex items-center gap-4 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
+                                        <div class="h-12 w-12 rounded-xl bg-slate-50 flex items-center justify-center font-black text-slate-400 group-hover:bg-green-50 group-hover:text-green-600 transition-all font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">${getInitial(d.author_name)}</div>
+                                        <span class="font-black text-slate-800 uppercase text-sm font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">${d.author_name}</span>
                                     </div>
-                                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">${formatDate(d.created_at)}</span>
+                                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">${formatDate(d.created_at)}</span>
                                 </div>
-                                <p class="text-slate-600 font-bold leading-relaxed text-lg font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">${d.message}</p>
+                                <p class="text-slate-600 font-bold leading-relaxed text-lg font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">${d.message}</p>
                             </div>`).join('')}
                     </div>
                 </div>`;
@@ -848,7 +854,7 @@
             if(res.ok) { document.getElementById('board-msg-input-final-final-val').value = ''; await syncData(); renderDiscussion(); notify("Broadcast Identity Matrix Hub Updated Final Final HUB."); }
         }
 
-        // --- HANDLERS (MISC) ---
+        // --- HANDLERS ---
         function logout() { localStorage.clear(); location.reload(); }
         function updateMonth(v) { state.selectedMonth = v; renderPayroll(); }
         function updateAttendanceMonth(v) { state.selectedAttendanceMonth = v; renderAttendance(); }
@@ -856,17 +862,17 @@
         async function updateAdminTarget(id) { state.selectedAdminEmployeeId = id; await syncData(); renderAttendance(); }
 
         async function handleClock(type) {
-            notify("Processing identity hub matrix mark hub matrix hub matrix hub mark mark hub...");
+            notify("Processing identity hub matrix mark hub matrix hub matrix hub hub hub hub matrix...");
             navigator.geolocation.getCurrentPosition(async (pos) => {
                 const payload = { employee_id: state.user.id, type, date_str: getPktDate(), time_str: getPktTime(), latitude: pos.coords.latitude, longitude: pos.coords.longitude };
                 const res = await fetch(`${API_BASE}/attendance`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
-                if(res.ok) { notify(`${type} Verified Matrix Hub Matrix Hub matrix hub mark mark hub.`); await syncData(); if(state.currentTab==='attendance') renderAttendance(); }
+                if(res.ok) { notify(`${type} Verified Matrix Hub Matrix Hub matrix hub hub matrix matrix hub.`); await syncData(); if(state.currentTab==='attendance') renderAttendance(); }
             });
         }
 
         async function exportAttendanceCSV(isAdmin) {
             const data = state.attendance.map(l => ({ ID: l.employee_id, Date: l.date_str, Time: l.time_str, Action: l.type, Lat: l.latitude, Lng: l.longitude }));
-            exportToCSV(data, "Attendance_Matrix_Identity_Report_HUB_HUB_FINAL_LEDGER.csv");
+            exportToCSV(data, "Attendance_Matrix_Identity_Report_HUB_HUB_FINAL_LEDGER_HUB.csv");
         }
 
         async function togglePublish(posted) {
@@ -876,11 +882,11 @@
         }
 
         async function wipeDateAttendance(date) {
-            if(!confirm(`DANGER: Purge identity matrix hub logs for ${date} hub matrix hub matrix hub matrix?`)) return;
+            if(!confirm(`DANGER: Purge identity matrix hub logs hub for ${date} hub matrix hub matrix hub hub matrix?`)) return;
             const targetId = (state.user.role === 'admin' && state.selectedAdminEmployeeId) ? state.selectedAdminEmployeeId : state.user.id;
             const logs = state.attendance.filter(l => l.date_str === date && l.employee_id === targetId);
             for(let l of logs) { await fetch(`${API_BASE}/attendance-entry/${l.id}`, { method: 'DELETE' }); }
-            notify("Identity Hub logs purged Matrix HUB HUB HUB HUB FINAL HUB."); await syncData(); renderAttendance();
+            notify("Identity Hub logs purged Matrix HUB HUB HUB HUB FINAL HUB HUB HUB."); await syncData(); renderAttendance();
         }
 
         document.getElementById('login-form').addEventListener('submit', async (e) => {
@@ -892,20 +898,9 @@
                 const list = await res.json();
                 const found = list.find(e => String(e.id).toUpperCase() === String(id).toUpperCase() && String(e.password) === String(pass));
                 if (found) { state.user = found; localStorage.setItem('hr_user', JSON.stringify(found)); await syncData(); showApp(); }
-                else alert("Matrix Access Denied Hub hub matrix hub hub matrix identity identity matrix hub matrix hub matrix.");
-            } catch(e) { alert("Matrix offline hub matrix hub hub matrix matrix matrix matrix matrix matrix."); }
+                else alert("Matrix Access Denied Hub hub matrix hub hub matrix hub matrix identity identity matrix hub matrix hub matrix identity.");
+            } catch(e) { alert("Matrix offline hub matrix hub hub matrix matrix matrix matrix matrix matrix matrix hub matrix matrix hub."); }
         });
-
-        function exportToCSV(data, filename) {
-            if (!data || !data.length) return;
-            const headers = Object.keys(data[0]).join(',');
-            const rows = data.map(row => Object.values(row).map(val => '"' + String(val || '').replace(/"/g, '""') + '"').join(','));
-            const csvContent = "data:text/csv;charset=utf-8," + [headers, ...rows].join('\n');
-            const encodedUri = encodeURI(csvContent);
-            const link = document.createElement("a");
-            link.setAttribute("href", encodedUri); link.setAttribute("download", filename);
-            document.body.appendChild(link); link.click(); document.body.removeChild(link);
-        }
 
         window.onload = init;
     </script>
