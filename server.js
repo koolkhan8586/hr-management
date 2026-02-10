@@ -285,8 +285,11 @@ app.post('/api/loans', (req, res) => {
             subject: `Matrix Alert: New Loan Request (${employeeId})`,
             html: `<p>Staff <b>${employeeId}</b> requested <b>Rs. ${amount}</b>.</p><p>Reason: ${reason}</p>`
         };
-        transporter.sendMail(mailOptions);
-        res.json({ success: true });
+        transporter.sendMail(mailOptions, (err) => {
+    if (err) console.log("Email failed but matrix saved:", err.message);
+});
+// Always send the success response to the frontend regardless of email success
+res.json({ success: true });
     });
 });
 
