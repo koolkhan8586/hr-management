@@ -47,7 +47,6 @@
         .status-pending { background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
         .status-approved { background-color: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
         .status-rejected { background-color: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
-        .status-verified { background-color: #eff6ff; color: #1e40af; border: 1px solid #dbeafe; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900 text-left text-[14px]">
@@ -75,25 +74,25 @@
                     <label class="block text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">System Key</label>
                     <input type="password" id="login-pass" class="w-full p-4 rounded-2xl border-2 border-slate-50 bg-slate-50 outline-none focus:border-green-500 focus:bg-white transition-all font-bold" placeholder="••••••••" required>
                 </div>
-                <button type="submit" class="w-full bg-green-700 text-white py-4 rounded-2xl font-black uppercase tracking-widest shadow-xl hover:bg-green-800 transition-all mt-4 active:scale-95 font-sans text-center">Authorize Session</button>
+                <button type="submit" class="w-full bg-green-700 text-white py-4 rounded-2xl font-black uppercase tracking-widest shadow-xl hover:bg-green-800 transition-all mt-4 active:scale-95 font-sans text-center font-bold">Authorize Session</button>
             </form>
         </div>
     </div>
 
     <!-- MAIN APP SHELL -->
-    <div id="app-shell" class="hidden min-h-screen flex">
-        <aside class="w-72 bg-white border-r border-slate-100 fixed h-full hidden lg:flex flex-col z-50 shadow-sm text-left">
+    <div id="app-shell" class="hidden min-h-screen flex font-sans">
+        <aside class="w-72 bg-white border-r border-slate-100 fixed h-full hidden lg:flex flex-col z-50 shadow-sm text-left font-sans">
             <div class="p-10 border-b border-slate-50 text-center font-sans">
                 <img src="UOL-Green-V1.png" class="h-12 mx-auto mb-2 object-contain font-sans" alt="LSAFHR">
                 <span class="text-[9px] font-black text-green-700 uppercase tracking-widest font-sans">Identity Hub Matrix</span>
             </div>
             <nav class="flex-1 p-6 space-y-2 overflow-y-auto custom-scrollbar font-sans" id="sidebar-nav"></nav>
             <div class="p-6 border-t border-slate-50 flex items-center justify-between font-sans">
-                <div class="flex items-center gap-3 overflow-hidden text-left text-slate-800">
+                <div class="flex items-center gap-3 overflow-hidden text-left text-slate-800 font-sans">
                     <div id="user-avatar" class="h-10 h-10 rounded-xl bg-green-100 text-green-700 flex items-center justify-center font-black text-sm uppercase">?</div>
                     <div class="flex flex-col overflow-hidden font-sans">
-                        <span id="user-display-name" class="text-[11px] font-black truncate uppercase text-left">User</span>
-                        <span id="user-display-role" class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter text-left">Verified</span>
+                        <span id="user-display-name" class="text-[11px] font-black truncate uppercase text-left font-sans">User</span>
+                        <span id="user-display-role" class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter text-left font-sans">Verified</span>
                     </div>
                 </div>
                 <button onclick="logout()" class="text-red-500 p-2 hover:bg-red-50 rounded-xl transition-all font-sans"><i data-lucide="log-out" size="18"></i></button>
@@ -144,7 +143,7 @@
             { id: 'discussion', label: 'Board', icon: 'message-square', admin: false }
         ];
 
-        // --- CORE UTILS ---
+        // --- UTILS ---
         function notify(msg) {
             const t = document.getElementById('status-toast'); if (!t) return;
             t.innerText = msg; t.style.opacity = '1'; t.style.transform = 'translateY(0) translateX(-50%)';
@@ -181,6 +180,7 @@
             return { netPaid: add - sub };
         }
 
+        // --- CORE SYNC ---
         async function init() {
             const saved = localStorage.getItem('hr_user');
             if (saved) {
@@ -247,7 +247,7 @@
 
         function renderView() {
             const container = document.getElementById('view-container');
-            container.innerHTML = '<div class="py-40 text-center animate-pulse font-black text-slate-300 uppercase tracking-[0.5em] font-sans">Connecting to Hub...</div>';
+            container.innerHTML = '<div class="py-40 text-center animate-pulse font-black text-slate-300 uppercase tracking-[0.5em] font-sans">Connecting to Identity Hub...</div>';
             setTimeout(() => {
                 switch(state.currentTab) {
                     case 'dashboard': renderDashboard(); break;
@@ -268,24 +268,24 @@
             const container = document.getElementById('view-container');
             container.innerHTML = `
                 <div class="animate-fade-in space-y-8 font-sans text-left text-slate-800">
-                    <div class="flex justify-between items-center border-b pb-4 border-slate-100 font-sans">
-                        <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase font-sans">Home Matrix Hub</h2>
+                    <div class="flex justify-between items-center border-b pb-4 border-slate-100">
+                        <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase font-sans">Home matrix hub</h2>
                         <div class="bg-white p-4 rounded-2xl border shadow-sm text-right">
-                            <p class="text-[10px] text-slate-400 uppercase font-sans">Pakistan Time</p><p class="text-green-700 font-black font-mono font-sans">${getPktTime()}</p>
+                            <p class="text-[10px] text-slate-400 uppercase">Pakistan Time</p><p class="text-green-700 font-black font-mono">${getPktTime()}</p>
                         </div>
                     </div>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 font-sans">
-                        <div class="bg-green-700 p-10 rounded-[3rem] text-white shadow-2xl relative overflow-hidden text-left">
-                            <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 font-sans"></div>
-                            <p class="text-[10px] font-black uppercase opacity-60">Status Matrix</p>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 font-sans font-sans font-sans">
+                        <div class="bg-green-700 p-10 rounded-[2.5rem] text-white shadow-2xl relative overflow-hidden text-left">
+                            <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 font-sans font-sans"></div>
+                            <p class="text-[10px] font-black uppercase opacity-60">Status hub</p>
                             <p class="text-3xl font-black mt-2 uppercase tracking-tighter">ACTIVE SESSION</p>
                         </div>
-                        <div class="bg-white p-10 rounded-[3rem] border-2 border-slate-100 shadow-sm text-left">
-                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest font-sans">Loan Matrix Outstanding</p>
+                        <div class="bg-white p-10 rounded-[2.5rem] border-2 border-slate-100 shadow-sm text-left">
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Loan matrix Outstanding</p>
                             <p class="text-4xl font-black text-red-500 mt-2 font-mono">Rs. ${cleanNumber(state.user.loan_opening_balance - state.user.loan_deduction).toLocaleString()}</p>
                         </div>
-                        <div class="bg-white p-10 rounded-[3rem] border shadow-sm text-left font-sans">
-                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Identity level</p>
+                        <div class="bg-white p-10 rounded-[2.5rem] border shadow-sm text-left font-sans">
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest font-sans">Identity Level Hub</p>
                             <p class="text-2xl font-black text-slate-800 mt-2 capitalize font-sans">${state.user.role}</p>
                         </div>
                     </div>
@@ -302,13 +302,13 @@
                 <div class="animate-fade-in space-y-6 font-sans text-left text-slate-800">
                     <div class="flex flex-col md:flex-row justify-between items-center gap-4 border-b pb-4 border-slate-100 text-left font-sans font-sans">
                         <h2 class="text-xl font-black uppercase tracking-widest text-slate-800">Salary Matrix Hub</h2>
-                        <div class="flex flex-wrap gap-2 justify-center font-sans font-sans">
+                        <div class="flex flex-wrap gap-2 justify-center font-sans font-sans font-sans">
                             <input type="month" value="${state.selectedMonth}" onchange="updateMonth(this.value)" class="p-3 border-2 rounded-xl font-black bg-white shadow-sm outline-none focus:border-green-600" />
                             ${isAdmin ? `
                                 <button onclick="togglePublish(${isPosted})" class="px-6 py-2.5 rounded-xl font-black text-[10px] text-white uppercase shadow-lg ${isPosted ? 'bg-red-600' : 'bg-slate-900'}">${isPosted ? 'Unpublish' : 'Publish'}</button>
-                                <button onclick="exportSalaryCSV()" class="bg-slate-900 text-white px-6 py-2.5 rounded-xl font-black text-[10px] uppercase shadow-lg">Export Ledger</button>
-                                <label class="bg-green-50 text-green-700 px-6 py-2.5 rounded-xl font-black text-[10px] uppercase cursor-pointer hover:bg-green-100 font-sans border-2 border-green-100 flex items-center gap-2 font-bold">Import Matrix <input type="file" onchange="importSalaryCSV(this)" class="hidden" accept=".csv"></label>
-                                <button onclick="downloadSalarySample()" class="bg-white border-2 px-6 py-2.5 rounded-xl font-black text-[10px] uppercase shadow-sm">Sample Tool Hub</button>
+                                <button onclick="exportSalaryCSV()" class="bg-slate-900 text-white px-6 py-2.5 rounded-xl font-black text-[10px] uppercase shadow-lg font-sans">Export Ledger Matrix</button>
+                                <label class="bg-green-50 text-green-700 px-6 py-2.5 rounded-xl font-black text-[10px] uppercase cursor-pointer hover:bg-green-100 font-sans border-2 border-green-100 flex items-center gap-2 font-bold font-sans">Import Matrix Hub<input type="file" onchange="importSalaryCSV(this)" class="hidden" accept=".csv"></label>
+                                <button onclick="downloadSalarySample()" class="bg-white border-2 px-6 py-2.5 rounded-xl font-black text-[10px] uppercase shadow-sm font-sans font-sans">Sample Tool Matrix</button>
                             ` : ``}
                         </div>
                     </div>`;
@@ -319,16 +319,16 @@
                 content += `
                     <div class="overflow-x-auto rounded-[2rem] bg-white border-2 shadow-2xl font-sans">
                         <table class="w-full text-left text-[9px] font-sans">
-                            <thead class="bg-slate-50 border-b font-black uppercase text-slate-400 tracking-widest">
+                            <thead class="bg-slate-50 border-b font-black uppercase text-slate-400 tracking-widest font-sans font-sans">
                                 <tr>
-                                    <th class="p-4">ID</th><th class="p-4">Identity Name</th>
-                                    <th class="p-4 text-right">Basic</th><th class="p-4 text-right font-sans">Invig</th>
-                                    <th class="p-4 text-right font-sans">T.Pay</th><th class="p-4 text-right font-sans">Incr</th>
-                                    <th class="p-4 text-right font-sans">Eidi</th><th class="p-4 text-right text-slate-500 font-sans font-sans">Tax</th>
-                                    <th class="p-4 text-right text-slate-500 font-sans">Loan</th><th class="p-4 text-right text-slate-500 font-sans font-sans font-sans">Ins. Hub</th>
-                                    <th class="p-4 text-right text-slate-500 font-sans">Others</th><th class="p-4 text-right text-red-500 font-sans font-sans">L.Ded</th>
-                                    <th class="p-4 text-right font-black text-slate-900 uppercase font-mono text-xs bg-slate-100/50">Net Paid Matrix</th>
-                                    ${isAdmin ? `<th class="p-4 text-center font-sans">Audit</th>` : ''}
+                                    <th class="p-4">ID Matrix</th><th class="p-4 font-sans font-sans">Identity Name Hub</th>
+                                    <th class="p-4 text-right">Basic Hub</th><th class="p-4 text-right">Invig Hub</th>
+                                    <th class="p-4 text-right">T.Pay Matrix</th><th class="p-4 text-right">Incr Hub</th>
+                                    <th class="p-4 text-right">Eidi Hub</th><th class="p-4 text-right text-slate-500 font-sans">Tax Hub</th>
+                                    <th class="p-4 text-right text-slate-500 font-sans">Loan Hub</th><th class="p-4 text-right text-slate-500 font-sans">Ins. Hub</th>
+                                    <th class="p-4 text-right text-slate-500">Others</th><th class="p-4 text-right text-red-500 font-sans">L.Ded Matrix</th>
+                                    <th class="p-4 text-right font-black text-slate-900 uppercase font-mono text-xs bg-slate-100/50">Net Paid Ledger</th>
+                                    ${isAdmin ? `<th class="p-4 text-center font-sans">Audit Matrix</th>` : ''}
                                 </tr>
                             </thead>
                             <tbody class="divide-y font-bold font-sans text-left text-slate-800">`;
@@ -338,23 +338,23 @@
                     const isEditing = state.editingSalaryId === emp.id;
                     const m = calculateSalaryMetrics(emp);
                     content += `
-                        <tr class="matrix-row transition-all">
-                            <td class="p-4 font-black font-mono text-slate-900">${emp.id}</td>
-                            <td class="p-4 truncate max-w-[100px] uppercase font-sans">${emp.name}</td>
+                        <tr class="matrix-row transition-all font-sans font-sans">
+                            <td class="p-4 font-black font-mono text-slate-900 font-sans">${emp.id}</td>
+                            <td class="p-4 truncate max-w-[100px] uppercase font-sans font-sans font-sans">${emp.name}</td>
                             <td class="p-4 text-right font-mono">${isEditing ? `<input type="number" id="eb-${emp.id}" class="w-16 border rounded p-1 text-right" value="${emp.basic_salary}">` : cleanNumber(emp.basic_salary).toLocaleString()}</td>
                             <td class="p-4 text-right font-mono">${isEditing ? `<input type="number" id="ei-${emp.id}" class="w-12 border rounded p-1 text-right" value="${emp.invigilation}">` : cleanNumber(emp.invigilation).toLocaleString()}</td>
                             <td class="p-4 text-right font-mono">${isEditing ? `<input type="number" id="et-${emp.id}" class="w-12 border rounded p-1 text-right" value="${emp.t_payment}">` : cleanNumber(emp.t_payment).toLocaleString()}</td>
                             <td class="p-4 text-right font-mono">${isEditing ? `<input type="number" id="en-${emp.id}" class="w-12 border rounded p-1 text-right" value="${emp.increment}">` : cleanNumber(emp.increment).toLocaleString()}</td>
                             <td class="p-4 text-right font-mono">${isEditing ? `<input type="number" id="ed-${emp.id}" class="w-12 border rounded p-1 text-right" value="${emp.eidi}">` : cleanNumber(emp.eidi).toLocaleString()}</td>
                             <td class="p-4 text-right font-mono text-slate-500 font-sans">${isEditing ? `<input type="number" id="ex-${emp.id}" class="w-12 border rounded p-1 text-right" value="${emp.tax}">` : cleanNumber(emp.tax).toLocaleString()}</td>
-                            <td class="p-4 text-right font-mono text-slate-500 font-sans">${isEditing ? `<input type="number" id="el-${emp.id}" class="w-12 border rounded p-1 text-right" value="${emp.loan_deduction}">` : cleanNumber(emp.loan_deduction).toLocaleString()}</td>
-                            <td class="p-4 text-right font-mono text-slate-500 font-sans">${isEditing ? `<input type="number" id="es-${emp.id}" class="w-12 border rounded p-1 text-right" value="${emp.insurance}">` : cleanNumber(emp.insurance).toLocaleString()}</td>
+                            <td class="p-4 text-right font-mono text-slate-500 font-sans font-sans">${isEditing ? `<input type="number" id="el-${emp.id}" class="w-12 border rounded p-1 text-right" value="${emp.loan_deduction}">` : cleanNumber(emp.loan_deduction).toLocaleString()}</td>
+                            <td class="p-4 text-right font-mono text-slate-500 font-sans font-sans font-sans">${isEditing ? `<input type="number" id="es-${emp.id}" class="w-12 border rounded p-1 text-right" value="${emp.insurance}">` : cleanNumber(emp.insurance).toLocaleString()}</td>
                             <td class="p-4 text-right font-mono text-slate-500 font-sans">${isEditing ? `<input type="number" id="eo-${emp.id}" class="w-12 border rounded p-1 text-right" value="${emp.others_deduction}">` : cleanNumber(emp.others_deduction).toLocaleString()}</td>
                             <td class="p-4 text-right font-mono text-red-500 font-sans">${isEditing ? `<input type="number" id="eld-${emp.id}" class="w-12 border rounded p-1 text-right" value="${emp.extra_leaves_deduction}">` : cleanNumber(emp.extra_leaves_deduction).toLocaleString()}</td>
-                            <td class="p-4 text-right font-black text-slate-900 font-mono text-xs bg-slate-100/50">Rs. ${m.netPaid.toLocaleString()}</td>
+                            <td class="p-4 text-right font-black text-slate-900 font-mono text-xs bg-slate-100/50 font-sans">Rs. ${m.netPaid.toLocaleString()}</td>
                             ${isAdmin ? `
-                                <td class="p-4 text-center">
-                                    ${isEditing ? `<button onclick="saveSalary('${emp.id}')" class="text-green-600 bg-green-50 p-2 rounded-lg hover:bg-green-600 hover:text-white transition-all font-sans"><i data-lucide="save" size="14"></i></button>` : `<button onclick="state.editingSalaryId='${emp.id}'; renderPayroll()" class="text-blue-500 bg-blue-50 p-2 rounded-lg hover:bg-blue-600 hover:text-white transition-all font-sans"><i data-lucide="pencil" size="14"></i></button>`}
+                                <td class="p-4 text-center font-sans font-sans">
+                                    ${isEditing ? `<button onclick="saveSalary('${emp.id}')" class="text-green-600 bg-green-50 p-2 rounded-lg hover:bg-green-600 hover:text-white transition-all font-sans"><i data-lucide="save" size="14"></i></button>` : `<button onclick="state.editingSalaryId='${emp.id}'; renderPayroll()" class="text-blue-500 bg-blue-50 p-2 rounded-lg hover:bg-blue-600 hover:text-white transition-all font-sans font-sans font-sans"><i data-lucide="pencil" size="14"></i></button>`}
                                 </td>` : ''}
                         </tr>`;
                 });
@@ -370,20 +370,20 @@
                 invigilation: cleanNumber(document.getElementById(`ei-${id}`).value),
                 t_payment: cleanNumber(document.getElementById(`et-${id}`).value),
                 increment: cleanNumber(document.getElementById(`en-${id}`).value),
-                eidi: cleanNumber(document.getElementById('ed-' + id).value),
-                tax: cleanNumber(document.getElementById('ex-' + id).value),
-                loan_deduction: cleanNumber(document.getElementById('el-' + id).value),
-                insurance: cleanNumber(document.getElementById('es-' + id).value),
-                others_deduction: cleanNumber(document.getElementById('eo-' + id).value),
-                extra_leaves_deduction: cleanNumber(document.getElementById('eld-' + id).value)
+                eidi: cleanNumber(document.getElementById(`ed-${id}`).value),
+                tax: cleanNumber(document.getElementById(`ex-${id}`).value),
+                loan_deduction: cleanNumber(document.getElementById(`el-${id}`).value),
+                insurance: cleanNumber(document.getElementById(`es-${id}`).value),
+                others_deduction: cleanNumber(document.getElementById(`eo-${id}`).value),
+                extra_leaves_deduction: cleanNumber(document.getElementById(`eld-${id}`).value)
             };
             const res = await fetch(`${API_BASE}/employees/${id}`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
             if (res.ok) { state.editingSalaryId = null; await syncData(); renderPayroll(); notify("Identity Matrix Updated."); }
         }
 
         function downloadSalarySample() {
-            const sample = [{ "ID": "EMP100", "Name": "Staff Name", "Basic": 50000, "Invig": 0, "TPay": 0, "Incr": 0, "Eidi": 0, "Tax": 0, "Loan": 0, "Ins": 0, "Other": 0, "LDed": 0 }];
-            exportToCSV(sample, "Salary_Matrix_Sample.csv");
+            const sample = [{ "ID": "EMP100", "Name": "Staff Name Matrix", "Basic": 50000, "Invig": 0, "TPay": 0, "Incr": 0, "Eidi": 0, "Tax": 0, "Loan": 0, "Ins": 0, "Other": 0, "LDed": 0 }];
+            exportToCSV(sample, "LSAFHR_Salary_Matrix_Sample_Hub.csv");
         }
 
         async function importSalaryCSV(input) {
@@ -392,7 +392,7 @@
             reader.onload = async (e) => {
                 const text = e.target.result;
                 const rows = text.split('\n').slice(1);
-                notify("Uploading bulk matrix records...");
+                notify("Uploading bulk ledger records hub...");
                 for(let row of rows) {
                     const cols = row.split(',');
                     if(cols.length < 2) continue;
@@ -414,9 +414,9 @@
             const data = state.employees.map(e => ({
                 "ID": e.id, "Name": e.name, "Basic": e.basic_salary, "Invig": e.invigilation, "T.Pay": e.t_payment, 
                 "Incr": e.increment, "Eidi": e.eidi, "Tax": e.tax, "Loan": e.loan_deduction, "Ins": e.insurance, 
-                "Others": e.others_deduction, "L.Ded": e.extra_leaves_deduction, "Net Paid Matrix Hub": calculateSalaryMetrics(e).netPaid
+                "Others": e.others_deduction, "L.Ded": e.extra_leaves_deduction, "Net Paid Hub": calculateSalaryMetrics(e).netPaid
             }));
-            exportToCSV(data, `LSAFHR_Salary_Export_${state.selectedMonth}.csv`);
+            exportToCSV(data, `LSAFHR_Ledger_Export_${state.selectedMonth}.csv`);
         }
 
         // --- ATTENDANCE HUB ---
@@ -425,7 +425,7 @@
             const isAdmin = state.user && state.user.role === 'admin';
             
             const dailyLogs = {};
-            state.attendance.filter(l => l.date_str && l.date_str.startsWith(state.selectedAttendanceMonth)).forEach(l => {
+            state.attendance.forEach(l => {
                 if(!dailyLogs[l.date_str]) dailyLogs[l.date_str] = [];
                 dailyLogs[l.date_str].push(l);
             });
@@ -434,74 +434,76 @@
             container.innerHTML = `
                 <div class="animate-fade-in space-y-8 font-sans text-left text-slate-800">
                     <div class="flex flex-col md:flex-row justify-between items-center gap-4 border-b pb-4 border-slate-100 font-sans">
-                        <h2 class="text-xl font-black uppercase tracking-widest text-left font-sans">Attendance Hub matrix</h2>
+                        <h2 class="text-xl font-black uppercase tracking-widest text-left font-sans font-sans">Attendance Hub matrix</h2>
                         <div class="flex gap-2">
                              <input type="month" value="${state.selectedAttendanceMonth}" onchange="updateAttendanceMonth(this.value)" class="p-3 border-2 rounded-xl font-black bg-white shadow-sm outline-none focus:border-green-600" />
-                             <button onclick="exportAttendanceCSV(${isAdmin})" class="bg-slate-900 text-white px-6 py-2.5 rounded-xl font-black text-[10px] uppercase shadow-lg">Export Records</button>
+                             <button onclick="exportAttendanceCSV(${isAdmin})" class="bg-slate-900 text-white px-6 py-2.5 rounded-xl font-black text-[10px] uppercase shadow-lg font-sans">Export Record Hub</button>
                         </div>
                     </div>
-                    <div class="bg-white p-6 rounded-[2.5rem] border-2 shadow-2xl font-sans relative overflow-hidden h-[450px]">
+                    <div class="bg-white p-6 rounded-[2.5rem] border-2 shadow-2xl relative overflow-hidden h-[450px] font-sans">
                         <div id="attendance-map" class="h-full w-full rounded-[2rem]"></div>
+                        <div class="absolute top-10 right-10 z-[1000] bg-white/90 backdrop-blur p-4 rounded-2xl border-2 shadow-2xl font-black text-[10px] uppercase tracking-widest text-green-700">Identity Tracking Matrix Active</div>
                     </div>
                     <div class="grid md:grid-cols-2 gap-8 font-sans font-sans">
                         <div class="bg-white rounded-[2.5rem] py-16 flex flex-col items-center justify-center space-y-8 border-2 border-dashed border-slate-100 shadow-inner bg-slate-50/50">
                             <h3 class="text-7xl font-black text-slate-800 font-mono tracking-tighter">${getPktTime()}</h3>
                             <div class="flex flex-col gap-4 w-full max-sm px-10">
-                                <button onclick="handleClock('Clock In')" class="w-full py-5 btn-clock-in text-base uppercase font-sans tracking-widest font-sans font-sans">Mark Clock In</button>
-                                <button onclick="handleClock('Clock Out')" class="w-full py-5 btn-clock-out text-base uppercase font-sans tracking-widest font-sans font-sans font-sans">Mark Clock Out</button>
+                                <button onclick="handleClock('Clock In')" class="w-full py-5 btn-clock-in text-base uppercase font-sans tracking-widest">Verify Clock In</button>
+                                <button onclick="handleClock('Clock Out')" class="w-full py-5 btn-clock-out text-base uppercase font-sans tracking-widest font-sans font-sans">Verify Clock Out</button>
                             </div>
                         </div>
-                        <div class="bg-white rounded-[2.5rem] p-12 border-2 border-slate-50 text-center flex flex-col items-center justify-center font-sans font-sans">
+                        <div class="bg-white rounded-[2.5rem] p-12 border-2 border-slate-50 text-center flex flex-col items-center justify-center">
                             <div class="bg-green-50 w-24 h-24 rounded-full flex items-center justify-center mb-8 font-sans"><i data-lucide="map-pin" class="text-green-600 animate-bounce" size="40"></i></div>
-                            <p class="text-xs font-black text-slate-600 uppercase tracking-widest font-sans">Geofence Verified Hub Matrix</p>
+                            <p class="text-xs font-black text-slate-600 uppercase tracking-widest">Geofence Verified Sync Hub</p>
                         </div>
                     </div>
 
                     <div class="bg-white rounded-[2.5rem] border shadow-sm mt-8 overflow-hidden font-sans font-sans">
-                        <div class="bg-slate-50 p-6 border-b flex justify-between items-center font-sans">
-                            <span class="font-black text-xs uppercase text-slate-500 tracking-widest font-sans font-sans">Shift identity summary hub matrix</span>
+                        <div class="bg-slate-50 p-6 border-b flex justify-between items-center">
+                            <span class="font-black text-xs uppercase text-slate-500 tracking-widest font-sans font-sans font-sans">Shift identity summary hub</span>
                             <span class="text-[10px] font-black text-green-700 uppercase tracking-tighter">Verified Matrix Logs</span>
                         </div>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left font-sans font-sans font-sans font-sans font-sans">
+                        <div class="overflow-x-auto font-sans">
+                            <table class="w-full text-left font-sans font-sans font-sans">
                                 <thead class="bg-slate-50/50 text-[10px] font-black uppercase text-slate-400 tracking-widest border-b font-sans">
-                                    <tr><th class="p-6 font-sans">Date hub Matrix</th><th class="p-6 text-center font-sans">In (Fly Map Matrix)</th><th class="p-6 text-center font-sans">Out (Fly Map Matrix)</th><th class="p-6 text-center font-sans font-sans">Total Work Matrix</th><th class="p-6 text-center font-sans">Audit hub Actions</th></tr>
+                                    <tr><th class="p-6 font-sans">Date Hub</th><th class="p-6 text-center font-sans">In (Fly Map) Hub</th><th class="p-6 text-center font-sans">Out (Fly Map) Hub</th><th class="p-6 text-center font-sans">Total Work Matrix</th><th class="p-6 text-center font-sans font-sans">Audit hub actions</th></tr>
                                 </thead>
-                                <tbody class="divide-y font-bold text-slate-800 font-sans">
+                                <tbody class="divide-y font-bold text-slate-800">
                                     ${dateRows.map(date => {
                                         const logs = dailyLogs[date];
                                         const cin = logs.find(l => l.type === 'Clock In');
                                         const cout = [...logs].reverse().find(l => l.type === 'Clock Out');
                                         return `
-                                            <tr class="matrix-row transition-all">
+                                            <tr class="matrix-row transition-all font-sans font-sans font-sans">
                                                 <td class="p-6 font-mono text-sm">${date}</td>
                                                 <td class="p-6 text-center font-sans">
-                                                    ${cin ? `<button onclick="focusMap(${cin.latitude}, ${cin.longitude}, 'CLOCK IN HUB', '${cin.time_str}')" class="text-green-600 border-b-2 border-green-100 uppercase text-[10px] font-black font-sans font-sans">${cin.time_str}</button>` : '<span class="text-slate-200">--:--</span>'}
+                                                    ${cin ? `<button onclick="focusMap(${(cin.latitude || 0)}, ${(cin.longitude || 0)}, 'IN', '${cin.time_str}')" class="text-green-600 border-b-2 border-green-100 uppercase text-[10px] font-black font-sans font-sans font-sans">${cin.time_str}</button>` : '<span class="text-slate-200">--:--</span>'}
                                                 </td>
-                                                <td class="p-6 text-center font-sans font-sans font-sans">
-                                                    ${cout ? `<button onclick="focusMap(${cout.latitude}, ${cout.longitude}, 'CLOCK OUT HUB', '${cout.time_str}')" class="text-red-600 border-b-2 border-red-100 uppercase text-[10px] font-black font-sans font-sans">${cout.time_str}</button>` : '<span class="text-slate-200 font-sans font-sans">--:--</span>'}
+                                                <td class="p-6 text-center">
+                                                    ${cout ? `<button onclick="focusMap(${(cout.latitude || 0)}, ${(cout.longitude || 0)}, 'OUT', '${cout.time_str}')" class="text-red-600 border-b-2 border-red-100 uppercase text-[10px] font-black font-sans font-sans font-sans">${cout.time_str}</button>` : '<span class="text-slate-200 font-sans font-sans">--:--</span>'}
                                                 </td>
                                                 <td class="p-6 text-center font-black">${calculateWorkTime(cin?.time_str, cout?.time_str)}</td>
                                                 <td class="p-6 text-center font-sans">
                                                     <div class="flex justify-center gap-4">
                                                         ${isAdmin ? `
-                                                            <button onclick="wipeDateAttendance('${date}')" class="bg-red-50 text-red-600 p-3 rounded-2xl hover:bg-red-600 transition-all hover:text-white font-sans"><i data-lucide="trash-2" size="18"></i></button>
-                                                        ` : `<span class="status-badge status-approved">Verified Hub Matrix</span>`}
+                                                            <button onclick="wipeDateAttendance('${date}')" class="bg-red-50 text-red-600 p-3 rounded-2xl hover:bg-red-600 hover:text-white transition-all"><i data-lucide="trash-2" size="18"></i></button>
+                                                        ` : `<span class="status-badge status-verified">Verified Hub</span>`}
                                                     </div>
                                                 </td>
                                             </tr>`;
                                     }).join('')}
-                                    ${dateRows.length === 0 ? '<tr><td colspan="5" class="p-40 text-center font-black text-slate-300 uppercase tracking-widest font-sans">No Matrix Records HUB</td></tr>' : ''}
+                                    ${dateRows.length === 0 ? '<tr><td colspan="5" class="p-40 text-center font-black text-slate-300 uppercase tracking-widest font-sans font-sans font-sans">No Records Found in Matrix hub</td></tr>' : ''}
                                 </tbody>
                             </table>
                         </div>
                     </div>
                 </div>`;
             lucide.createIcons();
+            
             setTimeout(() => {
                 navigator.geolocation.getCurrentPosition((p) => {
-                    initMap(p.coords.latitude, p.coords.longitude, "CURRENT POSITION MATRIX");
-                }, () => initMap(31.5204, 74.3587, "Lahore"));
+                    initMap(p.coords.latitude, p.coords.longitude, "CURRENT POSITION HUB");
+                }, () => initMap(31.5204, 74.3587, "Lahore hub center"));
             }, 300);
         }
 
@@ -511,15 +513,15 @@
             if (state.map) state.map.remove();
             state.map = window.L.map('attendance-map').setView([lat, lng], 15);
             window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(state.map);
-            window.L.marker([lat, lng]).addTo(state.map).bindPopup(`<p class="font-black text-[10px] uppercase font-sans">${label}</p>`).openPopup();
+            window.L.marker([lat, lng]).addTo(state.map).bindPopup(`<p class="font-black text-[10px] uppercase font-sans font-sans">${label}</p>`).openPopup();
         }
 
         function focusMap(lat, lng, action, time) {
             if (!state.map || !lat || !lng) return;
             state.map.setView([lat, lng], 17);
-            window.L.marker([lat, lng]).addTo(state.map).bindPopup(`<p class="font-black text-[10px] uppercase text-slate-800 font-sans">${action}<br/><span class="text-green-700 font-sans">${time}</span></p>`).openPopup();
+            window.L.marker([lat, lng]).addTo(state.map).bindPopup(`<p class="font-black text-[10px] uppercase text-slate-800 font-sans">${action}<br/><span class="text-green-700">${time}</span></p>`).openPopup();
             window.scrollTo({ top: 150, behavior: 'smooth' });
-            notify(`Focusing Matrix Point: ${time}`);
+            notify(`Focusing Matrix Hub Point: ${time}`);
         }
 
         // --- STAFF HUB ---
@@ -528,27 +530,30 @@
             const isAdmin = state.user && state.user.role === 'admin';
             
             container.innerHTML = `
-                <div class="animate-fade-in space-y-6 font-sans text-left text-slate-800 font-sans">
-                    <div class="flex flex-col md:flex-row justify-between items-center gap-4 border-b pb-4 border-slate-100 font-sans">
-                        <h2 class="text-xl font-black uppercase tracking-widest text-slate-800">Staff Hub Identity Matrix</h2>
+                <div class="animate-fade-in space-y-6 font-sans text-left text-slate-800">
+                    <div class="flex flex-col md:flex-row justify-between items-center gap-4 border-b pb-4 border-slate-100 font-sans text-left">
+                        <h2 class="text-xl font-black uppercase tracking-widest text-slate-800 font-sans font-sans">Staff Hub Matrix Hub</h2>
                         <div class="flex gap-2">
-                             <button onclick="downloadDirectorySample()" class="bg-white border-2 border-slate-100 px-6 py-2 rounded-xl font-black text-[10px] uppercase shadow-sm">Sample Tool Hub Hub</button>
-                             <button onclick="toggleStaffForm()" class="bg-green-700 text-white px-6 py-2 rounded-xl font-black text-[10px] uppercase shadow-lg font-sans">Add Identity Matrix</button>
+                             <button onclick="downloadDirectorySample()" class="bg-white border-2 border-slate-100 px-6 py-2.5 rounded-xl font-black text-[10px] uppercase shadow-sm">Sample Tool Hub HUB</button>
+                             <button onclick="toggleStaffForm()" class="bg-green-700 text-white px-6 py-2 rounded-xl font-black text-[10px] uppercase shadow-lg">Add Identity Matrix</button>
                         </div>
                     </div>
-                    <div id="staff-form-area" class="font-sans text-left font-sans font-sans"></div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 font-sans">
+                    <div id="staff-form-area" class="font-sans text-left font-sans"></div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 font-sans font-sans font-sans">
                         ${state.employees.map(emp => `
-                            <div class="bg-white p-6 rounded-2xl shadow-sm border-2 border-slate-50 flex flex-col items-center gap-4 hover:border-green-300 transition-all group text-center relative overflow-hidden">
-                                <div class="h-12 w-12 bg-green-50 text-green-700 rounded-xl flex items-center justify-center font-black text-xl uppercase font-sans">${getInitial(emp.name)}</div>
+                            <div class="bg-white p-10 rounded-[2.5rem] shadow-sm border-2 border-slate-50 flex flex-col items-center gap-6 hover:border-green-300 transition-all group text-center relative overflow-hidden font-sans">
+                                <div class="h-20 w-20 rounded-[2rem] bg-green-50 text-green-700 flex items-center justify-center font-black text-4xl shadow-inner font-sans">${getInitial(emp.name)}</div>
                                 <div class="w-full">
-                                    <h4 class="font-black text-slate-800 uppercase truncate text-sm mb-1">${emp.name}</h4>
-                                    <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest font-sans">${emp.id} • ${emp.role}</p>
-                                    <p class="text-[9px] font-black text-red-400 mt-2 font-sans">DEBT Matrix Hub: Rs. ${cleanNumber(emp.loan_opening_balance).toLocaleString()}</p>
+                                    <h4 class="font-black text-slate-800 uppercase truncate text-base mb-1 font-sans">${emp.name}</h4>
+                                    <p class="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em] font-sans font-sans font-sans">${emp.id} • ${emp.role}</p>
+                                    <div class="mt-6 pt-6 border-t border-slate-50 space-y-1 font-sans">
+                                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Opening debt hub matrix</p>
+                                        <p class="text-sm font-black text-red-500 font-mono">Rs. ${cleanNumber(emp.loan_opening_balance).toLocaleString()}</p>
+                                    </div>
                                 </div>
-                                <div class="flex gap-2 justify-center opacity-0 group-hover:opacity-100 transition-all font-sans">
-                                    <button onclick="editStaff('${emp.id}')" class="text-blue-500 p-2 font-sans font-sans font-sans font-sans"><i data-lucide="pencil" size="18"></i></button>
-                                    <button onclick="deleteStaff('${emp.id}')" class="text-red-400 p-2 font-sans font-sans font-sans font-sans font-sans"><i data-lucide="trash-2" size="18"></i></button>
+                                <div class="flex gap-2 justify-center opacity-0 group-hover:opacity-100 transition-all">
+                                    <button onclick="editStaff('${emp.id}')" class="bg-blue-50 text-blue-600 p-4 rounded-2xl hover:bg-blue-600 hover:text-white transition-all"><i data-lucide="pencil" size="18"></i></button>
+                                    <button onclick="deleteStaff('${emp.id}')" class="bg-red-50 text-red-600 p-4 rounded-2xl hover:bg-red-600 hover:text-white transition-all"><i data-lucide="trash-2" size="18"></i></button>
                                 </div>
                             </div>`).join('')}
                     </div>
@@ -561,16 +566,17 @@
             if (!emp && area.innerHTML && !state.editingMemberId) { area.innerHTML = ''; return; }
             state.editingMemberId = emp ? emp.id : null;
             area.innerHTML = `
-                <div class="bg-white p-10 rounded-[2.5rem] border-2 border-green-100 shadow-2xl mb-10 animate-slide-up relative font-sans">
-                    <button onclick="toggleStaffForm()" class="absolute top-6 right-6 text-slate-300 hover:text-red-500 font-sans"><i data-lucide="x" size="32"></i></button>
-                    <form onsubmit="handleStaffSubmit(event)" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 font-sans font-sans">
-                        <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans font-sans">ID Matrix Hub</label><input type="text" id="s-id" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 uppercase focus:bg-white" value="${emp ? emp.id : ''}" ${emp ? 'readonly' : 'required'} /></div>
-                        <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2">Full Name Hub Hub</label><input type="text" id="s-name" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 focus:bg-white" value="${emp ? emp.name : ''}" required /></div>
-                        <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2">Email Hub Hub Address</label><input type="email" id="s-email" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 focus:bg-white" value="${emp ? emp.email : ''}" required /></div>
-                        <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2">System matrix hub Key</label><input type="text" id="s-pass" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 focus:bg-white" value="${emp ? emp.password : ''}" required /></div>
-                        <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans font-sans font-sans">Opening Loan Matrix</label><input type="number" id="s-loan-open" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 focus:bg-white font-sans" value="${emp ? emp.loan_opening_balance : 0}" /></div>
-                        <div class="md:col-span-2 lg:col-span-4 flex justify-end gap-3 pt-6 border-t font-sans">
-                            <button type="submit" class="bg-green-700 text-white px-10 py-4 rounded-xl font-black uppercase text-xs shadow-lg hover:bg-green-800 transition-all font-sans">${emp ? 'Sync matrix changes hub' : 'Create matrix identity hub'}</button>
+                <div class="bg-white p-12 rounded-[3rem] border-2 border-green-100 shadow-2xl mb-12 animate-slide-up relative font-sans font-sans font-sans font-sans">
+                    <button onclick="toggleStaffForm()" class="absolute top-8 right-8 text-slate-200 hover:text-red-500 transition-colors"><i data-lucide="x" size="32"></i></button>
+                    <h3 class="text-2xl font-black uppercase tracking-tight mb-8 text-slate-800 font-sans font-sans">${emp ? 'Audit Identity Matrix hub' : 'Initialize Identity matrix Hub'}</h3>
+                    <form onsubmit="handleStaffSubmit(event)" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 font-sans font-sans font-sans">
+                        <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2">ID Matrix Hub</label><input type="text" id="s-id" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 uppercase focus:bg-white" value="${emp ? emp.id : ''}" ${emp ? 'readonly' : 'required'} /></div>
+                        <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans">Full Name matrix</label><input type="text" id="s-name" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 focus:bg-white" value="${emp ? emp.name : ''}" required /></div>
+                        <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2">Email address matrix hub</label><input type="email" id="s-email" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 focus:bg-white" value="${emp ? emp.email : ''}" required /></div>
+                        <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2">System matrix Key hub</label><input type="text" id="s-pass" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 focus:bg-white" value="${emp ? emp.password : ''}" required /></div>
+                        <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans font-sans">Opening Loan Matrix</label><input type="number" id="s-loan-open" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 focus:bg-white" value="${emp ? emp.loan_opening_balance : 0}" /></div>
+                        <div class="md:col-span-2 lg:col-span-4 flex justify-end gap-4 pt-8 border-t">
+                            <button type="submit" class="bg-green-700 text-white px-10 py-4 rounded-xl font-black uppercase text-xs shadow-lg hover:bg-green-800 transition-all font-sans font-sans font-sans font-sans">${emp ? 'Sync changes matrix' : 'Create matrix identity'}</button>
                         </div>
                     </form>
                 </div>`;
@@ -588,18 +594,18 @@
             const method = state.editingMemberId ? 'PUT' : 'POST';
             const url = state.editingMemberId ? `${API_BASE}/employees/${state.editingMemberId}` : `${API_BASE}/employees`;
             const res = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
-            if (res.ok) { notify("Identity hub matrix Synchronized."); state.editingMemberId = null; await syncData(); renderDirectory(); } else notify("Matrix system sync failure hub.");
+            if (res.ok) { notify("Identity Hub Matrix Synchronized Hub."); state.editingMemberId = null; await syncData(); renderDirectory(); } else notify("Matrix System Error Code: 501.");
         }
 
         async function deleteStaff(id) {
-            if(!confirm(`DANGER: Wipe identity hub ${id} and all related logs?`)) return;
+            if(!confirm(`DANGER: Purge identity hub ${id} and all logs?`)) return;
             const res = await fetch(`${API_BASE}/employees/${id}`, { method: 'DELETE' });
             if(res.ok) { notify("Identity Purged hub."); await syncData(); renderDirectory(); }
         }
 
         function downloadDirectorySample() {
-            const sample = [{ "id": "EMP101", "name": "Staff Name", "email": "staff@example.com", "password": "key", "loan_opening": 0 }];
-            exportToCSV(sample, "Identity_Matrix_Sample_HUB.csv");
+            const sample = [{ "id": "EMP101", "name": "Staff Name hub", "email": "staff@example.com", "password": "key", "loan_opening": 0 }];
+            exportToCSV(sample, "Identity_Matrix_Sample.csv");
         }
 
         // --- LOANS HUB ---
@@ -612,67 +618,67 @@
             const netOutstanding = cleanNumber(targetUser.loan_opening_balance) + totalApproved - cleanNumber(targetUser.loan_deduction);
 
             container.innerHTML = `
-                <div class="animate-fade-in space-y-10 font-sans text-left text-slate-800 font-sans font-sans font-sans">
+                <div class="animate-fade-in space-y-10 font-sans text-left text-slate-800 font-sans">
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10 font-sans">
-                        <div class="bg-white p-8 rounded-[2.5rem] border-2 shadow-sm text-left"><p class="text-[9px] font-black text-slate-400 uppercase tracking-widest font-sans font-sans">Opening Debt hub</p><p class="text-2xl font-black mt-2 font-mono font-sans font-sans">Rs. ${cleanNumber(targetUser.loan_opening_balance).toLocaleString()}</p></div>
-                        <div class="bg-green-50 p-8 rounded-[2.5rem] border-2 border-green-100 text-left font-sans font-sans font-sans"><p class="text-[9px] font-black text-green-700 uppercase tracking-widest font-sans font-sans font-sans font-sans">Approved matrix sum</p><p class="text-2xl font-black mt-2 font-mono text-green-800 font-sans font-sans">Rs. ${totalApproved.toLocaleString()}</p></div>
-                        <div class="bg-white p-8 rounded-[2.5rem] border-2 shadow-sm text-left font-sans font-sans font-sans font-sans font-sans"><p class="text-[9px] font-black text-slate-400 uppercase tracking-widest font-sans font-sans font-sans">Monthly deductions matrix</p><p class="text-2xl font-black mt-2 font-mono font-sans font-sans font-sans font-sans">Rs. ${cleanNumber(targetUser.loan_deduction).toLocaleString()}</p></div>
-                        <div class="bg-red-50 p-8 rounded-[2.5rem] border-2 border-red-100 text-left font-sans font-sans font-sans font-sans font-sans font-sans"><p class="text-[9px] font-black text-red-600 uppercase tracking-widest font-sans font-sans font-sans font-sans">Net matrix balance hub</p><p class="text-2xl font-black mt-2 font-mono text-red-600 font-sans font-sans">Rs. ${netOutstanding.toLocaleString()}</p></div>
+                        <div class="bg-white p-8 rounded-[2.5rem] border-2 shadow-sm text-left font-sans font-sans font-sans"><p class="text-[9px] font-black text-slate-400 uppercase tracking-widest font-sans font-sans">Opening Debt Hub Hub</p><p class="text-2xl font-black mt-2 font-mono">Rs. ${cleanNumber(targetUser.loan_opening_balance).toLocaleString()}</p></div>
+                        <div class="bg-green-50 p-8 rounded-[2.5rem] border-2 border-green-100 text-left font-sans font-sans font-sans font-sans font-sans"><p class="text-[9px] font-black text-green-700 uppercase tracking-widest">Approved Matrix Sum hub</p><p class="text-2xl font-black mt-2 font-mono text-green-800">Rs. ${totalApproved.toLocaleString()}</p></div>
+                        <div class="bg-white p-8 rounded-[2.5rem] border-2 shadow-sm text-left font-sans font-sans font-sans font-sans"><p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Monthly Hub Deductions</p><p class="text-2xl font-black mt-2 font-mono">Rs. ${cleanNumber(targetUser.loan_deduction).toLocaleString()}</p></div>
+                        <div class="bg-red-50 p-8 rounded-[2.5rem] border-2 border-red-100 text-left font-sans font-sans font-sans font-sans"><p class="text-[9px] font-black text-red-600 uppercase tracking-widest">Net Hub Matrix Balance</p><p class="text-2xl font-black mt-2 font-mono text-red-600">Rs. ${netOutstanding.toLocaleString()}</p></div>
                     </div>
 
-                    <div class="flex bg-slate-200 p-2 rounded-[2rem] max-w-sm mx-auto mb-10 shadow-inner font-sans font-sans font-sans">
-                        <button onclick="state.loanTab='apply'; renderLoans()" class="flex-1 py-3 text-[10px] font-black rounded-2xl uppercase tracking-widest transition-all ${state.loanTab === 'apply' ? 'bg-white text-green-700 shadow-xl' : 'text-slate-500'}">Apply Matrix</button>
-                        <button onclick="state.loanTab='history'; renderLoans()" class="flex-1 py-3 text-[10px] font-black rounded-2xl uppercase tracking-widest transition-all ${state.loanTab === 'history' ? 'bg-white text-green-700 shadow-xl' : 'text-slate-500'}">History Matrix</button>
+                    <div class="flex bg-slate-200 p-2 rounded-[2rem] max-w-sm mx-auto mb-10 shadow-inner font-sans font-sans">
+                        <button onclick="state.loanTab='apply'; renderLoans()" class="flex-1 py-3 text-[10px] font-black rounded-2xl uppercase tracking-widest transition-all ${state.loanTab === 'apply' ? 'bg-white text-green-700 shadow-xl' : 'text-slate-500'}">Apply hub</button>
+                        <button onclick="state.loanTab='history'; renderLoans()" class="flex-1 py-3 text-[10px] font-black rounded-2xl uppercase tracking-widest transition-all ${state.loanTab === 'history' ? 'bg-white text-green-700 shadow-xl' : 'text-slate-500'} font-sans font-sans">History hub</button>
                         ${isAdmin ? `<button onclick="state.loanTab='oversight'; renderLoans()" class="flex-1 py-3 text-[10px] font-black rounded-2xl uppercase transition-all ${state.loanTab === 'oversight' ? 'bg-white text-green-700 shadow-xl' : 'text-slate-500'}">Oversight Hub</button>` : ''}
                     </div>
 
                     ${state.loanTab === 'oversight' ? `
-                        <div class="bg-white rounded-[2rem] border-2 border-slate-100 shadow-2xl overflow-hidden font-sans">
+                        <div class="bg-white rounded-[2rem] border-2 border-slate-50 shadow-2xl overflow-hidden font-sans font-sans">
                             <div class="bg-slate-50 p-8 border-b flex justify-between items-center">
-                                <span class="font-black text-xs uppercase text-slate-500 tracking-widest font-sans font-sans font-sans">Loan Audit Hub oversight Matrix</span>
-                                <button onclick="exportToCSV(state.allLoans, 'Loans_Oversight_Report_Hub.csv')" class="bg-slate-900 text-white px-8 py-2.5 rounded-xl font-black text-[10px] uppercase shadow-lg font-sans">Export Oversight Hub</button>
+                                <span class="font-black text-xs uppercase text-slate-500 tracking-widest font-sans font-sans">Loan Audit Hub Oversight Ledger Matrix</span>
+                                <button onclick="exportToCSV(state.allLoans, 'Loans_Audit_HUB_Report.csv')" class="bg-slate-900 text-white px-8 py-2.5 rounded-xl font-black text-[10px] uppercase shadow-lg">Export Ledger Matrix</button>
                             </div>
-                            <div class="overflow-x-auto"><table class="w-full text-left text-[10px] font-bold font-sans">
-                                <thead class="bg-slate-50 border-b font-black uppercase text-slate-400"><tr><th class="p-6">Requester matrix identity</th><th class="p-6">Matrix Date hub</th><th class="p-6 text-right">Matrix Amount</th><th class="p-6">Status Hub</th><th class="p-6 text-center">Audit Actions Hub</th></tr></thead>
+                            <div class="overflow-x-auto font-sans font-sans"><table class="w-full text-left text-[11px] font-bold">
+                                <thead class="bg-slate-50 border-b font-black uppercase text-slate-400"><tr><th class="p-6 font-sans">Requester hub Identity</th><th class="p-6 font-sans">Matrix Date hub</th><th class="p-6 text-right">Amount matrix hub</th><th class="p-6">Status Hub</th><th class="p-6 text-center">Audit Actions matrix hub</th></tr></thead>
                                 <tbody class="divide-y divide-slate-50">
                                     ${(state.allLoans || []).map(ln => `
-                                        <tr class="hover:bg-slate-50 transition-colors">
+                                        <tr class="hover:bg-slate-50 transition-colors font-sans">
                                             <td class="p-6 font-black uppercase">${ln.name} (${ln.employee_id})</td>
-                                            <td class="p-6 font-mono text-slate-400 uppercase">${formatDate(ln.applied_at)}</td>
-                                            <td class="p-6 text-right font-mono font-black text-slate-900">Rs. ${cleanNumber(ln.amount).toLocaleString()}</td>
-                                            <td class="p-6 font-sans"><span class="status-badge ${ln.status==='Approved'?'status-approved':'status-pending'}">${ln.status}</span></td>
+                                            <td class="p-6 font-mono text-slate-400 uppercase font-sans">${formatDate(ln.applied_at)}</td>
+                                            <td class="p-6 text-right font-mono font-black text-slate-900 text-sm">Rs. ${cleanNumber(ln.amount).toLocaleString()}</td>
+                                            <td class="p-6"><span class="status-badge ${ln.status==='Approved'?'status-approved':'status-pending'}">${ln.status}</span></td>
                                             <td class="p-6 flex justify-center gap-3">
-                                                <button onclick="approveLoan('${ln.id}', 'Approved')" class="bg-green-700 text-white px-5 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg">Approve</button>
-                                                <button onclick="approveLoan('${ln.id}', 'Rejected')" class="bg-red-600 text-white px-5 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg">Reject</button>
+                                                <button onclick="approveLoan('${ln.id}', 'Approved')" class="bg-green-700 text-white px-5 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg">Approve</button>
+                                                <button onclick="approveLoan('${ln.id}', 'Rejected')" class="bg-red-600 text-white px-5 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg font-sans font-sans">Reject</button>
                                             </td>
                                         </tr>`).join('')}
                                 </tbody>
                             </table></div>
                         </div>` : (state.loanTab === 'apply' ? `
-                        <div class="bg-white p-12 rounded-[3.5rem] max-w-2xl mx-auto border-2 border-slate-100 shadow-2xl animate-slide-up relative overflow-hidden font-sans">
-                            <div class="absolute top-0 left-0 w-2 h-full bg-green-700 font-sans"></div>
-                            <h3 class="font-black text-3xl mb-10 uppercase tracking-tight text-center font-sans font-sans">Matrix identity Loan Request</h3>
-                            <form id="loan-form-dispatch-hub" onsubmit="handleLoanApply(event)" class="space-y-8 font-sans">
-                                <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans font-sans font-sans">Requested Hub amount (Rs.)</label><input type="number" id="ln-amt-val-hub" class="w-full p-5 rounded-[1.5rem] border-2 font-black bg-slate-50 focus:bg-white focus:border-green-600 outline-none text-2xl transition-all" placeholder="0.00" required /></div>
-                                <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans font-sans font-sans font-sans">Identity application reason hub</label><textarea id="ln-rsn-val-hub" class="w-full p-5 rounded-[1.5rem] border-2 font-bold h-32 bg-slate-50 focus:bg-white transition-all text-base" placeholder="Describe context matrix..." required></textarea></div>
-                                <button type="submit" class="w-full py-6 bg-green-700 text-white rounded-[1.5rem] font-black uppercase tracking-widest shadow-green-200 shadow-2xl hover:bg-green-800 transition-all">Submit Identity Request</button>
+                        <div class="bg-white p-12 rounded-[3.5rem] max-w-2xl mx-auto border-2 border-slate-100 shadow-2xl animate-slide-up relative overflow-hidden font-sans font-sans font-sans">
+                            <div class="absolute top-0 left-0 w-2 h-full bg-green-700 font-sans font-sans font-sans font-sans font-sans font-sans"></div>
+                            <h3 class="font-black text-3xl mb-10 uppercase tracking-tight text-center font-sans font-sans">Initialize Matrix Identity Loan Request</h3>
+                            <form id="loan-form-hub-final" onsubmit="handleLoanApply(event)" class="space-y-8">
+                                <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2 tracking-widest font-sans font-sans font-sans">Loan amount matrix hub (Rs.)</label><input type="number" id="ln-amt-input-val" class="w-full p-5 rounded-[1.5rem] border-2 font-black bg-slate-50 focus:bg-white focus:border-green-600 outline-none text-2xl transition-all" placeholder="0.00" required /></div>
+                                <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans">Identity application reason hub hub</label><textarea id="ln-rsn-input-val" class="w-full p-5 rounded-[1.5rem] border-2 font-bold h-32 bg-slate-50 focus:bg-white transition-all text-base font-sans" placeholder="..." required></textarea></div>
+                                <button type="submit" class="w-full py-6 bg-green-700 text-white rounded-[1.5rem] font-black uppercase tracking-widest shadow-green-200 shadow-2xl hover:bg-green-800 transition-all font-sans font-sans">SUBMIT IDENTITY REQUEST</button>
                             </form>
                         </div>` : `
                         <div class="space-y-6 max-w-4xl mx-auto font-sans">
-                            <div class="overflow-hidden rounded-[2.5rem] border-2 shadow-xl font-sans font-sans font-sans font-sans font-sans">
+                            <div class="overflow-hidden rounded-[2.5rem] border-2 shadow-xl">
                                 <table class="w-full text-left font-sans font-sans">
-                                    <thead class="bg-slate-50 border-b font-black uppercase text-[10px] text-slate-400 tracking-widest font-sans font-sans">
-                                        <tr><th class="p-6">Applied date hub</th><th class="p-6">Loan Amount matrix</th><th class="p-6">Hub Status matrix</th><th class="p-6 text-right">Balance context matrix</th></tr>
+                                    <thead class="bg-slate-50 border-b font-black uppercase text-[10px] text-slate-400 tracking-widest font-sans font-sans font-sans font-sans font-sans">
+                                        <tr><th class="p-6 font-sans">Matrix applied Date hub</th><th class="p-6 font-sans font-sans font-sans">Loan Amount Hub hub hub</th><th class="p-6 font-sans font-sans font-sans">Identity Status Matrix hub</th><th class="p-6 text-right font-sans font-sans font-sans">Balance Context matrix hub hub</th></tr>
                                     </thead>
-                                    <tbody class="divide-y font-bold text-slate-800 font-sans font-sans">
+                                    <tbody class="divide-y font-bold text-slate-800">
                                         ${(state.userLoans || []).map(ln => `
-                                            <tr class="hover:bg-slate-50">
-                                                <td class="p-6 font-mono text-slate-400">${formatDate(ln.applied_at)}</td>
-                                                <td class="p-6 font-black uppercase">Rs. ${cleanNumber(ln.amount).toLocaleString()}</td>
-                                                <td class="p-6 font-sans"><span class="status-badge ${ln.status === 'Approved' ? 'status-approved' : 'status-pending'}">${ln.status}</span></td>
-                                                <td class="p-6 text-right font-mono text-slate-400 font-sans">Net Rs. ${netOutstanding.toLocaleString()}</td>
+                                            <tr class="hover:bg-slate-50 font-sans font-sans font-sans">
+                                                <td class="p-6 font-mono text-slate-400 font-sans font-sans font-sans">${formatDate(ln.applied_at)}</td>
+                                                <td class="p-6 font-black uppercase font-sans">Rs. ${cleanNumber(ln.amount).toLocaleString()}</td>
+                                                <td class="p-6 font-sans font-sans"><span class="status-badge ${ln.status === 'Approved' ? 'status-approved' : 'status-pending'}">${ln.status}</span></td>
+                                                <td class="p-6 text-right font-mono text-slate-400 font-sans font-sans">Net Matrix Rs. ${netOutstanding.toLocaleString()}</td>
                                             </tr>`).join('')}
-                                        ${state.userLoans.length===0 ? '<tr><td colspan="4" class="p-20 text-center font-black text-slate-300 uppercase tracking-widest">No History recorded Matrix</td></tr>' : ''}
+                                        ${state.userLoans.length===0 ? '<tr><td colspan="4" class="p-20 text-center font-black text-slate-200 uppercase tracking-widest font-sans font-sans">No Records Found Hub</td></tr>' : ''}
                                     </tbody>
                                 </table>
                             </div>
@@ -683,8 +689,8 @@
 
         async function handleLoanApply(e) {
             e.preventDefault();
-            const amt_el = document.getElementById('ln-amt-val-hub');
-            const rsn_el = document.getElementById('ln-rsn-val-hub');
+            const amt_el = document.getElementById('ln-amt-input-val');
+            const rsn_el = document.getElementById('ln-rsn-input-val');
             if(!amt_el || !rsn_el) return;
             
             const payload = { 
@@ -698,12 +704,12 @@
                     notify("Application sent successfully. Admin has been notified and you will receive an email confirmation."); 
                     state.loanTab = 'history'; await syncData(); renderLoans(); 
                 } else notify("Matrix Hub Error Code: 500.");
-            } catch(e) { notify("Matrix link Offline."); }
+            } catch(e) { notify("Matrix link Offline hub."); }
         }
 
         async function approveLoan(id, status) {
             const res = await fetch(`${API_BASE}/admin/loans/${id}`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ status }) });
-            if(res.ok) { notify("Loan matrix updated. Identity updated and email dispatched."); await syncData(); renderLoans(); }
+            if(res.ok) { notify("Loan matrix updated hub matrix. Employee balance adjusted hub."); await syncData(); renderLoans(); }
         }
 
         // --- LEAVES HUB ---
@@ -714,64 +720,64 @@
             
             container.innerHTML = `
                 <div class="animate-fade-in space-y-10 font-sans text-left text-slate-800">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10 font-sans">
-                        <div class="bg-green-700 text-white shadow-2xl p-10 rounded-[3rem] text-left relative overflow-hidden font-sans font-sans font-sans"><p class="text-[10px] font-black uppercase opacity-60 font-sans font-sans font-sans font-sans font-sans">Annual Balance Matrix Hub</p><p class="text-6xl font-black mt-4 font-mono font-sans font-sans font-sans font-sans">${targetUser.leave_annual || 0} <span class="text-lg opacity-40 uppercase">Days Hub</span></p></div>
-                        <div class="bg-white border-2 border-slate-50 shadow-sm p-10 rounded-[3rem] text-left font-sans font-sans font-sans font-sans font-sans"><p class="text-[10px] font-black text-slate-400 uppercase font-sans font-sans font-sans font-sans font-sans">WOP Balance matrix hub</p><p class="text-6xl font-black mt-4 font-mono text-slate-800 font-sans font-sans font-sans font-sans font-sans">${targetUser.leave_casual || 0} <span class="text-lg text-slate-200 uppercase font-sans font-sans">Days Hub</span></p></div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10 font-sans font-sans font-sans font-sans font-sans">
+                        <div class="bg-green-700 text-white shadow-2xl p-10 rounded-[3rem] text-left relative overflow-hidden font-sans font-sans font-sans font-sans"><p class="text-[10px] font-black uppercase opacity-60 font-sans font-sans">Annual Balance Hub Matrix hub matrix</p><p class="text-6xl font-black mt-4 font-mono font-sans font-sans font-sans">${targetUser.leave_annual || 0} <span class="text-lg opacity-40 uppercase">Days Hub Matrix</span></p></div>
+                        <div class="bg-white border-2 border-slate-50 shadow-sm p-10 rounded-[3rem] text-left font-sans font-sans font-sans font-sans font-sans"><p class="text-[10px] font-black text-slate-400 uppercase font-sans font-sans">WOP Matrix Balance hub hub matrix</p><p class="text-6xl font-black mt-4 font-mono text-slate-800 font-sans font-sans font-sans font-sans font-sans">${targetUser.leave_casual || 0} <span class="text-lg text-slate-200 uppercase font-sans">Days Hub matrix</span></p></div>
                     </div>
 
-                    <div class="flex bg-slate-200 p-2 rounded-[2rem] max-w-sm mx-auto mb-10 shadow-inner font-sans font-sans font-sans">
-                        <button onclick="state.leaveTab='apply'; renderLeaves()" class="flex-1 py-3 text-[10px] font-black rounded-2xl uppercase tracking-widest transition-all ${state.leaveTab === 'apply' ? 'bg-white text-green-700 shadow-xl' : 'text-slate-500'} font-sans font-sans">Apply Hub</button>
-                        <button onclick="state.leaveTab='history'; renderLeaves()" class="flex-1 py-3 text-[10px] font-black rounded-2xl uppercase tracking-widest transition-all ${state.leaveTab === 'history' ? 'bg-white text-green-700 shadow-xl' : 'text-slate-500'} font-sans font-sans font-sans">History Hub</button>
-                        ${isAdmin ? `<button onclick="state.leaveTab='oversight'; renderLeaves()" class="flex-1 py-3 text-[10px] font-black rounded-2xl uppercase transition-all ${state.leaveTab === 'oversight' ? 'bg-white text-green-700 shadow-xl' : 'text-slate-500'}">Oversight Matrix</button>` : ''}
+                    <div class="flex bg-slate-200 p-2 rounded-[2rem] max-w-sm mx-auto mb-10 shadow-inner">
+                        <button onclick="state.leaveTab='apply'; renderLeaves()" class="flex-1 py-3 text-[10px] font-black rounded-2xl uppercase tracking-widest transition-all ${state.leaveTab === 'apply' ? 'bg-white text-green-700 shadow-xl' : 'text-slate-500'} font-sans font-sans font-sans font-sans">Apply matrix</button>
+                        <button onclick="state.leaveTab='history'; renderLeaves()" class="flex-1 py-3 text-[10px] font-black rounded-2xl uppercase tracking-widest transition-all ${state.leaveTab === 'history' ? 'bg-white text-green-700 shadow-xl' : 'text-slate-500'} font-sans font-sans font-sans font-sans">History Matrix</button>
+                        ${isAdmin ? `<button onclick="state.leaveTab='oversight'; renderLeaves()" class="flex-1 py-3 text-[10px] font-black rounded-2xl uppercase transition-all ${state.leaveTab === 'oversight' ? 'bg-white text-green-700 shadow-xl' : 'text-slate-500'} font-sans font-sans font-sans font-sans font-sans">Oversight hub</button>` : ''}
                     </div>
 
                     ${state.leaveTab === 'oversight' ? `
                         <div class="bg-white rounded-[2.5rem] border-2 border-slate-50 shadow-2xl overflow-hidden font-sans">
-                            <div class="bg-slate-50 p-8 border-b flex justify-between items-center font-sans font-sans font-sans">
-                                <span class="font-black text-xs uppercase text-slate-600 tracking-widest font-sans font-sans">Leaves Audit matrix oversight HUB</span>
-                                <button onclick="exportToCSV(state.allLeaves, 'Leaves_Matrix_Ledger_Hub.csv')" class="bg-slate-900 text-white px-8 py-2.5 rounded-xl font-black text-[10px] uppercase shadow-lg font-sans font-sans">Export Ledger Matrix</button>
+                            <div class="bg-slate-50 p-8 border-b flex justify-between items-center font-sans font-sans">
+                                <span class="font-black text-xs uppercase text-slate-600 tracking-widest">Leaves audit oversight HUB matrix ledger</span>
+                                <button onclick="exportToCSV(state.allLeaves, 'Leaves_Ledger_Report_Hub.csv')" class="bg-slate-900 text-white px-8 py-2.5 rounded-xl font-black text-[10px] uppercase shadow-lg font-sans">Export Ledger Matrix Hub</button>
                             </div>
-                            <div class="overflow-x-auto"><table class="w-full text-left text-[11px] font-bold font-sans">
-                                <thead class="bg-slate-50 border-b font-black uppercase text-slate-400 font-sans font-sans font-sans"><tr><th class="p-6">Identity requester hub</th><th class="p-6 font-sans font-sans font-sans">Remaining (Ann/WOP) matrix</th><th class="p-6 font-sans font-sans">Type hub matrix</th><th class="p-6 text-center font-sans">Days hub</th><th class="p-6 font-sans">Status matrix</th><th class="p-6 text-center font-sans font-sans">Audit hub Actions</th></tr></thead>
+                            <div class="overflow-x-auto font-sans"><table class="w-full text-left text-[11px] font-bold">
+                                <thead class="bg-slate-50 border-b font-black uppercase text-slate-400"><tr><th class="p-6">Staff Requester identity matrix</th><th class="p-6">Remaining (Ann/WOP) Hub Matrix</th><th class="p-6">Matrix Request Type hub</th><th class="p-6 text-center font-sans">Days matrix</th><th class="p-6">Status Hub</th><th class="p-6 text-center font-sans font-sans font-sans font-sans">Audit actions matrix</th></tr></thead>
                                 <tbody class="divide-y divide-slate-100 font-sans">
                                     ${(state.allLeaves || []).map(lv => {
                                         const r = state.employees.find(e => e.id === lv.employee_id) || {};
                                         return `<tr class="hover:bg-slate-50 transition-colors font-sans">
                                             <td class="p-6 font-black uppercase">${lv.name} (${lv.employee_id})</td>
                                             <td class="p-6 font-mono text-green-700 font-black text-[10px] font-sans font-sans">${r.leave_annual || 0} ANN / ${r.leave_casual || 0} WOP matrix</td>
-                                            <td class="p-6 uppercase text-slate-500">${lv.leave_type} Hub</td>
-                                            <td class="p-6 text-center font-black">${lv.days}</td>
+                                            <td class="p-6 uppercase text-slate-500 font-sans">${lv.leave_type} Hub Matrix</td>
+                                            <td class="p-6 text-center font-black">${lv.days} Hub</td>
                                             <td class="p-6 font-sans"><span class="status-badge ${lv.status==='Approved'?'status-approved':'status-pending'}">${lv.status}</span></td>
-                                            <td class="p-6 flex justify-center gap-3">
-                                                <button onclick="approveLeave('${lv.id}', 'Approved')" class="bg-green-700 text-white px-5 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg font-sans">Approve</button>
-                                                <button onclick="approveLeave('${lv.id}', 'Rejected')" class="bg-red-600 text-white px-5 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg font-sans font-sans">Reject</button>
+                                            <td class="p-6 flex justify-center gap-3 font-sans font-sans">
+                                                <button onclick="approveLeave('${lv.id}', 'Approved')" class="bg-green-700 text-white px-5 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg">Approve Matrix</button>
+                                                <button onclick="approveLeave('${lv.id}', 'Rejected')" class="bg-red-600 text-white px-5 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg font-sans font-sans">Reject matrix</button>
                                             </td>
                                         </tr>`;
                                     }).join('')}
                                 </tbody>
                             </table></div>
                         </div>` : (state.leaveTab === 'apply' ? `
-                        <div class="bg-white p-12 rounded-[3.5rem] max-w-2xl mx-auto border-2 border-slate-100 shadow-2xl animate-slide-up relative overflow-hidden font-sans font-sans font-sans">
-                            <div class="absolute top-0 left-0 w-2 h-full bg-green-700 font-sans font-sans font-sans"></div>
-                            <h3 class="font-black text-3xl mb-10 uppercase tracking-tight text-center font-sans font-sans font-sans">Leave identity request matrix HUB</h3>
+                        <div class="bg-white p-12 rounded-[3.5rem] max-w-2xl mx-auto border-2 border-slate-50 shadow-2xl animate-slide-up relative overflow-hidden font-sans font-sans">
+                            <div class="absolute top-0 left-0 w-2 h-full bg-green-700 font-sans font-sans font-sans font-sans"></div>
+                            <h3 class="font-black text-3xl mb-10 uppercase tracking-tight text-center font-sans font-sans font-sans font-sans">Identity Leave Hub Request hub matrix</h3>
                             <form onsubmit="handleLeaveApply(event)" class="space-y-6">
-                                <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans font-sans font-sans">Type Matrix hub</label><select id="lv-type-input-hub" class="w-full p-5 rounded-[1.5rem] border-2 font-black bg-slate-50 outline-none focus:bg-white focus:border-green-600 transition-all font-sans"><option>Annual Leave</option><option>WOP (Without Pay)</option><option>Sick Leave</option></select></div>
+                                <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans font-sans font-sans font-sans font-sans font-sans">Matrix type Hub matrix</label><select id="lv-type-input-hub-val" class="w-full p-5 rounded-[1.5rem] border-2 font-black bg-slate-50 outline-none focus:bg-white focus:border-green-600 transition-all font-sans"><option>Annual Leave</option><option>WOP (Without Pay)</option><option>Sick Leave</option></select></div>
                                 <div class="grid grid-cols-2 gap-6">
-                                    <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans font-sans font-sans">Start Matrix date hub</label><input type="date" id="lv-date-input-hub" class="w-full p-5 rounded-[1.5rem] border-2 font-black bg-slate-50 focus:bg-white outline-none" required /></div>
-                                    <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans font-sans font-sans font-sans">Matrix Hub Qty (Days)</label><input type="number" id="lv-days-input-hub" class="w-full p-5 rounded-[1.5rem] border-2 font-black bg-slate-50 focus:bg-white outline-none" required /></div>
+                                    <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans font-sans font-sans">Start Matrix date hub matrix</label><input type="date" id="lv-date-input-hub-val" class="w-full p-5 rounded-[1.5rem] border-2 font-black bg-slate-50 focus:bg-white outline-none" required /></div>
+                                    <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans font-sans font-sans">Matrix qty hub matrix (Days)</label><input type="number" id="lv-days-input-hub-val" class="w-full p-5 rounded-[1.5rem] border-2 font-black bg-slate-50 focus:bg-white outline-none" required /></div>
                                 </div>
-                                <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans font-sans">Reason Matrix hub hub</label><textarea id="lv-rsn-input-hub" class="w-full p-5 rounded-[1.5rem] border-2 font-bold h-24 bg-slate-50 focus:bg-white transition-all font-sans" required></textarea></div>
-                                <button type="submit" class="w-full py-6 bg-green-700 text-white rounded-[1.5rem] font-black uppercase tracking-widest shadow-xl font-sans font-sans">Transmit Identity application hub</button>
+                                <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans">Identity Hub reason matrix</label><textarea id="lv-rsn-input-hub-val" class="w-full p-5 rounded-[1.5rem] border-2 font-bold h-24 bg-slate-50 focus:bg-white transition-all font-sans font-sans" required></textarea></div>
+                                <button type="submit" class="w-full py-6 bg-green-700 text-white rounded-[1.5rem] font-black uppercase tracking-widest shadow-xl font-sans font-sans font-sans">Transmit Identity Hub matrix hub</button>
                             </form>
                         </div>` : `
                         <div class="space-y-6 max-w-3xl mx-auto font-sans">
                             ${(state.userLeaves || []).map(lv => `
-                                <div class="bg-white p-8 rounded-[2.5rem] border-2 border-slate-50 shadow-sm flex justify-between items-center hover:border-green-200 transition-all font-sans font-sans font-sans">
-                                    <div class="flex items-center gap-6">
+                                <div class="bg-white p-8 rounded-[2.5rem] border-2 border-slate-50 shadow-sm flex justify-between items-center hover:border-green-200 transition-all font-sans">
+                                    <div class="flex items-center gap-6 font-sans">
                                         <div class="bg-slate-50 p-5 rounded-2xl text-slate-400 font-sans font-sans font-sans"><i data-lucide="calendar"></i></div>
-                                        <div><h4 class="font-black uppercase text-slate-800 text-lg leading-tight font-sans font-sans">${lv.leave_type} Hub Matrix</h4><p class="text-[10px] text-slate-400 font-bold uppercase mt-2 tracking-widest font-sans font-sans font-sans">Applied Matrix date hub: ${formatDate(lv.start_date)} • ${lv.days} Days Matrix</p></div>
+                                        <div><h4 class="font-black uppercase text-slate-800 text-lg leading-tight font-sans">${lv.leave_type} Matrix hub</h4><p class="text-[10px] text-slate-400 font-bold uppercase mt-2 tracking-widest font-sans font-sans font-sans">Applied Matrix Hub date: ${formatDate(lv.start_date)} • ${lv.days} Days Matrix</p></div>
                                     </div>
-                                    <span class="status-badge ${lv.status==='Approved'?'status-approved':'status-pending'} font-sans font-sans font-sans font-sans font-sans">${lv.status}</span>
+                                    <span class="status-badge ${lv.status==='Approved'?'status-approved':'status-pending'} font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">${lv.status}</span>
                                 </div>`).join('')}
                         </div>`)}
                 </div>`;
@@ -780,46 +786,44 @@
 
         async function handleLeaveApply(e) {
             e.preventDefault();
-            const payload = { 
-                employeeId: state.user.id, 
-                type: document.getElementById('lv-type-input-hub').value, 
-                startDate: document.getElementById('lv-date-input-hub').value, 
-                days: document.getElementById('lv-days-input-hub').value, 
-                reason: document.getElementById('lv-rsn-input-hub').value 
-            };
+            const type = document.getElementById('lv-type-input-hub-val').value;
+            const date = document.getElementById('lv-date-input-hub-val').value;
+            const days = document.getElementById('lv-days-input-hub-val').value;
+            const rsn = document.getElementById('lv-rsn-input-hub-val').value;
+            const payload = { employeeId: state.user.id, type, startDate: date, days: cleanNumber(days), reason: rsn };
             const res = await fetch(`${API_BASE}/leaves`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
-            if(res.ok) { notify("Leave request dispatched. You will receive an email update once processed."); state.leaveTab = 'history'; await syncData(); renderLeaves(); }
+            if(res.ok) { notify("Leave request dispatched hub matrix. You will receive an email update once processed."); state.leaveTab = 'history'; await syncData(); renderLeaves(); }
         }
 
         async function approveLeave(id, status) {
             const res = await fetch(`${API_BASE}/admin/leaves/${id}`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ status }) });
-            if(res.ok) { notify("Leave record hub updated. Balance adjusted and email dispatched."); await syncData(); renderLeaves(); }
+            if(res.ok) { notify("Leave matrix updated hub. Balance adjusted and email dispatched matrix hub."); await syncData(); renderLeaves(); }
         }
 
         // --- DISCUSSION HUB ---
         function renderDiscussion() {
             const container = document.getElementById('view-container');
             container.innerHTML = `
-                <div class="animate-fade-in space-y-10 font-sans text-left max-w-5xl mx-auto font-sans font-sans font-sans font-sans">
-                    <div class="border-b-2 pb-6 border-slate-100 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><h2 class="text-4xl font-black uppercase tracking-tighter text-slate-800">Identity Matrix Board Hub</h2></div>
-                    <div class="bg-slate-900 p-10 rounded-[3rem] shadow-2xl relative font-sans font-sans font-sans font-sans font-sans font-sans">
-                        <div class="absolute top-6 right-10 flex items-center gap-2 font-sans font-sans font-sans font-sans"><div class="h-3 w-3 rounded-full bg-green-500 animate-pulse"></div><span class="text-[9px] font-black text-slate-500 uppercase tracking-widest font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Live Matrix Broadcast Feed Hub Matrix Hub Matrix Hub Matrix Matrix Matrix</span></div>
-                        <form onsubmit="broadcastMessage(event)" class="flex gap-6 mt-8 font-sans font-sans font-sans">
-                            <input type="text" id="board-msg-hub-el" placeholder="Broadcast identity update hub message matrix..." class="flex-1 bg-white/5 border-2 border-white/10 rounded-2xl p-6 font-bold text-white text-lg outline-none focus:bg-white/10 focus:border-green-600 transition-all font-sans font-sans font-sans" required />
-                            <button type="submit" class="bg-green-600 hover:bg-green-500 p-6 rounded-2xl transition-all shadow-green-900 shadow-xl text-white font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><i data-lucide="send" size="32"></i></button>
+                <div class="animate-fade-in space-y-10 font-sans text-left max-w-5xl mx-auto font-sans font-sans font-sans">
+                    <div class="border-b-2 pb-6 border-slate-100 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><h2 class="text-4xl font-black uppercase tracking-tighter text-slate-800">Identity Matrix Board Hub Hub Hub Matrix Hub</h2></div>
+                    <div class="bg-slate-900 p-10 rounded-[3rem] shadow-2xl relative font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
+                        <div class="absolute top-6 right-10 flex items-center gap-2 font-sans font-sans font-sans font-sans"><div class="h-3 w-3 rounded-full bg-green-500 animate-pulse"></div><span class="text-[9px] font-black text-slate-500 uppercase tracking-widest font-sans font-sans font-sans font-sans font-sans">Live Matrix Broadcast Feed Hub Hub Matrix Hub Matrix Matrix Hub Matrix</span></div>
+                        <form onsubmit="broadcastMessage(event)" class="flex gap-6 mt-8 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
+                            <input type="text" id="board-msg-input-final" placeholder="Broadcast identity hub update message matrix hub matrix hub matrix..." class="flex-1 bg-white/5 border-2 border-white/10 rounded-2xl p-6 font-bold text-white text-lg outline-none focus:bg-white/10 focus:border-green-600 transition-all font-sans font-sans font-sans font-sans" required />
+                            <button type="submit" class="bg-green-600 hover:bg-green-500 p-6 rounded-2xl transition-all shadow-green-900 shadow-xl text-white font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><i data-lucide="send" size="32"></i></button>
                         </form>
                     </div>
                     <div class="space-y-8">
                         ${state.discussions.map(d => `
-                            <div class="bg-white p-10 rounded-[3rem] border-2 border-slate-50 shadow-sm hover:border-green-100 transition-all group font-sans font-sans">
+                            <div class="bg-white p-10 rounded-[3rem] border-2 border-slate-50 shadow-sm hover:border-green-100 transition-all group font-sans font-sans font-sans font-sans font-sans">
                                 <div class="flex justify-between items-center mb-6 font-sans">
-                                    <div class="flex items-center gap-4 font-sans font-sans font-sans">
-                                        <div class="h-12 w-12 rounded-xl bg-slate-50 flex items-center justify-center font-black text-slate-400 group-hover:bg-green-50 group-hover:text-green-600 transition-all font-sans font-sans font-sans font-sans">${getInitial(d.author_name)}</div>
-                                        <span class="font-black text-slate-800 uppercase text-sm font-sans font-sans font-sans font-sans">${d.author_name}</span>
+                                    <div class="flex items-center gap-4 font-sans font-sans font-sans font-sans">
+                                        <div class="h-12 w-12 rounded-xl bg-slate-50 flex items-center justify-center font-black text-slate-400 group-hover:bg-green-50 group-hover:text-green-600 transition-all font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">${getInitial(d.author_name)}</div>
+                                        <span class="font-black text-slate-800 uppercase text-sm font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">${d.author_name}</span>
                                     </div>
-                                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-sans font-sans font-sans font-sans">${formatDate(d.created_at)}</span>
+                                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">${formatDate(d.created_at)}</span>
                                 </div>
-                                <p class="text-slate-600 font-bold leading-relaxed text-lg font-sans font-sans font-sans font-sans">${d.message}</p>
+                                <p class="text-slate-600 font-bold leading-relaxed text-lg font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">${d.message}</p>
                             </div>`).join('')}
                     </div>
                 </div>`;
@@ -828,12 +832,12 @@
 
         async function broadcastMessage(e) {
             e.preventDefault();
-            const msg = document.getElementById('board-msg-hub-el').value;
+            const msg = document.getElementById('board-msg-input-final').value;
             const res = await fetch(`${API_BASE}/discussions`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ employee_id: state.user.id, author_name: state.user.name, message: msg }) });
-            if(res.ok) { document.getElementById('board-msg-hub-el').value = ''; await syncData(); renderDiscussion(); notify("Broadcast Matrix Updated."); }
+            if(res.ok) { document.getElementById('board-msg-input-final').value = ''; await syncData(); renderDiscussion(); notify("Broadcast Matrix Updated HUB."); }
         }
 
-        // --- HANDLERS (MISC) ---
+        // --- HANDLERS ---
         function logout() { localStorage.clear(); location.reload(); }
         function updateMonth(v) { state.selectedMonth = v; renderPayroll(); }
         function updateAttendanceMonth(v) { state.selectedAttendanceMonth = v; renderAttendance(); }
@@ -841,17 +845,17 @@
         async function updateAdminTarget(id) { state.selectedAdminEmployeeId = id; await syncData(); renderAttendance(); }
 
         async function handleClock(type) {
-            notify("Processing identity matrix mark...");
+            notify("Processing identification matrix hub...");
             navigator.geolocation.getCurrentPosition(async (pos) => {
                 const payload = { employee_id: state.user.id, type, date_str: getPktDate(), time_str: getPktTime(), latitude: pos.coords.latitude, longitude: pos.coords.longitude };
                 const res = await fetch(`${API_BASE}/attendance`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
-                if(res.ok) { notify(`${type} verified. Matrix synchronized hub.`); await syncData(); if(state.currentTab==='attendance') renderAttendance(); }
+                if(res.ok) { notify(`${type} Verified Hub Matrix.`); await syncData(); if(state.currentTab==='attendance') renderAttendance(); }
             });
         }
 
         async function exportAttendanceCSV(isAdmin) {
             const data = state.attendance.map(l => ({ ID: l.employee_id, Date: l.date_str, Time: l.time_str, Action: l.type, Lat: l.latitude, Lng: l.longitude }));
-            exportToCSV(data, "LSAF_Attendance_Matrix_Report_HUB.csv");
+            exportToCSV(data, "Attendance_Matrix_Identity_Report_HUB.csv");
         }
 
         async function togglePublish(posted) {
@@ -861,11 +865,11 @@
         }
 
         async function wipeDateAttendance(date) {
-            if(!confirm(`DANGER: Wipe identity logs for ${date}?`)) return;
+            if(!confirm(`DANGER: Purge matrix logs for ${date} hub?`)) return;
             const targetId = (state.user.role === 'admin' && state.selectedAdminEmployeeId) ? state.selectedAdminEmployeeId : state.user.id;
             const logs = state.attendance.filter(l => l.date_str === date && l.employee_id === targetId);
             for(let l of logs) { await fetch(`${API_BASE}/attendance-entry/${l.id}`, { method: 'DELETE' }); }
-            notify("Identity matrix logs purged hub."); await syncData(); renderAttendance();
+            notify("Identity Hub logs purged Matrix HUB."); await syncData(); renderAttendance();
         }
 
         document.getElementById('login-form').addEventListener('submit', async (e) => {
@@ -877,8 +881,8 @@
                 const list = await res.json();
                 const found = list.find(e => String(e.id).toUpperCase() === String(id).toUpperCase() && String(e.password) === String(pass));
                 if (found) { state.user = found; localStorage.setItem('hr_user', JSON.stringify(found)); await syncData(); showApp(); }
-                else alert("Matrix Identity Access Denied Hub.");
-            } catch(e) { alert("Matrix offline hub."); }
+                else alert("Matrix Access Denied Hub matrix.");
+            } catch(e) { alert("Core Matrix offline."); }
         });
 
         function exportToCSV(data, filename) {
