@@ -25,7 +25,7 @@
         .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         
-        .animate-slide-up { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .animate-slide-up { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
         @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
         .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -85,6 +85,7 @@
 </head>
 <body>
     <div id="root"></div>
+    <div id="status-toast" class="fixed top-12 left-1/2 -translate-x-1/2 z-[1000] bg-slate-900 text-white px-10 py-5 rounded-[1.5rem] font-black uppercase text-[11px] tracking-widest shadow-2xl opacity-0 pointer-events-none transition-all duration-300 transform translate-y-[-20px] text-center">Status Matrix Updated</div>
 
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
@@ -164,7 +165,7 @@
         };
 
         /**
-         * --- SHARED COMPONENTS ---
+         * --- SHARED UI COMPONENTS ---
          */
         const Card = ({ children, className = "" }) => (
             <div className={`bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm transition-all hover:shadow-md ${className}`}>{children}</div>
@@ -196,40 +197,40 @@
         };
 
         /**
-         * --- MODULE: LOGIN ---
+         * --- MODULE COMPONENTS ---
          */
-        function LoginView({ onLogin, loading }) {
-            const [id, setId] = useState('');
-            const [pass, setPass] = useState('');
 
+        // 1. DASHBOARD VIEW
+        function DashboardView({ user }) {
+            const loanBal = cleanNumber(user.loan_opening_balance - user.loan_deduction);
             return (
-                <div className="min-h-screen flex items-center justify-center bg-slate-100 w-full">
-                    <Card className="w-full max-w-md p-12 shadow-2xl animate-slide-up">
-                        <div className="text-center mb-10">
-                            <img src="/UOL-Green-V1.png" className="h-20 mx-auto mb-6" alt="LSAFHR" />
-                            <h1 className="text-3xl font-black text-slate-800 uppercase tracking-widest">Login Matrix</h1>
+                <div className="animate-fade-in space-y-12">
+                    <div className="flex justify-between items-center border-b pb-8 border-slate-100">
+                        <h2 className="text-5xl font-black text-slate-800 tracking-tighter uppercase">Identity Base</h2>
+                        <div className="bg-white p-6 rounded-[2rem] border shadow-sm text-right">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Global Server Time</p>
+                            <p className="text-green-700 font-black font-mono text-3xl mt-1">{getPktTime()}</p>
                         </div>
-                        <form onSubmit={(e) => { e.preventDefault(); onLogin(id, pass); }} className="space-y-6">
-                            <div>
-                                <label className="block text-[10px] font-black text-slate-400 uppercase ml-2 mb-1">Employee ID</label>
-                                <input value={id} onChange={e=>setId(e.target.value)} className="w-full p-5 rounded-3xl border-2 font-black uppercase bg-slate-50 focus:bg-white focus:border-green-600 outline-none" placeholder="Enter ID" required />
-                            </div>
-                            <div>
-                                <label class="block text-[10px] font-black text-slate-400 uppercase ml-2 mb-1">Access Key</label>
-                                <input type="password" value={pass} onChange={e=>setPass(e.target.value)} className="w-full p-5 rounded-3xl border-2 font-black bg-slate-50 focus:bg-white focus:border-green-600 outline-none" placeholder="••••••••" required />
-                            </div>
-                            <Button type="submit" className="w-full py-6 text-base" disabled={loading}>
-                                {loading ? "Authorizing..." : "Enter Hub"}
-                            </Button>
-                        </form>
-                    </Card>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+                        <div className="bg-green-700 text-white p-12 rounded-[4rem] shadow-2xl relative overflow-hidden">
+                            <p className="text-[11px] font-black uppercase opacity-60">System Status</p>
+                            <p className="text-4xl font-black mt-3 uppercase tracking-tighter">ACTIVE MATRIX</p>
+                        </div>
+                        <div className="bg-white p-12 rounded-[4rem] border-2 border-slate-100 shadow-sm flex flex-col justify-center">
+                            <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Total Loan Balance</p>
+                            <p className="text-5xl font-black text-red-500 mt-2 font-mono">Rs. {loanBal.toLocaleString()}</p>
+                        </div>
+                        <div className="bg-white p-12 rounded-[4rem] border-2 border-slate-100 shadow-sm flex flex-col justify-center">
+                            <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Security Level</p>
+                            <p className="text-3xl font-black text-slate-800 mt-2 capitalize">{user.role}</p>
+                        </div>
+                    </div>
                 </div>
             );
         }
 
-        /**
-         * --- MODULE: ATTENDANCE ---
-         */
+        // 2. ATTENDANCE HUB
         function AttendanceHub({ user, attendance, fetchData }) {
             const [selectedMonth, setSelectedMonth] = useState(getPktDate().slice(0, 7));
             const mapRef = useRef(null);
@@ -320,9 +321,7 @@
             );
         }
 
-        /**
-         * --- MODULE: SALARY ---
-         */
+        // 3. SALARY HUB
         function SalaryHub({ user, employees, fetchData, postedMonths }) {
             const [editingId, setEditingId] = useState(null);
             const [month, setMonth] = useState(getPktDate().slice(0, 7));
@@ -388,16 +387,16 @@
                                                 <tr key={e.id} class="hover:bg-slate-50">
                                                     <td class="p-5 font-mono text-slate-500">{e.id}</td>
                                                     <td class="p-5 uppercase">{e.name}</td>
-                                                    <td class="p-5 text-right font-mono">{edit ? <input id={`eb-${e.id}`} class="w-20 border rounded p-1" defaultValue={e.basic_salary}/> : e.basic_salary.toLocaleString()}</td>
-                                                    <td class="p-5 text-right font-mono">{edit ? <input id={`ei-${e.id}`} class="w-16 border rounded p-1" defaultValue={e.invigilation}/> : e.invigilation.toLocaleString()}</td>
-                                                    <td class="p-5 text-right font-mono">{edit ? <input id={`et-${e.id}`} class="w-16 border rounded p-1" defaultValue={e.t_payment}/> : e.t_payment.toLocaleString()}</td>
-                                                    <td class="p-4 text-right font-mono">{edit ? <input id={`en-${e.id}`} class="w-16 border rounded p-1" defaultValue={e.increment}/> : e.increment.toLocaleString()}</td>
-                                                    <td class="p-4 text-right font-mono">{edit ? <input id={`ed-${e.id}`} class="w-16 border rounded p-1" defaultValue={e.eidi}/> : e.eidi.toLocaleString()}</td>
-                                                    <td class="p-4 text-right font-mono text-slate-400">{edit ? <input id={`ex-${e.id}`} class="w-16 border rounded p-1" defaultValue={e.tax}/> : e.tax.toLocaleString()}</td>
-                                                    <td class="p-4 text-right font-mono text-slate-400">{edit ? <input id={`el-${e.id}`} class="w-16 border rounded p-1" defaultValue={e.loan_deduction}/> : e.loan_deduction.toLocaleString()}</td>
-                                                    <td class="p-4 text-right font-mono text-slate-400">{edit ? <input id={`es-${e.id}`} class="w-16 border rounded p-1" defaultValue={e.insurance}/> : e.insurance.toLocaleString()}</td>
-                                                    <td class="p-4 text-right font-mono text-slate-400">{edit ? <input id={`eo-${e.id}`} class="w-16 border rounded p-1" defaultValue={e.others_deduction}/> : e.others_deduction.toLocaleString()}</td>
-                                                    <td class="p-4 text-right font-mono text-red-500">{edit ? <input id={`eld-${e.id}`} class="w-16 border rounded p-1" defaultValue={e.extra_leaves_deduction}/> : e.extra_leaves_deduction.toLocaleString()}</td>
+                                                    <td class="p-5 text-right font-mono">{edit ? <input id={`eb-${e.id}`} class="w-20 border rounded p-1 text-right" defaultValue={e.basic_salary}/> : e.basic_salary.toLocaleString()}</td>
+                                                    <td class="p-5 text-right font-mono">{edit ? <input id={`ei-${e.id}`} class="w-16 border rounded p-1 text-right" defaultValue={e.invigilation}/> : e.invigilation.toLocaleString()}</td>
+                                                    <td class="p-5 text-right font-mono">{edit ? <input id={`et-${e.id}`} class="w-16 border rounded p-1 text-right" defaultValue={e.t_payment}/> : e.t_payment.toLocaleString()}</td>
+                                                    <td class="p-4 text-right font-mono">{edit ? <input id={`en-${e.id}`} class="w-16 border rounded p-1 text-right" defaultValue={e.increment}/> : e.increment.toLocaleString()}</td>
+                                                    <td class="p-4 text-right font-mono">{edit ? <input id={`ed-${e.id}`} class="w-16 border rounded p-1 text-right" defaultValue={e.eidi}/> : e.eidi.toLocaleString()}</td>
+                                                    <td class="p-4 text-right font-mono text-slate-400">{edit ? <input id={`ex-${e.id}`} class="w-16 border rounded p-1 text-right" defaultValue={e.tax}/> : e.tax.toLocaleString()}</td>
+                                                    <td class="p-4 text-right font-mono text-slate-400">{edit ? <input id={`el-${e.id}`} class="w-16 border rounded p-1 text-right" defaultValue={e.loan_deduction}/> : e.loan_deduction.toLocaleString()}</td>
+                                                    <td class="p-4 text-right font-mono text-slate-400">{edit ? <input id={`es-${e.id}`} class="w-16 border rounded p-1 text-right" defaultValue={e.insurance}/> : e.insurance.toLocaleString()}</td>
+                                                    <td class="p-4 text-right font-mono text-slate-400">{edit ? <input id={`eo-${e.id}`} class="w-16 border rounded p-1 text-right" defaultValue={e.others_deduction}/> : e.others_deduction.toLocaleString()}</td>
+                                                    <td class="p-4 text-right font-mono text-red-500">{edit ? <input id={`eld-${e.id}`} class="w-16 border rounded p-1 text-right" defaultValue={e.extra_leaves_deduction}/> : e.extra_leaves_deduction.toLocaleString()}</td>
                                                     <td class="p-5 text-right font-black bg-slate-50 text-slate-900">Rs. {m.netPaid.toLocaleString()}</td>
                                                     {isAdmin && <td class="p-5 text-center">
                                                         {edit ? <button onClick={() => handleSave(e.id)} class="text-green-600"><Save size={18}/></button> : <button onClick={()=>setEditingId(e.id)} class="text-blue-500"><Pencil size={18}/></button>}
@@ -414,9 +413,6 @@
             );
         }
 
-        /**
-         * --- LOANS MODULE ---
-         */
         function LoansHub({ user, userLoans, allLoans, employees, fetchData }) {
             const [tab, setTab] = useState('apply');
             const isAdmin = user.role === 'admin';
@@ -480,12 +476,12 @@
                                 <tbody class="divide-y font-bold">
                                     {allLoans.map(l => (
                                         <tr key={l.id} class="hover:bg-slate-50">
-                                            <td class="p-6 uppercase">{l.name}</td>
+                                            <td class="p-6 uppercase">${l.name}</td>
                                             <td class="p-6 font-mono">{formatDate(l.applied_at)}</td>
                                             <td class="p-6 text-right font-black">Rs. {cleanNumber(l.amount).toLocaleString()}</td>
                                             <td class="p-6 flex gap-2">
                                                 <button onClick={()=>decide(l.id, 'Approved')} class="bg-green-700 text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase">Approve</button>
-                                                <button onClick={()=>decide(l.id, 'Rejected')} class="bg-red-600 text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase">Reject</button>
+                                                <button onclick={()=>decide(l.id, 'Rejected')} class="bg-red-600 text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase">Reject</button>
                                             </td>
                                         </tr>
                                     ))}
@@ -496,7 +492,7 @@
                         <div class="space-y-4 max-w-3xl mx-auto">
                             {userLoans.map((l, i) => (
                                 <Card key={i} className="flex justify-between items-center border-2 border-slate-100">
-                                    <div><p class="font-black text-lg">Rs. {cleanNumber(l.amount).toLocaleString()}</p><p class="text-[10px] text-slate-400 uppercase font-black">{formatDate(l.applied_at)}</p></div>
+                                    <div><p class="font-black text-lg">Rs. {cleanNumber(l.amount).toLocaleString()}</p><p class="text-[10px] text-slate-400 uppercase font-black">${formatDate(l.applied_at)}</p></div>
                                     <div class="text-right">
                                         <span class={\`status-badge \${l.status==='Approved'?'status-approved': 'status-pending'}\`}>{l.status}</span>
                                         <p class="text-[9px] text-slate-300 font-bold mt-2 uppercase">Balance After: Rs. {netOutstanding.toLocaleString()}</p>
@@ -509,9 +505,6 @@
             );
         }
 
-        /**
-         * --- LEAVES MODULE ---
-         */
         function LeavesHub({ user, userLeaves, allLeaves, employees, fetchData }) {
             const [tab, setTab] = useState('apply');
             const isAdmin = user.role === 'admin';
@@ -593,30 +586,49 @@
             );
         }
 
-        /**
-         * --- DIRECTORY & BOARD ---
-         */
-        const DirectoryModule = ({ employees, fetchData }) => {
+        function DirectoryModule({ employees, fetchData }) {
+            const [isOpen, setIsOpen] = useState(false);
+            const [form, setForm] = useState({ id: '', name: '', email: '', password: '', role: 'employee' });
+
+            const submit = async (e) => {
+                e.preventDefault();
+                await fetch(`${API_BASE}/employees`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(form) });
+                setIsOpen(false); fetchData(); notify("New Identity Created.");
+            };
+
             return (
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-                    {employees.map(e => (
-                        <div class="bg-white p-8 rounded-[3rem] border-2 text-center group">
-                            <div class="h-20 w-20 bg-green-50 text-green-700 flex items-center justify-center font-black mx-auto rounded-[2rem] text-2xl mb-4 group-hover:scale-95 transition-all">${getInitial(e.name)}</div>
-                            <p class="font-black uppercase text-slate-800">${e.name}</p>
-                            <p class="text-[9px] text-slate-400 font-bold uppercase mt-1">${e.id} • ${e.role}</p>
-                            <button onclick="deleteStaff('${e.id}')" class="mt-4 text-red-500 opacity-0 group-hover:opacity-100 transition-all"><i data-lucide="trash-2" size="20"></i></button>
+                <div class="space-y-8">
+                    <div class="flex justify-between items-center border-b pb-6"><h2 class="text-3xl font-black uppercase tracking-tighter">Staff Hub</h2><button onClick={()=>setIsOpen(true)} class="bg-green-700 text-white px-6 py-3 rounded-2xl font-black uppercase text-xs">Add Staff</button></div>
+                    {isOpen && (
+                        <div class="bg-white p-12 rounded-[3rem] border-2 border-green-100 shadow-2xl mb-12">
+                            <form onSubmit={submit} class="grid grid-cols-4 gap-6">
+                                <input placeholder="ID" value={form.id} onChange={e=>setForm({...form, id:e.target.value})} class="p-4 border-2 rounded-xl font-bold uppercase" />
+                                <input placeholder="Name" value={form.name} onChange={e=>setForm({...form, name:e.target.value})} class="p-4 border-2 rounded-xl font-bold" />
+                                <input placeholder="Email" value={form.email} onChange={e=>setForm({...form, email:e.target.value})} class="p-4 border-2 rounded-xl font-bold" />
+                                <input placeholder="Key" value={form.password} onChange={e=>setForm({...form, password:e.target.value})} class="p-4 border-2 rounded-xl font-bold" />
+                                <button type="submit" class="col-span-4 bg-green-700 text-white py-4 rounded-2xl font-black uppercase">Create Profile</button>
+                            </form>
                         </div>
-                    ))}
+                    )}
+                    <div class="grid grid-cols-4 gap-6">
+                        {employees.map(e => (
+                            <div key={e.id} class="bg-white p-8 rounded-[3rem] border-2 text-center group">
+                                <div class="h-20 w-20 bg-green-50 text-green-700 flex items-center justify-center font-black mx-auto rounded-[2rem] text-2xl mb-4">${getInitial(e.name)}</div>
+                                <p class="font-black uppercase text-slate-800">${e.name}</p>
+                                <p class="text-[9px] text-slate-400 font-bold uppercase mt-1">${e.id} • ${e.role}</p>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             );
-        };
+        }
 
         const Board = ({ user, discussions, fetchData }) => {
             const [val, setVal] = useState('');
             const post = async (e) => {
                 e.preventDefault();
                 await fetch(`${API_BASE}/discussions`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ employee_id: user.id, author_name: user.name, message: val }) });
-                setVal(''); fetchData(); notify("Broadcast Dispatched.");
+                setVal(''); fetchData(); notify("Broadcast Matrix Updated.");
             };
             return (
                 <div class="space-y-12 max-w-5xl mx-auto">
@@ -674,6 +686,17 @@
                 } catch(err) { console.error(err); } finally { setLoading(false); }
             };
 
+            const handleLogin = async (id, pass) => {
+                setLoading(true);
+                try {
+                    const r = await fetch(`${API_BASE}/employees`);
+                    const list = await r.json();
+                    const found = list.find(e => String(e.id).toUpperCase() === String(id).toUpperCase() && String(e.password) === String(pass));
+                    if(found) { setUser(found); localStorage.setItem('hr_user', JSON.stringify(found)); } 
+                    else alert("Access Denied.");
+                } catch(e) { alert("Offline."); } finally { setLoading(false); }
+            };
+
             const logout = () => { localStorage.clear(); window.location.reload(); };
 
             if(loading && !user) return <div class="h-screen flex items-center justify-center font-black uppercase text-slate-300 animate-pulse">Initializing LSAFHR Core...</div>;
@@ -694,15 +717,17 @@
                 </div>
             </div>;
 
-            const handleLogin = async (id, pass) => {
-                setLoading(true);
-                try {
-                    const r = await fetch(`${API_BASE}/employees`);
-                    const list = await r.json();
-                    const found = list.find(e => String(e.id).toUpperCase() === String(id).toUpperCase() && String(e.password) === String(pass));
-                    if(found) { setUser(found); localStorage.setItem('hr_user', JSON.stringify(found)); } 
-                    else alert("Access Denied.");
-                } catch(e) { alert("Offline."); } finally { setLoading(false); }
+            const renderUI = () => {
+                switch(view) {
+                    case 'dashboard': return <DashboardView user={user} />;
+                    case 'attendance': return <AttendanceHub user={user} attendance={attendance} fetchData={fetchMatrixData} />;
+                    case 'payroll': return <SalaryHub user={user} employees={employees} fetchData={fetchMatrixData} postedMonths={payrollPosted} />;
+                    case 'directory': return <DirectoryModule employees={employees} fetchData={fetchMatrixData} />;
+                    case 'loans': return <LoansHub user={user} userLoans={userLoans} allLoans={allLoans} employees={employees} fetchData={fetchMatrixData} />;
+                    case 'leaves': return <LeavesHub user={user} allLeaves={allLeaves} userLeaves={[]} employees={employees} fetchData={fetchMatrixData} />;
+                    case 'discussion': return <Board user={user} discussions={discussions} fetchData={fetchMatrixData} />;
+                    default: return <DashboardView user={user} />;
+                }
             };
 
             return (
@@ -711,28 +736,14 @@
                         <div class="p-10 border-b text-center"><img src="/UOL-Green-V1.png" class="h-12 mx-auto mb-3" /><span class="text-[10px] font-black text-green-700 uppercase tracking-widest">Identity Hub</span></div>
                         <nav class="flex-1 p-6 space-y-2">
                             {NAV_ITEMS.filter(n => !n.admin || user.role === 'admin').map(n => (
-                                <button key={n.id} onClick={()=>setView(n.id)} class={`w-full flex items-center gap-5 p-5 rounded-3xl font-black transition-all ${view===n.id?'bg-green-700 text-white shadow-2xl scale-105':'text-slate-500 hover:bg-slate-50'}`}>
+                                <button key={n.id} onClick={()=>setView(n.id)} class={`w-full flex items-center gap-5 p-5 rounded-3xl font-black transition-all ${state.currentTab===n.id?'bg-green-700 text-white shadow-2xl scale-105':'text-slate-500 hover:bg-slate-50'}`}>
                                     <i data-lucide={n.icon} size="20"></i><span class="text-[11px] uppercase tracking-widest text-left">{n.label}</span>
                                 </button>
                             ))}
                         </nav>
                         <div class="p-8 border-t flex justify-between items-center"><div class="overflow-hidden"><p class="font-black text-[12px] uppercase truncate">{user.name}</p><p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{user.role}</p></div><button onClick={logout} class="text-red-500 hover:bg-red-50 p-3 rounded-2xl transition-all"><i data-lucide="log-out" size="24"></i></button></div>
                     </aside>
-                    <main class="flex-1 md:ml-72 p-12"><div class="max-w-[1600px] mx-auto">
-                        {(() => {
-                            switch(view) {
-                                case 'dashboard': return <DashboardView user={user} />;
-                                case 'attendance': return <AttendanceHub user={user} attendance={attendance} fetchData={fetchMatrixData} />;
-                                case 'payroll': return <SalaryHub user={user} employees={employees} fetchData={fetchMatrixData} postedMonths={payrollPosted} />;
-                                case 'directory': return <DirectoryModule employees={employees} fetchData={fetchMatrixData} />;
-                                case 'loans': return <LoansHub user={user} userLoans={userLoans} allLoans={allLoans} employees={employees} fetchData={fetchMatrixData} />;
-                                case 'leaves': return <LeavesHub user={user} allLeaves={allLeaves} userLeaves={[]} employees={employees} fetchData={fetchMatrixData} />;
-                                case 'discussion': return <Board user={user} discussions={discussions} fetchData={fetchMatrixData} />;
-                                default: return <DashboardView user={user} />;
-                            }
-                        })()}
-                    </div></main>
-                    <div id="status-toast" class="fixed top-12 left-1/2 -translate-x-1/2 z-[1000] bg-slate-900 text-white px-10 py-5 rounded-[1.5rem] font-black uppercase text-[11px] tracking-widest shadow-2xl opacity-0 pointer-events-none transition-all duration-300 transform translate-y-[-20px] text-center">Status Matrix Updated</div>
+                    <main class="flex-1 md:ml-72 p-12"><div class="max-w-[1600px] mx-auto">{renderUI()}</div></main>
                 </div>
             );
         }
