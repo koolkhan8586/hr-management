@@ -42,7 +42,6 @@
             font-weight: 800;
         }
         .btn-clock-out:hover { background-color: #f8fafc; }
-        .matrix-table-row:hover { background-color: #f8fafc; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900 text-left text-[14px]">
@@ -50,7 +49,7 @@
     <!-- GLOBAL LOADING SCREEN -->
     <div id="loading-screen" class="fixed inset-0 bg-white z-[999] flex flex-col items-center justify-center text-center">
         <div class="loader w-16 h-16 border-4 border-slate-100 border-t-green-700 rounded-full mb-4"></div>
-        <p class="text-slate-400 font-black uppercase tracking-[0.3em] text-sm animate-pulse font-sans">Connecting to LSAFHR Core</p>
+        <p class="text-slate-400 font-black uppercase tracking-[0.3em] text-sm animate-pulse font-sans">Connecting to LSAFHR Matrix</p>
     </div>
 
     <!-- LOGIN INTERFACE -->
@@ -58,8 +57,8 @@
         <div class="bg-white w-full max-w-md p-10 rounded-[2.5rem] shadow-2xl border border-slate-100 animate-slide-up">
             <div class="text-center mb-10">
                 <img src="UOL-Green-V1.png" alt="Logo" class="h-20 mx-auto mb-4 object-contain" onerror="this.src='https://placehold.co/150x150?text=LSAFHR'">
-                <h1 class="text-2xl font-black text-slate-800 leading-tight uppercase tracking-widest leading-none font-sans text-center">Lahore School of Accountancy</h1>
-                <p class="text-slate-400 text-xs font-bold mt-2 uppercase tracking-widest font-sans text-center">Management System v7.5.0</p>
+                <h1 class="text-2xl font-black text-slate-800 leading-tight uppercase tracking-widest font-sans text-center">Lahore School of Accountancy</h1>
+                <p class="text-slate-400 text-xs font-bold mt-2 uppercase tracking-widest font-sans text-center">Identity System v7.5.5</p>
             </div>
             <form id="login-form" class="space-y-5 text-left font-sans">
                 <div class="space-y-1 text-left">
@@ -77,40 +76,40 @@
 
     <!-- MAIN APP SHELL -->
     <div id="app-shell" class="hidden min-h-screen flex">
-        <aside class="w-64 bg-white border-r border-slate-100 fixed h-full hidden lg:flex flex-col z-50 shadow-sm text-left">
-            <div class="p-8 border-b border-slate-50 text-center font-sans">
+        <aside class="w-72 bg-white border-r border-slate-100 fixed h-full hidden lg:flex flex-col z-50 shadow-sm text-left">
+            <div class="p-10 border-b border-slate-50 text-center font-sans">
                 <img src="UOL-Green-V1.png" class="h-12 mx-auto mb-2 object-contain font-sans" alt="LSAFHR">
                 <span class="text-[9px] font-black text-green-700 uppercase tracking-widest font-sans">Identity Hub Matrix</span>
             </div>
-            <nav class="flex-1 p-4 space-y-1 overflow-y-auto custom-scrollbar font-sans" id="sidebar-nav"></nav>
-            <div class="p-4 border-t border-slate-50 flex items-center justify-between font-sans">
+            <nav class="flex-1 p-6 space-y-2 overflow-y-auto custom-scrollbar font-sans" id="sidebar-nav"></nav>
+            <div class="p-6 border-t border-slate-50 flex items-center justify-between font-sans">
                 <div class="flex items-center gap-3 overflow-hidden text-left text-slate-800">
-                    <div id="user-avatar" class="h-9 w-9 rounded-xl bg-green-100 text-green-700 flex items-center justify-center font-black text-sm uppercase">?</div>
+                    <div id="user-avatar" class="h-10 w-10 rounded-xl bg-green-100 text-green-700 flex items-center justify-center font-black text-sm uppercase">?</div>
                     <div class="flex flex-col overflow-hidden font-sans">
                         <span id="user-display-name" class="text-[11px] font-black truncate uppercase text-left">User</span>
                         <span id="user-display-role" class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter text-left">Verified</span>
                     </div>
                 </div>
-                <button onclick="logout()" class="text-red-500 p-2 hover:bg-red-50 rounded-xl transition-all"><i data-lucide="log-out" size="18"></i></button>
+                <button onclick="logout()" class="text-red-500 p-2 hover:bg-red-50 rounded-xl transition-all font-sans"><i data-lucide="log-out" size="18"></i></button>
             </div>
         </aside>
 
-        <main class="flex-1 lg:ml-64 p-4 md:p-10 pb-24 lg:pb-10 min-h-screen bg-slate-50/30 font-sans">
+        <main class="flex-1 lg:ml-72 p-6 md:p-12 pb-24 lg:pb-12 min-h-screen bg-slate-50/30 font-sans">
             <div id="view-container" class="max-w-full mx-auto text-left font-sans"></div>
         </main>
 
-        <nav class="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 p-3 flex justify-around shadow-2xl z-50 rounded-t-[2.5rem] font-sans">
-            <button onclick="switchTab('dashboard')" class="p-4 rounded-2xl mobile-nav-btn font-sans" id="mob-dashboard"><i data-lucide="home"></i></button>
-            <button onclick="switchTab('attendance')" class="p-4 rounded-2xl mobile-nav-btn font-sans" id="mob-attendance"><i data-lucide="clock"></i></button>
-            <button onclick="switchTab('payroll')" class="p-4 rounded-2xl mobile-nav-btn font-sans" id="mob-payroll"><i data-lucide="dollar-sign"></i></button>
-            <button onclick="switchTab('directory')" class="p-4 rounded-2xl mobile-nav-btn font-sans" id="mob-directory"><i data-lucide="users"></i></button>
-            <button onclick="switchTab('loans')" class="p-4 rounded-2xl mobile-nav-btn font-sans" id="mob-loans"><i data-lucide="wallet"></i></button>
+        <nav class="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 p-4 flex justify-around shadow-2xl z-50 rounded-t-[2.5rem] font-sans">
+            <button onclick="switchTab('dashboard')" class="p-4 rounded-2xl font-sans" id="mob-dashboard"><i data-lucide="home"></i></button>
+            <button onclick="switchTab('attendance')" class="p-4 rounded-2xl font-sans" id="mob-attendance"><i data-lucide="clock"></i></button>
+            <button onclick="switchTab('payroll')" class="p-4 rounded-2xl font-sans" id="mob-payroll"><i data-lucide="dollar-sign"></i></button>
+            <button onclick="switchTab('directory')" class="p-4 rounded-2xl font-sans" id="mob-directory"><i data-lucide="users"></i></button>
+            <button onclick="switchTab('loans')" class="p-4 rounded-2xl font-sans" id="mob-loans"><i data-lucide="wallet"></i></button>
         </nav>
     </div>
 
     <!-- TOAST NOTIFICATION -->
     <div id="status-toast" class="fixed top-10 left-1/2 -translate-x-1/2 z-[1000] bg-slate-900 text-white px-8 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-2xl opacity-0 pointer-events-none transition-all duration-300 transform translate-y-[-20px] font-sans text-center">
-        Status Matrix Updated
+        Status Updated
     </div>
 
     <script>
@@ -120,7 +119,7 @@
 
         let state = {
             user: null, employees: [], attendance: [], loans: [], discussions: [], leaves: [],
-            allLeaves: [], allLoans: [], 
+            allLeaves: [], allLoans: [], userLoans: [], userLeaves: [],
             payrollPostedMonths: [], currentTab: 'dashboard', 
             selectedMonth: new Date().toISOString().slice(0, 7),
             selectedAttendanceMonth: new Date().toISOString().slice(0, 7),
@@ -134,12 +133,12 @@
             { id: 'attendance', label: 'Attendance', icon: 'clock', admin: false },
             { id: 'payroll', label: 'Salary Hub', icon: 'dollar-sign', admin: false },
             { id: 'directory', label: 'Staff Hub', icon: 'users', admin: true },
-            { id: 'loans', label: 'Loans', icon: 'wallet', admin: false },
-            { id: 'leaves', label: 'Leaves', icon: 'calendar', admin: false },
-            { id: 'discussion', label: 'Board', icon: 'message-square', admin: false }
+            { id: 'loans', label: 'Loans Hub', icon: 'wallet', admin: false },
+            { id: 'leaves', label: 'Leaves Hub', icon: 'calendar', admin: false },
+            { id: 'discussion', label: 'Matrix Board', icon: 'message-square', admin: false }
         ];
 
-        // --- CORE UTILS ---
+        // --- UTILS ---
         function notify(msg) {
             const t = document.getElementById('status-toast'); if (!t) return;
             t.innerText = msg; t.style.opacity = '1'; t.style.transform = 'translateY(0) translateX(-50%)';
@@ -148,26 +147,8 @@
         function getPktTime() { return new Date().toLocaleTimeString('en-US', { timeZone: 'Asia/Karachi', hour: '2-digit', minute: '2-digit', hour12: true }); }
         function getPktDate() { return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Karachi' }); }
         function cleanNumber(val) { const num = parseFloat(String(val || 0).replace(/[^0-9.-]+/g, '')); return isNaN(num) ? 0 : num; }
+        function formatDate(d) { return d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'; }
         function getInitial(name) { return name ? String(name).charAt(0).toUpperCase() : '?'; }
-        function formatDate(d) { return d ? new Date(d).toLocaleDateString('en-GB') : 'N/A'; }
-
-        function calculateWorkTime(inTime, outTime) {
-            if (!inTime || !outTime) return "0h 0m";
-            try {
-                const parseTime = (tStr) => {
-                    const [time, modifier] = tStr.split(' ');
-                    let [hours, minutes] = time.split(':');
-                    if (hours === '12') hours = '00';
-                    if (modifier === 'PM') hours = parseInt(hours, 10) + 12;
-                    return new Date(2000, 0, 1, hours, minutes);
-                };
-                const diff = parseTime(outTime) - parseTime(inTime);
-                if (diff < 0) return "0h 0m";
-                const h = Math.floor(diff / 3600000);
-                const m = Math.floor((diff % 3600000) / 60000);
-                return `${h}h ${m}m`;
-            } catch(e) { return "0h 0m"; }
-        }
 
         function calculateSalaryMetrics(emp) {
             if (!emp) return { netPaid: 0 };
@@ -176,7 +157,6 @@
             return { netPaid: add - sub };
         }
 
-        // --- CORE SYNC ---
         async function init() {
             const saved = localStorage.getItem('hr_user');
             if (saved) {
@@ -195,7 +175,8 @@
                 const isAdmin = state.user.role === 'admin';
                 const endpoints = [
                     fetch(`${API_BASE}/employees`), fetch(`${API_BASE}/payroll-posted`), fetch(`${API_BASE}/discussions`), 
-                    fetch(`${API_BASE}/attendance/${state.user.id}`), fetch(`${API_BASE}/leaves/${state.user.id}`), fetch(`${API_BASE}/loans/${state.user.id}`),
+                    fetch(`${API_BASE}/attendance/${(isAdmin && state.selectedAdminEmployeeId) ? state.selectedAdminEmployeeId : state.user.id}`),
+                    fetch(`${API_BASE}/leaves/${state.user.id}`), fetch(`${API_BASE}/loans/${state.user.id}`),
                     isAdmin ? fetch(`${API_BASE}/admin/leaves`) : Promise.resolve({ ok: true, json: () => [] }),
                     isAdmin ? fetch(`${API_BASE}/admin/loans`) : Promise.resolve({ ok: true, json: () => [] })
                 ];
@@ -243,7 +224,7 @@
 
         function renderView() {
             const container = document.getElementById('view-container');
-            container.innerHTML = '<div class="py-40 text-center animate-pulse font-black text-slate-300 uppercase tracking-[0.5em] font-sans">Connecting to Matrix Hub...</div>';
+            container.innerHTML = '<div class="py-40 text-center animate-pulse font-black text-slate-300 uppercase tracking-[0.5em] font-sans">Synchronizing Matrix Hub...</div>';
             setTimeout(() => {
                 switch(state.currentTab) {
                     case 'dashboard': renderDashboard(); break;
@@ -265,24 +246,24 @@
             container.innerHTML = `
                 <div class="animate-fade-in space-y-8 font-sans text-left text-slate-800">
                     <div class="flex justify-between items-center border-b pb-4 border-slate-100">
-                        <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase font-sans font-sans">Home Matrix</h2>
+                        <h2 class="text-3xl font-black text-slate-800 tracking-tighter uppercase font-sans">Home Matrix</h2>
                         <div class="bg-white p-4 rounded-2xl border shadow-sm text-right">
-                            <p class="text-[10px] text-slate-400 uppercase">Pakistan Time</p><p class="text-green-700 font-black font-mono font-sans font-sans">${getPktTime()}</p>
+                            <p class="text-[10px] text-slate-400 uppercase font-sans">Pakistan Time</p><p class="text-green-700 font-black font-mono font-sans">${getPktTime()}</p>
                         </div>
                     </div>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 font-sans font-sans font-sans">
-                        <div class="bg-green-700 p-8 rounded-[2.5rem] text-white shadow-xl relative overflow-hidden text-left font-sans">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 font-sans">
+                        <div class="bg-green-700 p-10 rounded-[2.5rem] text-white shadow-2xl relative overflow-hidden text-left font-sans">
                             <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 font-sans"></div>
-                            <p class="text-[10px] font-black uppercase opacity-60">Status</p>
-                            <p class="text-3xl font-black mt-2 uppercase tracking-tighter font-sans font-sans">ACTIVE SESSION</p>
+                            <p class="text-[10px] font-black uppercase opacity-60 font-sans">Status</p>
+                            <p class="text-3xl font-black mt-2 uppercase tracking-tighter font-sans">ACTIVE SESSION</p>
                         </div>
-                        <div class="bg-white p-8 rounded-[2.5rem] border shadow-sm text-left">
-                            <p class="text-[10px] font-black text-slate-400 uppercase font-sans font-sans">Remaining Loan Matrix</p>
-                            <p class="text-3xl font-black text-red-500 mt-2 font-mono font-sans">Rs. ${cleanNumber(state.user.loan_opening_balance - state.user.loan_deduction).toLocaleString()}</p>
+                        <div class="bg-white p-10 rounded-[2.5rem] border-2 border-slate-100 shadow-sm text-left">
+                            <p class="text-[10px] font-black text-slate-400 uppercase font-sans">Loan Outstanding</p>
+                            <p class="text-4xl font-black text-red-500 mt-2 font-mono font-sans">Rs. ${cleanNumber(state.user.loan_opening_balance - state.user.loan_deduction).toLocaleString()}</p>
                         </div>
-                        <div class="bg-white p-8 rounded-[2.5rem] border shadow-sm text-left font-sans">
-                            <p class="text-[10px] font-black text-slate-400 uppercase font-sans font-sans font-sans">Identity Level</p>
-                            <p class="text-2xl font-black text-slate-800 mt-2 capitalize font-sans">${state.user.role}</p>
+                        <div class="bg-white p-10 rounded-[2.5rem] border shadow-sm text-left font-sans">
+                            <p class="text-[10px] font-black text-slate-400 uppercase font-sans">Identity Level</p>
+                            <p class="text-2xl font-black text-slate-800 mt-2 capitalize font-sans font-sans">${state.user.role}</p>
                         </div>
                     </div>
                 </div>`;
@@ -295,36 +276,36 @@
             const isPosted = state.payrollPostedMonths.includes(state.selectedMonth);
 
             let content = `
-                <div class="animate-fade-in space-y-6 font-sans text-left text-slate-800">
-                    <div class="flex flex-col md:flex-row justify-between items-center gap-4 border-b pb-4 border-slate-100 text-left font-sans font-sans">
-                        <h2 class="text-xl font-black uppercase tracking-widest text-slate-800 font-sans font-sans">Salary Matrix Hub</h2>
-                        <div class="flex flex-wrap gap-2 justify-center font-sans font-sans font-sans font-sans font-sans font-sans">
-                            <input type="month" value="${state.selectedMonth}" onchange="updateMonth(this.value)" class="p-2 border-2 rounded-xl font-black bg-white focus:border-green-500 font-sans">
+                <div class="animate-fade-in space-y-6 font-sans text-left text-slate-800 font-sans font-sans">
+                    <div class="flex flex-col md:flex-row justify-between items-center gap-4 border-b pb-4 border-slate-100 text-left font-sans">
+                        <h2 class="text-xl font-black uppercase tracking-widest text-slate-800 font-sans">Salary Matrix Hub</h2>
+                        <div class="flex flex-wrap gap-2 justify-center font-sans">
+                            <input type="month" value="${state.selectedMonth}" onchange="updateMonth(this.value)" class="p-3 border-2 rounded-2xl font-black bg-white shadow-sm outline-none focus:border-green-600" />
                             ${isAdmin ? `
-                                <button onclick="togglePublish(${isPosted})" class="px-6 py-2 rounded-xl font-black text-[10px] text-white uppercase shadow-lg ${isPosted ? 'bg-red-600' : 'bg-slate-900'} font-sans">${isPosted ? 'Unpublish' : 'Publish'}</button>
-                                <button onclick="exportSalaryCSV()" class="bg-slate-900 text-white px-6 py-2 rounded-xl font-black text-[10px] uppercase shadow-lg font-sans">Export Ledger</button>
-                                <label class="bg-green-50 text-green-700 px-6 py-2 rounded-xl font-black text-[10px] uppercase cursor-pointer hover:bg-green-100 font-sans">Import Matrix <input type="file" onchange="importSalaryCSV(this)" class="hidden" accept=".csv"></label>
-                                <button onclick="downloadSalarySample()" class="bg-white border px-6 py-2 rounded-xl font-black text-[10px] uppercase shadow-sm font-sans">Sample Data</button>
+                                <button onclick="togglePublish(${isPosted})" class="px-6 py-2.5 rounded-xl font-black text-[10px] text-white uppercase shadow-lg ${isPosted ? 'bg-red-600' : 'bg-slate-900'} font-sans font-sans">${isPosted ? 'Unpublish' : 'Publish'}</button>
+                                <button onclick="exportSalaryCSV()" class="bg-slate-900 text-white px-6 py-2.5 rounded-xl font-black text-[10px] uppercase shadow-lg font-sans">Export Ledger</button>
+                                <label class="bg-green-50 text-green-700 px-6 py-2.5 rounded-xl font-black text-[10px] uppercase cursor-pointer hover:bg-green-100 font-sans border-2 border-green-100 flex items-center gap-2 font-bold">Import Matrix <input type="file" onchange="importSalaryCSV(this)" class="hidden" accept=".csv"></label>
+                                <button onclick="downloadSalarySample()" class="bg-white border-2 px-6 py-2.5 rounded-xl font-black text-[10px] uppercase shadow-sm font-sans font-sans">Sample Data</button>
                             ` : ``}
                         </div>
                     </div>`;
 
             if (!isAdmin && !isPosted) {
-                content += `<div class="py-40 text-center bg-white rounded-[3rem] border-2 border-slate-100 shadow-sm font-sans"><div class="bg-slate-50 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6"><i data-lucide="lock" class="text-slate-200" size="48"></i></div><h3 class="text-xl font-black text-slate-400 uppercase tracking-widest text-slate-300 font-sans font-sans font-sans font-sans">Period Locked</h3></div>`;
+                content += `<div class="py-40 text-center bg-white rounded-[3rem] border-2 border-slate-100 shadow-sm font-sans"><div class="bg-slate-50 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 font-sans"><i data-lucide="lock" class="text-slate-200" size="48"></i></div><h3 class="text-xl font-black text-slate-400 uppercase tracking-widest text-slate-300 font-sans font-sans font-sans font-sans font-sans">Period Locked</h3><p class="text-xs font-bold text-slate-400 uppercase mt-2">Awaiting sync for ${state.selectedMonth}</p></div>`;
             } else {
                 content += `
-                    <div class="overflow-x-auto rounded-[2rem] bg-white border shadow-xl font-sans font-sans">
-                        <table class="w-full text-left text-[9px] font-sans font-sans font-sans font-sans">
-                            <thead class="bg-slate-50 border-b font-black text-slate-400 uppercase tracking-widest font-sans font-sans">
+                    <div class="overflow-x-auto rounded-[2rem] bg-white border-2 shadow-2xl font-sans">
+                        <table class="w-full text-left text-[9px] font-sans">
+                            <thead class="bg-slate-50 border-b font-black text-slate-400 uppercase tracking-widest font-sans">
                                 <tr>
-                                    <th class="p-3">ID</th><th class="p-3 font-sans">Identity Name</th>
-                                    <th class="p-3 text-right">Basic</th><th class="p-3 text-right">Invig</th>
-                                    <th class="p-3 text-right">T.Pay</th><th class="p-3 text-right">Incr</th>
-                                    <th class="p-3 text-right">Eidi</th><th class="p-3 text-right text-slate-500">Tax</th>
-                                    <th class="p-3 text-right text-slate-500">Loan</th><th class="p-3 text-right text-slate-500 font-sans">Ins.</th>
-                                    <th class="p-3 text-right text-slate-500">Others</th><th class="p-3 text-right text-red-500 font-sans">L.Ded</th>
-                                    <th class="p-3 text-right font-black text-slate-900 uppercase font-mono">Net Paid</th>
-                                    ${isAdmin ? `<th class="p-3 text-center font-sans font-sans">Audit</th>` : ''}
+                                    <th class="p-4">ID</th><th class="p-4">Name</th>
+                                    <th class="p-4 text-right">Basic</th><th class="p-4 text-right font-sans">Invig</th>
+                                    <th class="p-4 text-right font-sans">T.Pay</th><th class="p-4 text-right font-sans">Incr</th>
+                                    <th class="p-4 text-right font-sans">Eidi</th><th class="p-4 text-right text-slate-500 font-sans">Tax</th>
+                                    <th class="p-4 text-right text-slate-500 font-sans">Loan</th><th class="p-4 text-right text-slate-500 font-sans">Ins.</th>
+                                    <th class="p-4 text-right text-slate-500 font-sans">Others</th><th class="p-4 text-right text-red-500 font-sans">L.Ded</th>
+                                    <th class="p-4 text-right font-black text-slate-900 uppercase font-mono text-xs bg-slate-100/50">Net Paid</th>
+                                    ${isAdmin ? `<th class="p-4 text-center">Audit</th>` : ''}
                                 </tr>
                             </thead>
                             <tbody class="divide-y font-bold font-sans text-left text-slate-800">`;
@@ -334,23 +315,23 @@
                     const isEditing = state.editingSalaryId === emp.id;
                     const m = calculateSalaryMetrics(emp);
                     content += `
-                        <tr class="hover:bg-slate-50 transition-colors">
-                            <td class="p-3 font-black font-mono">${emp.id}</td>
-                            <td class="p-3 uppercase truncate max-w-[100px] font-sans font-sans font-sans font-sans font-sans font-sans font-sans">${emp.name}</td>
-                            <td class="p-3 text-right font-mono">${isEditing ? `<input type="number" id="eb-${emp.id}" class="w-16 border rounded p-1" value="${emp.basic_salary}">` : cleanNumber(emp.basic_salary).toLocaleString()}</td>
-                            <td class="p-3 text-right font-mono">${isEditing ? `<input type="number" id="ei-${emp.id}" class="w-12 border rounded p-1" value="${emp.invigilation}">` : cleanNumber(emp.invigilation).toLocaleString()}</td>
-                            <td class="p-3 text-right font-mono">${isEditing ? `<input type="number" id="et-${emp.id}" class="w-12 border rounded p-1" value="${emp.t_payment}">` : cleanNumber(emp.t_payment).toLocaleString()}</td>
-                            <td class="p-3 text-right font-mono">${isEditing ? `<input type="number" id="en-${emp.id}" class="w-12 border rounded p-1" value="${emp.increment}">` : cleanNumber(emp.increment).toLocaleString()}</td>
-                            <td class="p-3 text-right font-mono">${isEditing ? `<input type="number" id="ed-${emp.id}" class="w-12 border rounded p-1" value="${emp.eidi}">` : cleanNumber(emp.eidi).toLocaleString()}</td>
-                            <td class="p-3 text-right font-mono text-slate-500">${isEditing ? `<input type="number" id="ex-${emp.id}" class="w-12 border rounded p-1" value="${emp.tax}">` : cleanNumber(emp.tax).toLocaleString()}</td>
-                            <td class="p-3 text-right font-mono text-slate-500">${isEditing ? `<input type="number" id="el-${emp.id}" class="w-12 border rounded p-1" value="${emp.loan_deduction}">` : cleanNumber(emp.loan_deduction).toLocaleString()}</td>
-                            <td class="p-3 text-right font-mono text-slate-500">${isEditing ? `<input type="number" id="es-${emp.id}" class="w-12 border rounded p-1" value="${emp.insurance}">` : cleanNumber(emp.insurance).toLocaleString()}</td>
-                            <td class="p-3 text-right font-mono text-slate-500">${isEditing ? `<input type="number" id="eo-${emp.id}" class="w-12 border rounded p-1" value="${emp.others_deduction}">` : cleanNumber(emp.others_deduction).toLocaleString()}</td>
-                            <td class="p-3 text-right font-mono text-red-500">${isEditing ? `<input type="number" id="eld-${emp.id}" class="w-12 border rounded p-1" value="${emp.extra_leaves_deduction}">` : cleanNumber(emp.extra_leaves_deduction).toLocaleString()}</td>
-                            <td class="p-3 text-right font-black text-slate-900 font-mono font-sans font-sans font-sans font-sans font-sans font-sans">Rs. ${m.netPaid.toLocaleString()}</td>
+                        <tr class="matrix-table-row transition-all">
+                            <td class="p-4 font-black font-mono text-slate-900">${emp.id}</td>
+                            <td class="p-4 truncate max-w-[100px] uppercase font-sans">${emp.name}</td>
+                            <td class="p-4 text-right font-mono">${isEditing ? `<input type="number" id="eb-${emp.id}" class="w-16 border rounded p-1 text-right" value="${emp.basic_salary}">` : cleanNumber(emp.basic_salary).toLocaleString()}</td>
+                            <td class="p-4 text-right font-mono">${isEditing ? `<input type="number" id="ei-${emp.id}" class="w-12 border rounded p-1 text-right" value="${emp.invigilation}">` : cleanNumber(emp.invigilation).toLocaleString()}</td>
+                            <td class="p-4 text-right font-mono">${isEditing ? `<input type="number" id="et-${emp.id}" class="w-12 border rounded p-1 text-right" value="${emp.t_payment}">` : cleanNumber(emp.t_payment).toLocaleString()}</td>
+                            <td class="p-4 text-right font-mono">${isEditing ? `<input type="number" id="en-${emp.id}" class="w-12 border rounded p-1 text-right" value="${emp.increment}">` : cleanNumber(emp.increment).toLocaleString()}</td>
+                            <td class="p-4 text-right font-mono">${isEditing ? `<input type="number" id="ed-${emp.id}" class="w-12 border rounded p-1 text-right" value="${emp.eidi}">` : cleanNumber(emp.eidi).toLocaleString()}</td>
+                            <td class="p-4 text-right font-mono text-slate-500">${isEditing ? `<input type="number" id="ex-${emp.id}" class="w-12 border rounded p-1 text-right" value="${emp.tax}">` : cleanNumber(emp.tax).toLocaleString()}</td>
+                            <td class="p-4 text-right font-mono text-slate-500">${isEditing ? `<input type="number" id="el-${emp.id}" class="w-12 border rounded p-1 text-right" value="${emp.loan_deduction}">` : cleanNumber(emp.loan_deduction).toLocaleString()}</td>
+                            <td class="p-4 text-right font-mono text-slate-500">${isEditing ? `<input type="number" id="es-${emp.id}" class="w-12 border rounded p-1 text-right" value="${emp.insurance}">` : cleanNumber(emp.insurance).toLocaleString()}</td>
+                            <td class="p-4 text-right font-mono text-slate-500">${isEditing ? `<input type="number" id="eo-${emp.id}" class="w-12 border rounded p-1 text-right" value="${emp.others_deduction}">` : cleanNumber(emp.others_deduction).toLocaleString()}</td>
+                            <td class="p-4 text-right font-mono text-red-500">${isEditing ? `<input type="number" id="eld-${emp.id}" class="w-12 border rounded p-1 text-right" value="${emp.extra_leaves_deduction}">` : cleanNumber(emp.extra_leaves_deduction).toLocaleString()}</td>
+                            <td class="p-4 text-right font-black text-slate-900 font-mono text-xs bg-slate-100/50">Rs. ${m.netPaid.toLocaleString()}</td>
                             ${isAdmin ? `
-                                <td class="p-3 text-center">
-                                    ${isEditing ? `<button onclick="saveSalary('${emp.id}')" class="text-green-600 font-black text-[9px] uppercase border-b-2 border-green-600 font-sans font-sans font-sans font-sans font-sans font-sans">Save</button>` : `<button onclick="state.editingSalaryId='${emp.id}'; renderPayroll()" class="text-blue-500 transition-all font-sans font-sans"><i data-lucide="pencil" size="14"></i></button>`}
+                                <td class="p-4 text-center">
+                                    ${isEditing ? `<button onclick="saveSalary('${emp.id}')" class="text-green-600 bg-green-50 p-2 rounded-lg hover:bg-green-600 hover:text-white transition-all"><i data-lucide="save" size="14"></i></button>` : `<button onclick="state.editingSalaryId='${emp.id}'; renderPayroll()" class="text-blue-500 bg-blue-50 p-2 rounded-lg hover:bg-blue-600 hover:text-white transition-all"><i data-lucide="pencil" size="14"></i></button>`}
                                 </td>` : ''}
                         </tr>`;
                 });
@@ -374,12 +355,12 @@
                 extra_leaves_deduction: cleanNumber(document.getElementById(`eld-${id}`).value)
             };
             const res = await fetch(`${API_BASE}/employees/${id}`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
-            if (res.ok) { state.editingSalaryId = null; await syncData(); renderPayroll(); notify("Identity Matrix Updated."); }
+            if (res.ok) { state.editingSalaryId = null; await syncData(); renderPayroll(); notify("Ledger matrix updated."); }
         }
 
         function downloadSalarySample() {
             const sample = [{ "ID": "EMP100", "Name": "Staff Name", "Basic": 50000, "Invig": 0, "TPay": 0, "Incr": 0, "Eidi": 0, "Tax": 0, "Loan": 0, "Ins": 0, "Other": 0, "LDed": 0 }];
-            exportToCSV(sample, "LSAFHR_Salary_Matrix_Sample.csv");
+            exportToCSV(sample, "Salary_Matrix_Sample.csv");
         }
 
         async function importSalaryCSV(input) {
@@ -388,22 +369,20 @@
             reader.onload = async (e) => {
                 const text = e.target.result;
                 const rows = text.split('\n').slice(1);
-                notify("Uploading Bulk Ledger records...");
+                notify("Uploading bulk ledger...");
                 for(let row of rows) {
                     const cols = row.split(',');
                     if(cols.length < 2) continue;
                     const id = cols[0].replace(/"/g, '').trim().toUpperCase();
                     const payload = { 
-                        basic_salary: cleanNumber(cols[2]), invigilation: cleanNumber(cols[3]), 
-                        t_payment: cleanNumber(cols[4]), increment: cleanNumber(cols[5]), 
-                        eidi: cleanNumber(cols[6]), tax: cleanNumber(cols[7]), 
-                        loan_deduction: cleanNumber(cols[8]), insurance: cleanNumber(cols[9]), 
-                        others_deduction: cleanNumber(cols[10]), extra_leaves_deduction: cleanNumber(cols[11]) 
+                        basic_salary: cleanNumber(cols[2]), invigilation: cleanNumber(cols[3]), t_payment: cleanNumber(cols[4]), 
+                        increment: cleanNumber(cols[5]), eidi: cleanNumber(cols[6]), tax: cleanNumber(cols[7]), 
+                        loan_deduction: cleanNumber(cols[8]), insurance: cleanNumber(cols[9]), others_deduction: cleanNumber(cols[10]), 
+                        extra_leaves_deduction: cleanNumber(cols[11]) 
                     };
                     await fetch(`${API_BASE}/employees/${id}`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
                 }
-                notify("Salary matrix successfully synchronized.");
-                await syncData(); renderPayroll();
+                notify("Matrix synchronization complete."); await syncData(); renderPayroll();
             };
             reader.readAsText(file);
         }
@@ -414,12 +393,14 @@
                 "Incr": e.increment, "Eidi": e.eidi, "Tax": e.tax, "Loan": e.loan_deduction, "Ins": e.insurance, 
                 "Others": e.others_deduction, "L.Ded": e.extra_leaves_deduction, "Net Paid": calculateSalaryMetrics(e).netPaid
             }));
-            exportToCSV(data, `LSAF_Salary_Export_${state.selectedMonth}.csv`);
+            exportToCSV(data, `LSAF_Matrix_Report_${state.selectedMonth}.csv`);
         }
 
         // --- ATTENDANCE HUB ---
         async function renderAttendance() {
             const container = document.getElementById('view-container');
+            const isAdmin = state.user && state.user.role === 'admin';
+            
             const dailyLogs = {};
             state.attendance.filter(l => l.date_str && l.date_str.startsWith(state.selectedAttendanceMonth)).forEach(l => {
                 if(!dailyLogs[l.date_str]) dailyLogs[l.date_str] = [];
@@ -428,41 +409,42 @@
             const dateRows = Object.keys(dailyLogs).sort((a,b) => new Date(b) - new Date(a));
 
             container.innerHTML = `
-                <div class="animate-fade-in space-y-8 font-sans text-left text-slate-800">
+                <div class="animate-fade-in space-y-8 font-sans text-left text-slate-800 font-sans font-sans">
                     <div class="flex flex-col md:flex-row justify-between items-center gap-4 border-b pb-4 border-slate-100 font-sans">
-                        <h2 class="text-xl font-black uppercase tracking-widest text-left font-sans font-sans">Attendance Hub</h2>
+                        <h2 class="text-xl font-black uppercase tracking-widest text-left">Attendance Hub Matrix</h2>
                         <div class="flex flex-wrap gap-2">
-                             <input type="month" value="${state.selectedAttendanceMonth}" onchange="updateAttendanceMonth(this.value)" class="p-2 border-2 rounded-xl font-black bg-white focus:border-green-500 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
-                             <button onclick="exportAttendanceCSV(${state.user.role === 'admin'})" class="bg-slate-900 text-white px-6 py-2 rounded-xl font-black text-[10px] uppercase shadow-lg font-sans font-sans font-sans">Export Record</button>
+                             <input type="month" value="${state.selectedAttendanceMonth}" onchange="updateAttendanceMonth(this.value)" class="p-3 border-2 rounded-2xl font-black bg-white shadow-sm outline-none focus:border-green-600" />
+                             <button onclick="exportAttendanceCSV(${isAdmin})" class="bg-slate-900 text-white px-6 py-2.5 rounded-xl font-black text-[10px] uppercase shadow-lg">Export Records</button>
                         </div>
                     </div>
-                    <div class="bg-white p-6 rounded-[2.5rem] border-2 shadow-sm font-sans font-sans">
-                        <div id="attendance-map" class="rounded-3xl font-sans font-sans"></div>
+                    <div class="bg-white p-6 rounded-[2.5rem] border-2 shadow-2xl font-sans relative overflow-hidden h-[450px]">
+                        <div id="attendance-map" class="h-full w-full rounded-[2rem]"></div>
+                        <div class="absolute top-10 right-10 z-[1000] bg-white/90 backdrop-blur p-4 rounded-2xl border-2 shadow-2xl font-black text-[10px] uppercase tracking-widest text-green-700">Geofence Matrix Active</div>
                     </div>
-                    <div class="grid md:grid-cols-2 gap-6 font-sans">
-                        <div class="bg-white rounded-[2.5rem] py-12 flex flex-col items-center justify-center space-y-6 border-2 shadow-inner bg-slate-50/50">
-                            <h3 class="text-6xl font-black text-slate-800 font-mono tracking-tighter">${getPktTime()}</h3>
-                            <p class="text-xs font-bold text-slate-400 uppercase tracking-[0.2em] font-sans font-sans font-sans">${getPktDate()}</p>
-                            <div class="w-full max-w-xs space-y-3 pt-6 flex flex-col items-center gap-3">
-                                <button onclick="handleClock('Clock In')" class="w-full py-5 btn-clock-in text-base uppercase font-sans tracking-widest font-sans font-sans">Clock In</button>
-                                <button onclick="handleClock('Clock Out')" class="w-full py-5 btn-clock-out text-base uppercase font-sans tracking-widest font-sans font-sans">Clock Out</button>
+                    <div class="grid md:grid-cols-2 gap-8 font-sans">
+                        <div class="bg-white rounded-[2.5rem] py-16 flex flex-col items-center justify-center space-y-8 border-2 border-dashed border-slate-100 shadow-inner bg-slate-50/50">
+                            <h3 class="text-7xl font-black text-slate-800 font-mono tracking-tighter">${getPktTime()}</h3>
+                            <div class="flex flex-col gap-4 w-full max-w-sm px-10">
+                                <button onclick="handleClock('Clock In')" class="w-full py-5 btn-clock-in text-base uppercase font-sans tracking-widest">Mark Clock In</button>
+                                <button onclick="handleClock('Clock Out')" class="w-full py-5 btn-clock-out text-base uppercase font-sans tracking-widest">Mark Clock Out</button>
                             </div>
                         </div>
-                        <div class="bg-white rounded-[2.5rem] p-10 border-2 text-center flex flex-col items-center justify-center font-sans font-sans font-sans font-sans">
-                            <div class="bg-green-50 w-20 h-20 rounded-full flex items-center justify-center mb-6"><i data-lucide="map-pin" class="text-green-600 animate-bounce"></i></div>
+                        <div class="bg-white rounded-[2.5rem] p-12 border-2 border-slate-50 text-center flex flex-col items-center justify-center font-sans font-sans font-sans font-sans">
+                            <div class="bg-green-50 w-24 h-24 rounded-full flex items-center justify-center mb-8"><i data-lucide="map-pin" class="text-green-600 animate-bounce" size="40"></i></div>
                             <p class="text-xs font-black text-slate-600 uppercase tracking-widest">Geofence Verified Sync</p>
+                            <p class="text-[10px] text-slate-400 font-bold uppercase mt-4">Coordinate encryption active</p>
                         </div>
                     </div>
 
-                    <div class="bg-white rounded-[2.5rem] border shadow-sm mt-8 overflow-hidden font-sans font-sans font-sans">
-                        <div class="bg-slate-50 p-6 border-b flex justify-between items-center font-sans font-sans font-sans">
-                            <span class="font-black text-xs uppercase text-slate-500 tracking-widest font-sans font-sans font-sans font-sans font-sans font-sans">Shift identity summary</span>
-                            <span class="text-[10px] font-black text-green-700 uppercase tracking-tighter font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Live Matrix Logs</span>
+                    <div class="bg-white rounded-[2.5rem] border-2 border-slate-50 shadow-2xl mt-10 overflow-hidden font-sans">
+                        <div class="bg-slate-50 p-8 border-b flex justify-between items-center font-sans font-sans font-sans">
+                            <span class="font-black text-xs uppercase text-slate-500 tracking-widest">Shift identity summary matrix</span>
+                            <span class="text-[10px] font-black text-green-700 uppercase tracking-tighter">Verified Pairs</span>
                         </div>
                         <div class="overflow-x-auto">
-                            <table class="w-full text-left font-sans font-sans">
+                            <table class="w-full text-left font-sans font-sans font-sans font-sans">
                                 <thead class="bg-slate-50/50 text-[10px] font-black uppercase text-slate-400 tracking-widest border-b font-sans font-sans font-sans">
-                                    <tr><th class="p-5 font-sans font-sans font-sans font-sans">Date</th><th class="p-5 text-center font-sans font-sans font-sans font-sans">Clock In</th><th class="p-5 text-center font-sans font-sans font-sans font-sans">Clock Out</th><th class="p-5 text-center font-sans font-sans font-sans font-sans font-sans font-sans">Total Work</th><th class="p-5 text-center font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Audit Actions</th></tr>
+                                    <tr><th class="p-6 font-sans">Date Matrix</th><th class="p-6 text-center">Clock In (Fly Map)</th><th class="p-6 text-center">Clock Out (Fly Map)</th><th class="p-6 text-center font-sans">Total Work</th><th class="p-6 text-center font-sans">Audit Actions</th></tr>
                                 </thead>
                                 <tbody class="divide-y font-bold text-slate-800">
                                     ${dateRows.map(date => {
@@ -471,35 +453,46 @@
                                         const cout = [...logs].reverse().find(l => l.type === 'Clock Out');
                                         const total = calculateWorkTime(cin?.time_str, cout?.time_str);
                                         return `
-                                            <tr class="hover:bg-slate-50 transition-colors font-sans">
-                                                <td class="p-5 font-mono text-sm">${date}</td>
-                                                <td class="p-5 text-center font-sans">
-                                                    ${cin ? `<button onclick="focusMap(${cin.latitude}, ${cin.longitude}, 'IN')" class="text-green-600 border-b border-green-200">${cin.time_str}</button>` : '<span class="text-slate-200">--:--</span>'}
+                                            <tr class="matrix-table-row transition-all">
+                                                <td class="p-6 font-mono text-sm">${date}</td>
+                                                <td class="p-6 text-center font-sans">
+                                                    ${cin ? `<button onclick="focusMap(${cin.latitude}, ${cin.longitude}, 'CLOCK IN', '${cin.time_str}')" class="text-green-600 border-b-2 border-green-200 hover:text-green-800 transition-colors uppercase text-[10px] font-black">${cin.time_str}</button>` : '<span class="text-slate-200">--:--</span>'}
                                                 </td>
-                                                <td class="p-5 text-center font-sans font-sans font-sans">
-                                                    ${cout ? `<button onclick="focusMap(${cout.latitude}, ${cout.longitude}, 'OUT')" class="text-red-600 border-b border-red-200">${cout.time_str}</button>` : '<span class="text-slate-200 font-sans font-sans font-sans font-sans font-sans">--:--</span>'}
+                                                <td class="p-6 text-center font-sans font-sans font-sans">
+                                                    ${cout ? `<button onclick="focusMap(${cout.latitude}, ${cout.longitude}, 'CLOCK OUT', '${cout.time_str}')" class="text-red-600 border-b-2 border-red-200 hover:text-red-800 transition-colors uppercase text-[10px] font-black">${cout.time_str}</button>` : '<span class="text-slate-200 font-sans font-sans font-sans font-sans font-sans font-sans">--:--</span>'}
                                                 </td>
-                                                <td class="p-5 text-center font-black font-sans font-sans font-sans font-sans font-sans font-sans">${total}</td>
-                                                <td class="p-5 text-center font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
+                                                <td class="p-6 text-center font-black font-sans font-sans font-sans font-sans font-sans font-sans text-xs">${total}</td>
+                                                <td class="p-6 text-center font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
                                                     <div class="flex justify-center gap-4">
                                                         ${state.user.role === 'admin' ? `
-                                                            <button onclick="wipeDateAttendance('${date}')" class="text-red-400 hover:scale-125 transition-transform"><i data-lucide="trash-2" size="18"></i></button>
-                                                        ` : `<span class="text-slate-300 text-[10px] uppercase">Verified</span>`}
+                                                            <button onclick="wipeDateAttendance('${date}')" class="bg-red-50 text-red-600 p-3 rounded-2xl hover:bg-red-600 hover:text-white transition-all"><i data-lucide="trash-2" size="18"></i></button>
+                                                        ` : `<span class="text-[9px] font-black uppercase text-green-700 bg-green-50 px-3 py-1 rounded-lg">Verified</span>`}
                                                     </div>
                                                 </td>
                                             </tr>`;
                                     }).join('')}
+                                    ${dateRows.length === 0 ? `<tr><td colspan="5" class="p-40 text-center font-black uppercase text-slate-300 tracking-[0.4em]">No Records in Matrix</td></tr>` : ''}
                                 </tbody>
                             </table>
                         </div>
                     </div>
                 </div>`;
             lucide.createIcons();
+            
+            // Map Dynamic Location logic
             setTimeout(() => {
                 navigator.geolocation.getCurrentPosition((p) => {
-                    initMap(p.coords.latitude, p.coords.longitude, "Current Point");
-                }, () => initMap(31.5204, 74.3587, "Lahore"));
-            }, 200);
+                    initMap(p.coords.latitude, p.coords.longitude, "CURRENT POSITION");
+                }, () => initMap(31.5204, 74.3587, "LAHORE CENTER"));
+            }, 500);
+        }
+
+        function focusMap(lat, lng, action, time) {
+            if (!state.map || !lat || !lng) return;
+            state.map.setView([lat, lng], 17);
+            window.L.marker([lat, lng]).addTo(state.map).bindPopup(`<p class="font-black text-[10px] uppercase text-slate-800 font-sans">${action}<br/><span class="text-green-700">${time}</span></p>`).openPopup();
+            window.scrollTo({ top: 150, behavior: 'smooth' });
+            notify(`Focusing Identity Point: ${time}`);
         }
 
         // --- STAFF HUB ---
@@ -508,27 +501,30 @@
             const isAdmin = state.user && state.user.role === 'admin';
             
             container.innerHTML = `
-                <div class="animate-fade-in space-y-6 font-sans text-left text-slate-800 font-sans font-sans">
-                    <div class="flex flex-col md:flex-row justify-between items-center gap-4 border-b pb-4 border-slate-100 font-sans text-left font-sans">
-                        <h2 class="text-xl font-black uppercase tracking-widest text-slate-800 font-sans font-sans font-sans font-sans font-sans">Staff Hub Matrix</h2>
+                <div class="animate-fade-in space-y-8 font-sans text-left text-slate-800 font-sans font-sans font-sans font-sans">
+                    <div class="flex flex-col md:flex-row justify-between items-center gap-4 border-b pb-6 border-slate-100 font-sans text-left font-sans font-sans font-sans font-sans">
+                        <h2 class="text-2xl font-black uppercase tracking-tighter text-slate-800 font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Staff Hub Matrix</h2>
                         <div class="flex gap-2">
-                             <Button onClick="downloadDirectorySample()" variant="secondary" class="bg-white border-2 px-6 py-2 rounded-xl font-black text-[10px] uppercase shadow-sm font-sans font-sans font-sans font-sans font-sans font-sans">Sample Tool</Button>
-                             <button onclick="toggleStaffForm()" class="bg-green-700 text-white px-6 py-2 rounded-xl font-black text-[10px] uppercase shadow-lg font-sans font-sans font-sans font-sans font-sans font-sans">Add Identity</button>
+                             <button onclick="downloadDirectorySample()" class="bg-white border-2 border-slate-100 px-6 py-2.5 rounded-xl font-black text-[10px] uppercase shadow-sm hover:border-slate-300 transition-all font-sans font-sans font-sans font-sans font-sans font-sans">Sample Data</button>
+                             <button onclick="toggleStaffForm()" class="bg-green-700 text-white px-8 py-2.5 rounded-xl font-black text-[10px] uppercase shadow-xl hover:bg-green-800 transition-all font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Add Identity</button>
                         </div>
                     </div>
-                    <div id="staff-form-area" class="font-sans text-left font-sans font-sans font-sans font-sans"></div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 font-sans">
+                    <div id="staff-form-area" class="font-sans text-left font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"></div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 font-sans">
                         ${state.employees.map(emp => `
-                            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4 hover:border-green-300 transition-all group text-left relative">
-                                <div class="h-12 w-12 bg-green-50 text-green-700 rounded-xl flex items-center justify-center font-black text-xl uppercase font-sans">${getInitial(emp.name)}</div>
-                                <div class="flex-1 overflow-hidden font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
-                                    <h4 class="font-black text-slate-800 uppercase truncate leading-none mb-1 font-sans text-sm">${emp.name}</h4>
-                                    <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest font-sans font-sans font-sans font-sans font-sans font-sans">${emp.id} • ${emp.role}</p>
-                                    <p class="text-[9px] font-black text-red-400 mt-2 font-sans font-sans font-sans font-sans">DEBT: Rs. ${cleanNumber(emp.loan_opening_balance).toLocaleString()}</p>
+                            <div class="bg-white p-10 rounded-[2.5rem] shadow-sm border-2 border-slate-50 flex flex-col items-center gap-6 hover:border-green-300 transition-all group text-center relative overflow-hidden">
+                                <div class="h-20 w-20 rounded-[2rem] bg-green-50 text-green-700 flex items-center justify-center font-black text-4xl shadow-inner font-sans">${getInitial(emp.name)}</div>
+                                <div class="w-full">
+                                    <h4 class="font-black text-slate-800 uppercase truncate text-base mb-1">${emp.name}</h4>
+                                    <p class="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em] font-sans font-sans font-sans font-sans">${emp.id} • ${emp.role}</p>
+                                    <div class="mt-6 pt-6 border-t border-slate-50 space-y-1">
+                                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Opening debt Matrix</p>
+                                        <p class="text-sm font-black text-red-500 font-mono">Rs. ${cleanNumber(emp.loan_opening_balance).toLocaleString()}</p>
+                                    </div>
                                 </div>
-                                <div class="opacity-0 group-hover:opacity-100 flex gap-1 transition-all">
-                                    <button onclick="editStaff('${emp.id}')" class="text-blue-500 p-2"><i data-lucide="pencil" size="18"></i></button>
-                                    <button onclick="deleteStaff('${emp.id}')" class="text-red-400 p-2"><i data-lucide="trash-2" size="18"></i></button>
+                                <div class="flex gap-2 justify-center opacity-0 group-hover:opacity-100 transition-all font-sans font-sans font-sans">
+                                    <button onclick="editStaff('${emp.id}')" class="bg-blue-50 text-blue-600 p-4 rounded-2xl hover:bg-blue-600 hover:text-white transition-all"><i data-lucide="pencil" size="18"></i></button>
+                                    <button onclick="deleteStaff('${emp.id}')" class="bg-red-50 text-red-600 p-4 rounded-2xl hover:bg-red-600 hover:text-white transition-all font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><i data-lucide="trash-2" size="18"></i></button>
                                 </div>
                             </div>`).join('')}
                     </div>
@@ -541,16 +537,17 @@
             if (!emp && area.innerHTML && !state.editingMemberId) { area.innerHTML = ''; return; }
             state.editingMemberId = emp ? emp.id : null;
             area.innerHTML = `
-                <div class="bg-white p-10 rounded-[2.5rem] border-2 border-green-100 shadow-2xl mb-10 animate-slide-up relative font-sans">
-                    <button onclick="toggleStaffForm()" class="absolute top-6 right-6 text-slate-300 hover:text-red-500 font-sans"><i data-lucide="x" size="32"></i></button>
-                    <form onsubmit="handleStaffSubmit(event)" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 font-sans font-sans font-sans font-sans">
-                        <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2">ID</label><input type="text" id="s-id" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50 uppercase" value="${emp ? emp.id : ''}" ${emp ? 'readonly' : 'required'} /></div>
-                        <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2">Name</label><input type="text" id="s-name" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50" value="${emp ? emp.name : ''}" required /></div>
-                        <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2">Email</label><input type="email" id="s-email" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50" value="${emp ? emp.email : ''}" required /></div>
-                        <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans font-sans">Key</label><input type="text" id="s-pass" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50" value="${emp ? emp.password : ''}" required /></div>
-                        <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans">Opening Loan</label><input type="number" id="s-loan-open" class="w-full p-4 rounded-xl border-2 font-bold bg-slate-50" value="${emp ? emp.loan_opening_balance : 0}" /></div>
-                        <div class="md:col-span-2 lg:col-span-4 flex justify-end gap-3 pt-6 border-t">
-                            <button type="submit" class="bg-green-700 text-white px-10 py-4 rounded-xl font-black uppercase text-xs shadow-lg font-sans">${emp ? 'Sync Changes' : 'Initialize identity'}</button>
+                <div class="bg-white p-12 rounded-[3rem] border-2 border-green-100 shadow-2xl mb-12 animate-slide-up relative font-sans">
+                    <button onclick="toggleStaffForm()" class="absolute top-8 right-8 text-slate-200 hover:text-red-500 transition-colors font-sans"><i data-lucide="x" size="32"></i></button>
+                    <h3 class="text-2xl font-black uppercase tracking-tight mb-8 text-slate-800">${emp ? 'Audit Identity Matrix' : 'Initialize New Identity'}</h3>
+                    <form onsubmit="handleStaffSubmit(event)" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 font-sans font-sans">
+                        <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2">ID</label><input type="text" id="s-id" class="w-full p-5 rounded-2xl border-2 font-bold bg-slate-50 uppercase focus:bg-white focus:border-green-600 outline-none" value="${emp ? emp.id : ''}" ${emp ? 'readonly' : 'required'} /></div>
+                        <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans font-sans">Full Name</label><input type="text" id="s-name" class="w-full p-5 rounded-2xl border-2 font-bold bg-slate-50 focus:bg-white focus:border-green-600 outline-none" value="${emp ? emp.name : ''}" required /></div>
+                        <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans font-sans">Email Hub</label><input type="email" id="s-email" class="w-full p-5 rounded-2xl border-2 font-bold bg-slate-50 focus:bg-white focus:border-green-600 outline-none" value="${emp ? emp.email : ''}" required /></div>
+                        <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2">System Key</label><input type="text" id="s-pass" class="w-full p-5 rounded-2xl border-2 font-bold bg-slate-50 focus:bg-white" value="${emp ? emp.password : ''}" required /></div>
+                        <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2">Opening Loan Matrix</label><input type="number" id="s-loan-open" class="w-full p-5 rounded-2xl border-2 font-bold bg-slate-50" value="${emp ? emp.loan_opening_balance : 0}" /></div>
+                        <div class="md:col-span-2 lg:col-span-4 flex justify-end gap-4 pt-8 border-t font-sans font-sans">
+                            <button type="submit" class="bg-green-700 text-white px-12 py-5 rounded-2xl font-black uppercase text-xs tracking-widest shadow-2xl hover:bg-green-800 transition-all font-sans font-sans">${emp ? 'Sync changes' : 'Initialize Matrix identity'}</button>
                         </div>
                     </form>
                 </div>`;
@@ -568,36 +565,18 @@
             const method = state.editingMemberId ? 'PUT' : 'POST';
             const url = state.editingMemberId ? `${API_BASE}/employees/${state.editingMemberId}` : `${API_BASE}/employees`;
             const res = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
-            if (res.ok) { notify("Matrix Sync Success."); await syncData(); renderDirectory(); } else notify("Sync Failure.");
+            if (res.ok) { notify("Matrix Hub Updated."); state.editingMemberId = null; await syncData(); renderDirectory(); } else notify("Matrix Sync Failure.");
         }
 
         async function deleteStaff(id) {
-            if(!confirm(`DANGER: Purge identity ${id} and all related logs?`)) return;
+            if(!confirm(`DANGER: Wipe identity ${id} and all related records?`)) return;
             const res = await fetch(`${API_BASE}/employees/${id}`, { method: 'DELETE' });
             if(res.ok) { notify("Identity Purged."); await syncData(); renderDirectory(); }
         }
 
         function downloadDirectorySample() {
             const sample = [{ "id": "EMP101", "name": "Staff Name", "email": "staff@example.com", "password": "pass", "loan_opening": 0 }];
-            exportToCSV(sample, "Identity_Sample.csv");
-        }
-
-        async function importDirectoryCSV(input) {
-            const file = input.files[0]; if(!file) return;
-            const reader = new FileReader();
-            reader.onload = async (e) => {
-                const text = e.target.result;
-                const rows = text.split('\n').slice(1);
-                notify("Matrix Bulk Sync...");
-                for(let row of rows) {
-                    const cols = row.split(',');
-                    if(cols.length < 2) continue;
-                    const payload = { id: cols[0].replace(/"/g, '').trim().toUpperCase(), name: cols[1].replace(/"/g, '').trim(), email: cols[2].replace(/"/g, '').trim(), password: cols[3].replace(/"/g, '').trim(), role: 'employee', loan_opening_balance: cleanNumber(cols[4]), leave_annual: 14, leave_casual: 10 };
-                    await fetch(`${API_BASE}/employees`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
-                }
-                notify("Matrix Synchronized."); await syncData(); renderDirectory();
-            };
-            reader.readAsText(file);
+            exportToCSV(sample, "Identity_Matrix_Sample.csv");
         }
 
         // --- LOANS HUB ---
@@ -608,69 +587,80 @@
             const currentBal = cleanNumber(targetUser.loan_opening_balance - targetUser.loan_deduction);
 
             container.innerHTML = `
-                <div class="animate-fade-in space-y-8 font-sans text-left text-slate-800">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10 font-sans">
-                        <div class="bg-white p-8 rounded-[2.5rem] border-2 shadow-sm text-left"><p class="text-[10px] font-black text-slate-400 uppercase">Opening Balance</p><p class="text-4xl font-black mt-2 font-mono">Rs. ${cleanNumber(targetUser.loan_opening_balance).toLocaleString()}</p></div>
-                        <div class="bg-red-50 p-8 rounded-[2.5rem] border-2 border-red-100 text-left"><p class="text-[10px] font-black text-red-400 uppercase">Outstanding matrix</p><p class="text-4xl font-black mt-2 font-mono text-red-600">Rs. ${currentBal.toLocaleString()}</p></div>
+                <div class="animate-fade-in space-y-10 font-sans text-left text-slate-800 font-sans">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10 font-sans font-sans">
+                        <div class="bg-white p-10 rounded-[2.5rem] border-2 border-slate-50 shadow-sm text-left"><p class="text-[10px] font-black text-slate-400 uppercase tracking-widest font-sans font-sans">Identity Opening Debt</p><p class="text-5xl font-black mt-4 font-mono text-slate-800">Rs. ${cleanNumber(targetUser.loan_opening_balance).toLocaleString()}</p></div>
+                        <div class="bg-red-50 p-10 rounded-[2.5rem] border-2 border-red-100 text-left font-sans font-sans"><p class="text-[10px] font-black text-red-400 uppercase tracking-widest font-sans font-sans font-sans">Remaining matrix balance</p><p class="text-5xl font-black mt-4 font-mono text-red-600">Rs. ${currentBal.toLocaleString()}</p></div>
                     </div>
 
-                    <div class="flex bg-slate-200 p-1.5 rounded-2xl max-w-sm mx-auto mb-10 shadow-inner font-sans font-sans">
-                        <button onclick="state.loanTab='apply'; renderLoans()" class="flex-1 py-2.5 text-[10px] font-black rounded-xl uppercase transition-all ${state.loanTab === 'apply' ? 'bg-white text-green-700 shadow-sm' : 'text-slate-500'} font-sans">Apply</button>
-                        <button onclick="state.loanTab='history'; renderLoans()" class="flex-1 py-2.5 text-[10px] font-black rounded-xl uppercase transition-all ${state.loanTab === 'history' ? 'bg-white text-green-700 shadow-sm' : 'text-slate-500'}">History</button>
-                        ${isAdmin ? `<button onclick="state.loanTab='oversight'; renderLoans()" class="flex-1 py-2.5 text-[10px] font-black rounded-xl uppercase transition-all ${state.loanTab === 'oversight' ? 'bg-white text-green-700 shadow-sm' : 'text-slate-500'}">Oversight</button>` : ''}
+                    <div class="flex bg-slate-200 p-2 rounded-[2rem] max-w-sm mx-auto mb-10 shadow-inner font-sans font-sans font-sans">
+                        <button onclick="state.loanTab='apply'; renderLoans()" class="flex-1 py-3 text-[10px] font-black rounded-2xl uppercase tracking-widest transition-all ${state.loanTab === 'apply' ? 'bg-white text-green-700 shadow-xl' : 'text-slate-500'} font-sans font-sans">Apply</button>
+                        <button onclick="state.loanTab='history'; renderLoans()" class="flex-1 py-3 text-[10px] font-black rounded-2xl uppercase tracking-widest transition-all ${state.loanTab === 'history' ? 'bg-white text-green-700 shadow-xl' : 'text-slate-500'} font-sans">History</button>
+                        ${isAdmin ? `<button onclick="state.loanTab='oversight'; renderLoans()" class="flex-1 py-3 text-[10px] font-black rounded-2xl uppercase tracking-widest transition-all ${state.loanTab === 'oversight' ? 'bg-white text-green-700 shadow-xl' : 'text-slate-500'} font-sans font-sans">Oversight</button>` : ''}
                     </div>
 
                     ${state.loanTab === 'oversight' ? `
-                        <div class="bg-white rounded-[2rem] border shadow-sm overflow-hidden font-sans">
-                            <div class="bg-slate-50 p-6 border-b flex justify-between items-center">
-                                <span class="font-black text-xs uppercase text-slate-500 tracking-widest font-sans">Loan Audit matrix oversight</span>
-                                <button onclick="exportToCSV(state.allLoans, 'Loans_Oversight.csv')" class="bg-slate-900 text-white px-6 py-2 rounded-xl font-black text-[10px] uppercase shadow-lg font-sans">Export Ledger</button>
+                        <div class="bg-white rounded-[2.5rem] border-2 border-slate-50 shadow-2xl overflow-hidden font-sans">
+                            <div class="bg-slate-50 p-8 border-b flex justify-between items-center">
+                                <span class="font-black text-xs uppercase text-slate-500 tracking-widest">Loan audit matrix oversight hub</span>
+                                <button onclick="exportLoanOversightCSV()" class="bg-slate-900 text-white px-8 py-2.5 rounded-xl font-black text-[10px] uppercase shadow-lg font-sans font-sans">Export Oversight</button>
                             </div>
                             <div class="overflow-x-auto"><table class="w-full text-left text-xs font-bold font-sans">
-                                <thead class="bg-slate-50 border-b font-black text-slate-400 uppercase"><tr><th class="p-5 font-sans">Identity</th><th class="p-5 font-sans">Date</th><th class="p-5 text-right font-sans">Amount</th><th class="p-5 font-sans">Status</th><th class="p-5 text-center">Action</th></tr></thead>
-                                <tbody class="divide-y">
+                                <thead class="bg-slate-50 border-b font-black uppercase text-slate-400"><tr><th class="p-6 font-sans">Identity</th><th class="p-6 font-sans">Matrix Date</th><th class="p-6 text-right font-sans">Amount</th><th class="p-6 font-sans font-sans font-sans">Status</th><th class="p-6 text-center">Audit Action</th></tr></thead>
+                                <tbody class="divide-y divide-slate-50">
                                     ${(state.allLoans || []).map(ln => `
-                                        <tr class="hover:bg-slate-50 font-sans font-sans">
-                                            <td class="p-5 uppercase font-sans">${ln.name} (${ln.employee_id})</td>
-                                            <td class="p-5 font-mono text-slate-400 font-sans">${formatDate(ln.applied_at)}</td>
-                                            <td class="p-5 text-right font-mono font-black font-sans">Rs. ${cleanNumber(ln.amount).toLocaleString()}</td>
-                                            <td class="p-5 font-sans font-sans"><Badge status="${ln.status}" /></td>
-                                            <td class="p-5 flex justify-center gap-2">
-                                                <button onclick="approveLoan('${ln.id}', 'Approved')" class="bg-green-700 text-white px-3 py-1 rounded text-[9px] font-black uppercase">Approve</button>
-                                                <button onclick="approveLoan('${ln.id}', 'Rejected')" class="bg-red-600 text-white px-3 py-1 rounded text-[9px] font-black uppercase">Reject</button>
+                                        <tr class="hover:bg-slate-50 transition-colors">
+                                            <td class="p-6 font-black uppercase font-sans">${ln.name} <span class="text-slate-400 ml-1 font-mono text-[9px]">(${ln.employee_id})</span></td>
+                                            <td class="p-6 font-mono text-slate-400 uppercase font-sans">${formatDate(ln.applied_at)}</td>
+                                            <td class="p-6 text-right font-mono font-black text-slate-900 text-sm font-sans font-sans">Rs. ${cleanNumber(ln.amount).toLocaleString()}</td>
+                                            <td class="p-6 font-sans font-sans"><span class="text-[10px] uppercase font-black px-3 py-1 rounded-lg ${ln.status==='Approved'?'bg-green-100 text-green-700':'bg-amber-100 text-amber-700'}">${ln.status}</span></td>
+                                            <td class="p-6 flex justify-center gap-3 font-sans font-sans font-sans font-sans">
+                                                <button onclick="approveLoan('${ln.id}', 'Approved')" class="bg-green-700 text-white px-5 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg">Approve</button>
+                                                <button onclick="approveLoan('${ln.id}', 'Rejected')" class="bg-red-600 text-white px-5 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg">Reject</button>
                                             </td>
                                         </tr>`).join('')}
                                 </tbody>
                             </table></div>
                         </div>` : (state.loanTab === 'apply' ? `
-                        <div class="bg-white p-10 rounded-[2.5rem] max-w-xl mx-auto border-2 shadow-2xl animate-slide-up font-sans font-sans font-sans font-sans">
-                            <h3 class="font-black text-2xl mb-8 uppercase tracking-tight text-center font-sans font-sans font-sans font-sans">Identity matrix Loan Request</h3>
-                            <form id="loan-form" onsubmit="handleLoanApply(event)" class="space-y-6">
-                                <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2">Amount (Rs.) Matrix</label><input type="number" id="ln-amt" class="w-full p-4 rounded-xl border-2 font-black bg-slate-50 focus:bg-white transition-all" placeholder="0.00" required /></div>
-                                <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans font-sans font-sans font-sans font-sans font-sans">Reason Matrix</label><textarea id="ln-rsn" class="w-full p-4 rounded-xl border-2 font-bold h-24 bg-slate-50 focus:bg-white transition-all font-sans font-sans font-sans" placeholder="..." required></textarea></div>
-                                <button type="submit" class="w-full py-5 bg-green-700 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl font-sans font-sans font-sans">Submit Identity Request</button>
+                        <div class="bg-white p-12 rounded-[3rem] max-w-2xl mx-auto border-2 border-slate-50 shadow-2xl animate-slide-up relative overflow-hidden font-sans">
+                            <div class="absolute top-0 left-0 w-2 h-full bg-green-700"></div>
+                            <h3 class="font-black text-3xl mb-10 uppercase tracking-tight text-slate-800 font-sans font-sans font-sans font-sans">Initialize Matrix Loan Request</h3>
+                            <form onsubmit="handleLoanApply(event)" class="space-y-8">
+                                <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2 tracking-widest">Requested Matrix Amount (Rs.)</label><input type="number" id="ln-amt" class="w-full p-5 rounded-[1.25rem] border-2 font-black bg-slate-50 focus:bg-white text-2xl transition-all" placeholder="0.00" required /></div>
+                                <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans font-sans">Identity Purpose</label><textarea id="ln-rsn" class="w-full p-5 rounded-[1.25rem] border-2 font-bold h-32 bg-slate-50 focus:bg-white transition-all text-base" placeholder="Describe the matrix request..." required></textarea></div>
+                                <button type="submit" class="w-full py-6 bg-green-700 text-white rounded-[1.5rem] font-black uppercase tracking-widest shadow-green-200 shadow-2xl hover:bg-green-800 transition-all font-sans font-sans font-sans">Submit Identity Request</button>
                             </form>
                         </div>` : `
-                        <div class="space-y-4 max-w-xl mx-auto font-sans">
+                        <div class="space-y-6 max-w-3xl mx-auto font-sans font-sans font-sans font-sans">
                             ${(state.userLoans || []).map(ln => `
-                                <div class="bg-white p-6 rounded-2xl border-2 flex justify-between items-center font-sans">
-                                    <div><h4 class="font-black uppercase tracking-tighter font-sans">Loan Matrix: Rs. ${cleanNumber(ln.amount).toLocaleString()}</h4><p class="text-[10px] text-slate-400 font-bold uppercase mt-1">Matrix Date: ${formatDate(ln.applied_at)}</p></div>
-                                    <span class="text-[10px] uppercase font-black px-2 py-1 rounded ${ln.status === 'Approved' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'} font-sans font-sans font-sans">${ln.status}</span>
+                                <div class="bg-white p-8 rounded-[2.5rem] border-2 border-slate-50 shadow-sm flex justify-between items-center hover:border-green-200 transition-all font-sans">
+                                    <div class="flex items-center gap-6">
+                                        <div class="bg-slate-50 p-5 rounded-2xl text-slate-400"><i data-lucide="wallet"></i></div>
+                                        <div><h4 class="font-black uppercase text-slate-800 text-lg leading-tight font-sans">Loan: Rs. ${cleanNumber(ln.amount).toLocaleString()}</h4><p class="text-[10px] text-slate-400 font-bold uppercase mt-1 tracking-widest font-sans">Date Applied: ${formatDate(ln.applied_at)}</p></div>
+                                    </div>
+                                    <span class="text-[10px] uppercase font-black px-4 py-1.5 rounded-xl border ${ln.status==='Approved'?'bg-green-50 text-green-700 border-green-100':'bg-amber-50 text-amber-700 border-amber-100'} font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">${ln.status}</span>
                                 </div>`).join('')}
+                                ${state.userLoans.length===0 ? '<div class="py-20 text-center font-black text-slate-200 uppercase text-xs tracking-widest">No History recorded</div>' : ''}
                         </div>`)}
                 </div>`;
+            lucide.createIcons();
         }
 
         async function handleLoanApply(e) {
             e.preventDefault();
             const payload = { employeeId: state.user.id, amount: document.getElementById('ln-amt').value, reason: document.getElementById('ln-rsn').value };
             const res = await fetch(`${API_BASE}/loans`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
-            if(res.ok) { notify("Request dispatched."); state.loanTab = 'history'; await syncData(); renderLoans(); }
+            if(res.ok) { notify("Identity Matrix dispatched to oversight."); state.loanTab = 'history'; await syncData(); renderLoans(); }
         }
 
         async function approveLoan(id, status) {
             const res = await fetch(`${API_BASE}/admin/loans/${id}`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ status }) });
-            if(res.ok) { notify("Matrix Sync Success."); await syncData(); renderLoans(); }
+            if(res.ok) { notify("Loan Matrix Updated."); await syncData(); renderLoans(); }
+        }
+
+        async function exportLoanOversightCSV() {
+            const data = state.allLoans.map(l => ({ ID: l.employee_id, Name: l.name, Date: formatDate(l.applied_at), Amount: l.amount, Reason: l.reason, Status: l.status }));
+            exportToCSV(data, "LSAFHR_Loan_Oversight.csv");
         }
 
         // --- LEAVES HUB ---
@@ -680,61 +670,81 @@
             const targetUser = state.employees.find(e => e.id === state.user.id) || state.user;
             
             container.innerHTML = `
-                <div class="animate-fade-in space-y-8 font-sans text-left text-slate-800">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
-                        <div class="bg-green-700 text-white shadow-xl p-8 rounded-[2.5rem] text-left"><p class="text-[10px] font-black uppercase opacity-60">Annual balance Matrix</p><p class="text-4xl font-black mt-2 font-mono">${targetUser.leave_annual || 0} Days</p></div>
-                        <div class="bg-white border-2 shadow-sm p-8 rounded-[2.5rem] text-left"><p class="text-[10px] font-black text-slate-400 uppercase font-sans font-sans">WOP Matrix Balance</p><p class="text-4xl font-black mt-2 font-mono text-slate-800">${targetUser.leave_casual || 0} Days</p></div>
+                <div class="animate-fade-in space-y-10 font-sans text-left text-slate-800 font-sans font-sans font-sans">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10 font-sans">
+                        <div class="bg-green-700 text-white shadow-2xl p-10 rounded-[3rem] text-left relative overflow-hidden font-sans">
+                            <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
+                            <p class="text-[10px] font-black uppercase opacity-60 font-sans">Annual balance Matrix</p>
+                            <p class="text-6xl font-black mt-4 font-mono font-sans font-sans font-sans font-sans font-sans">${targetUser.leave_annual || 0} <span class="text-lg opacity-40 uppercase">Days</span></p>
+                        </div>
+                        <div class="bg-white border-2 border-slate-50 shadow-sm p-10 rounded-[3rem] text-left font-sans font-sans"><p class="text-[10px] font-black text-slate-400 uppercase font-sans font-sans">WOP Matrix Balance</p><p class="text-6xl font-black mt-4 font-mono text-slate-800 font-sans font-sans font-sans font-sans font-sans font-sans font-sans">${targetUser.leave_casual || 0} <span class="text-lg text-slate-200 uppercase font-sans">Days</span></p></div>
                     </div>
 
-                    <div class="flex bg-slate-200 p-1.5 rounded-2xl max-w-sm mx-auto mb-10 shadow-inner font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
-                        <button onclick="state.leaveTab='apply'; renderLeaves()" class="flex-1 py-2.5 text-[10px] font-black rounded-xl uppercase transition-all ${state.leaveTab === 'apply' ? 'bg-white text-green-700 shadow-sm' : 'text-slate-500'}">Apply</button>
-                        <button onclick="state.leaveTab='history'; renderLeaves()" class="flex-1 py-2.5 text-[10px] font-black rounded-xl uppercase transition-all ${state.leaveTab === 'history' ? 'bg-white text-green-700 shadow-sm' : 'text-slate-500'}">History</button>
-                        ${isAdmin ? `<button onclick="state.leaveTab='oversight'; renderLeaves()" class="flex-1 py-2.5 text-[10px] font-black rounded-xl uppercase transition-all ${state.leaveTab === 'oversight' ? 'bg-white text-green-700 shadow-sm' : 'text-slate-500'}">Oversight</button>` : ''}
+                    <div class="flex bg-slate-200 p-2 rounded-[2rem] max-w-sm mx-auto mb-10 shadow-inner font-sans font-sans font-sans">
+                        <button onclick="state.leaveTab='apply'; renderLeaves()" class="flex-1 py-3 text-[10px] font-black rounded-2xl uppercase transition-all ${state.leaveTab === 'apply' ? 'bg-white text-green-700 shadow-xl' : 'text-slate-500'} font-sans font-sans">Apply</button>
+                        <button onclick="state.leaveTab='history'; renderLeaves()" class="flex-1 py-3 text-[10px] font-black rounded-2xl uppercase transition-all ${state.leaveTab === 'history' ? 'bg-white text-green-700 shadow-xl' : 'text-slate-500'} font-sans">History</button>
+                        ${isAdmin ? `<button onclick="state.leaveTab='oversight'; renderLeaves()" class="flex-1 py-3 text-[10px] font-black rounded-2xl uppercase transition-all ${state.leaveTab === 'oversight' ? 'bg-white text-green-700 shadow-xl' : 'text-slate-500'} font-sans font-sans font-sans">Oversight</button>` : ''}
                     </div>
 
                     ${state.leaveTab === 'oversight' ? `
-                        <div class="bg-white rounded-[2rem] border shadow-sm overflow-hidden font-sans font-sans font-sans font-sans font-sans">
-                            <div class="bg-slate-50 p-6 border-b flex justify-between items-center font-sans">
-                                <span class="font-black text-xs uppercase text-slate-500 tracking-widest font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Leaves Audit matrix oversight</span>
-                                <button onclick="exportToCSV(state.allLeaves, 'Leaves_Oversight.csv')" class="bg-slate-900 text-white px-6 py-2 rounded-xl font-black text-[10px] uppercase shadow-lg">Export Ledger</button>
+                        <div class="bg-white rounded-[2.5rem] border-2 border-slate-50 shadow-2xl overflow-hidden font-sans font-sans font-sans">
+                            <div class="bg-slate-50 p-8 border-b flex justify-between items-center font-sans font-sans font-sans">
+                                <span class="font-black text-xs uppercase text-slate-600 tracking-widest font-sans font-sans">Leaves audit oversight hub</span>
+                                <button onclick="exportLeaveOversightCSV()" class="bg-slate-900 text-white px-8 py-2.5 rounded-xl font-black text-[10px] uppercase shadow-lg">Export Ledger</button>
                             </div>
-                            <div class="overflow-x-auto"><table class="w-full text-left text-[10px] font-bold">
-                                <thead class="bg-slate-50 border-b font-black text-slate-400 uppercase tracking-widest font-sans font-sans font-sans font-sans"><tr><th class="p-5 font-sans font-sans">Identity</th><th class="p-5 font-sans font-sans">Rem. Bal (Ann/WOP)</th><th class="p-5 font-sans font-sans">Type</th><th class="p-5 font-sans font-sans font-sans">Status</th><th class="p-5 text-center">Action</th></tr></thead>
-                                <tbody class="divide-y font-bold font-sans font-sans font-sans">
+                            <div class="overflow-x-auto"><table class="w-full text-left text-[11px] font-bold">
+                                <thead class="bg-slate-50 border-b font-black text-slate-400 uppercase tracking-widest"><tr><th class="p-6 font-sans">Staff Identity</th><th class="p-6 font-sans">Rem. Bal (Ann/WOP)</th><th class="p-6 font-sans">Matrix Type</th><th class="p-6 text-center font-sans">Days</th><th class="p-6 font-sans font-sans">Status</th><th class="p-6 text-center font-sans">Audit Action</th></tr></thead>
+                                <tbody class="divide-y divide-slate-100">
                                     ${(state.allLeaves || []).map(lv => {
                                         const r = state.employees.find(e => e.id === lv.employee_id) || {};
-                                        return `<tr><td class="p-5 uppercase">${lv.name} (${lv.employee_id})</td><td class="p-5 font-mono text-green-700">${r.leave_annual || 0} Ann / ${r.leave_casual || 0} WOP</td><td class="p-5 uppercase font-sans">${lv.leave_type} (${lv.days}d)</td><td class="p-5 font-sans"><span class="text-[10px] uppercase font-black px-2 py-1 rounded ${lv.status === 'Approved' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}">${lv.status}</span></td><td class="p-5 flex justify-center gap-2 font-sans font-sans"><button onclick="approveLeave('${lv.id}', 'Approved')" class="bg-green-700 text-white px-3 py-1 rounded text-[9px] font-black uppercase">Approve</button><button onclick="approveLeave('${lv.id}', 'Rejected')" class="bg-red-600 text-white px-3 py-1 rounded text-[9px] font-black uppercase">Reject</button></td></tr>`;
+                                        return `<tr class="hover:bg-slate-50 transition-colors">
+                                            <td class="p-6 font-black uppercase text-slate-800">${lv.name} <span class="text-slate-400 font-mono text-[9px]">(${lv.employee_id})</span></td>
+                                            <td class="p-6 font-mono text-green-700 font-black text-[10px]">${r.leave_annual || 0} ANN / ${r.leave_casual || 0} WOP</td>
+                                            <td class="p-6 uppercase font-sans font-sans font-sans text-slate-500">${lv.leave_type}</td>
+                                            <td class="p-6 text-center font-black">${lv.days}</td>
+                                            <td class="p-6 font-sans"><span class="text-[10px] uppercase font-black px-3 py-1 rounded-lg ${lv.status==='Approved'?'bg-green-100 text-green-700':'bg-amber-100 text-amber-700'}">${lv.status}</span></td>
+                                            <td class="p-6 flex justify-center gap-3">
+                                                <button onclick="approveLeave('${lv.id}', 'Approved')" class="bg-green-700 text-white px-5 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg">Approve</button>
+                                                <button onclick="approveLeave('${lv.id}', 'Rejected')" class="bg-red-600 text-white px-5 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg">Reject</button>
+                                            </td>
+                                        </tr>`;
                                     }).join('')}
                                 </tbody>
                             </table></div>
                         </div>` : (state.leaveTab === 'apply' ? `
-                        <div class="bg-white p-10 rounded-[2.5rem] max-w-xl mx-auto border-2 shadow-2xl animate-slide-up font-sans">
-                            <h3 class="font-black text-2xl mb-8 uppercase tracking-tight text-center font-sans font-sans font-sans font-sans font-sans font-sans">Leave Matrix Request</h3>
-                            <form onsubmit="handleLeaveApply(event)" class="space-y-6">
-                                <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans font-sans">Type Matrix</label><select id="lv-type" class="w-full p-4 rounded-xl border-2 font-black bg-slate-50 outline-none focus:bg-white font-sans font-sans font-sans font-sans"><option>Annual Leave</option><option>WOP (Without Pay)</option><option>Sick Leave</option></select></div>
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans font-sans font-sans font-sans">Start Matrix</label><input type="date" id="lv-date" class="w-full p-4 rounded-xl border-2 font-black bg-slate-50 focus:bg-white" required /></div>
-                                    <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans font-sans font-sans font-sans">Qty Matrix (Days)</label><input type="number" id="lv-days" class="w-full p-4 rounded-xl border-2 font-black bg-slate-50 focus:bg-white" required /></div>
+                        <div class="bg-white p-12 rounded-[3rem] max-w-2xl mx-auto border-2 border-slate-50 shadow-2xl animate-slide-up relative overflow-hidden font-sans font-sans">
+                            <div class="absolute top-0 left-0 w-2 h-full bg-green-700"></div>
+                            <h3 class="font-black text-3xl mb-10 uppercase tracking-tight text-slate-800 font-sans font-sans font-sans font-sans font-sans font-sans">Leave Matrix Application</h3>
+                            <form onsubmit="handleLeaveApply(event)" class="space-y-8">
+                                <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans font-sans font-sans font-sans">Leave Type Matrix</label><select id="lv-type" class="w-full p-5 rounded-[1.25rem] border-2 font-black bg-slate-50 outline-none focus:bg-white focus:border-green-600 transition-all"><option>Annual Leave</option><option>WOP (Without Pay)</option><option>Sick Leave</option></select></div>
+                                <div class="grid grid-cols-2 gap-6">
+                                    <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans font-sans font-sans font-sans font-sans font-sans">Start Matrix</label><input type="date" id="lv-date" class="w-full p-5 rounded-[1.25rem] border-2 font-black bg-slate-50 outline-none focus:bg-white" required /></div>
+                                    <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Matrix Qty (Days)</label><input type="number" id="lv-days" class="w-full p-5 rounded-[1.25rem] border-2 font-black bg-slate-50 outline-none focus:bg-white" required /></div>
                                 </div>
-                                <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans font-sans">Reason Matrix</label><textarea id="lv-rsn" class="w-full p-4 rounded-xl border-2 font-bold h-24 bg-slate-50 focus:bg-white" required></textarea></div>
-                                <button type="submit" class="w-full py-5 bg-green-700 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl font-sans font-sans font-sans font-sans font-sans font-sans">Transmit application</button>
+                                <div><label class="text-[10px] font-black uppercase text-slate-400 ml-2 font-sans font-sans font-sans font-sans font-sans">Reason Matrix</label><textarea id="lv-rsn" class="w-full p-5 rounded-[1.25rem] border-2 font-bold h-32 bg-slate-50 outline-none focus:border-green-600 focus:bg-white transition-all text-base" required></textarea></div>
+                                <button type="submit" class="w-full py-6 bg-green-700 text-white rounded-[1.5rem] font-black uppercase tracking-widest shadow-green-200 shadow-2xl hover:bg-green-800 transition-all font-sans font-sans font-sans font-sans font-sans font-sans">Transmit Identity Application</button>
                             </form>
                         </div>` : `
-                        <div class="space-y-4 max-w-xl mx-auto font-sans font-sans font-sans font-sans font-sans">
+                        <div class="space-y-6 max-w-3xl mx-auto font-sans font-sans font-sans font-sans font-sans">
                             ${(state.userLeaves || []).map(lv => `
-                                <div class="bg-white p-6 rounded-2xl border-2 flex justify-between items-center font-sans">
-                                    <div><h4 class="font-black uppercase">${lv.leave_type}</h4><p class="text-[10px] text-slate-400 font-bold uppercase mt-1">Matrix Applied: ${formatDate(lv.start_date)} • ${lv.days} Days</p></div>
-                                    <span class="text-[10px] uppercase font-black px-2 py-1 rounded ${lv.status === 'Approved' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'} font-sans font-sans font-sans font-sans font-sans">${lv.status}</span>
+                                <div class="bg-white p-8 rounded-[2.5rem] border-2 border-slate-50 shadow-sm flex justify-between items-center hover:border-green-200 transition-all font-sans">
+                                    <div class="flex items-center gap-6 font-sans">
+                                        <div class="bg-slate-50 p-5 rounded-2xl text-slate-400"><i data-lucide="calendar"></i></div>
+                                        <div><h4 class="font-black uppercase text-slate-800 text-lg leading-tight font-sans font-sans">${lv.leave_type}</h4><p class="text-[10px] text-slate-400 font-bold uppercase mt-1 tracking-widest font-sans font-sans font-sans font-sans">Matrix Applied: ${formatDate(lv.start_date)} • ${lv.days} Days</p></div>
+                                    </div>
+                                    <span class="text-[10px] uppercase font-black px-4 py-1.5 rounded-xl border ${lv.status==='Approved'?'bg-green-50 text-green-700 border-green-100':'bg-amber-50 text-amber-700 border-amber-100'} font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">${lv.status}</span>
                                 </div>`).join('')}
+                                ${state.userLeaves.length===0 ? '<div class="py-20 text-center font-black text-slate-200 uppercase text-xs tracking-widest">No matrix history recorded</div>' : ''}
                         </div>`)}
                 </div>`;
+            lucide.createIcons();
         }
 
         async function handleLeaveApply(e) {
             e.preventDefault();
             const payload = { employeeId: state.user.id, type: document.getElementById('lv-type').value, startDate: document.getElementById('lv-date').value, days: document.getElementById('lv-days').value, reason: document.getElementById('lv-rsn').value };
             const res = await fetch(`${API_BASE}/leaves`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
-            if(res.ok) { notify("Request Logged."); state.leaveTab = 'history'; await syncData(); renderLeaves(); }
+            if(res.ok) { notify("Leave request initialized."); state.leaveTab = 'history'; await syncData(); renderLeaves(); }
         }
 
         async function approveLeave(id, status) {
@@ -742,30 +752,35 @@
             if(res.ok) { notify("Matrix hub synchronized."); await syncData(); renderLeaves(); }
         }
 
+        async function exportLeaveOversightCSV() {
+            const data = state.allLeaves.map(l => ({ ID: l.employee_id, Name: l.name, Type: l.leave_type, Days: l.days, Status: l.status }));
+            exportToCSV(data, "LSAFHR_Leave_Oversight.csv");
+        }
+
         // --- DISCUSSION BOARD ---
         function renderDiscussion() {
             const container = document.getElementById('view-container');
             container.innerHTML = `
-                <div class="animate-fade-in space-y-8 font-sans text-left max-w-4xl mx-auto">
-                    <div class="border-b pb-4 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><h2 class="text-2xl font-black uppercase tracking-tighter">LSAFHR Matrix Board</h2></div>
-                    <div class="bg-slate-900 p-8 rounded-[2.5rem] shadow-2xl border-none relative font-sans font-sans font-sans font-sans font-sans">
-                        <div class="absolute top-4 right-8 flex items-center gap-2"><div class="h-2 w-2 rounded-full bg-green-500 animate-pulse"></div><span class="text-[9px] font-black text-slate-500 uppercase tracking-widest font-sans font-sans font-sans font-sans font-sans">Live Matrix Broadcast</span></div>
-                        <form onsubmit="broadcastMsg(event)" class="flex gap-4 mt-4">
-                            <input type="text" id="disc-msg" placeholder="Initialize matrix broadcast message..." class="flex-1 bg-white/5 border-2 border-white/10 rounded-2xl p-5 font-bold text-white text-base outline-none focus:bg-white/10 focus:border-green-600 transition-all font-sans font-sans font-sans font-sans font-sans font-sans" required />
-                            <button type="submit" class="bg-green-600 hover:bg-green-500 p-5 rounded-2xl transition-all shadow-green-900 shadow-xl text-white font-sans font-sans font-sans font-sans font-sans"><i data-lucide="send" size="24"></i></button>
+                <div class="animate-fade-in space-y-10 font-sans text-left max-w-5xl mx-auto font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
+                    <div class="border-b-2 pb-6 border-slate-100 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><h2 class="text-4xl font-black uppercase tracking-tighter text-slate-800">Identity Matrix Board</h2></div>
+                    <div class="bg-slate-900 p-10 rounded-[3rem] shadow-2xl border-none relative font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
+                        <div class="absolute top-6 right-10 flex items-center gap-2"><div class="h-3 w-3 rounded-full bg-green-500 animate-pulse"></div><span class="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] font-sans font-sans font-sans font-sans">Live Matrix Broadcast Feed</span></div>
+                        <form onsubmit="broadcastMsg(event)" class="flex gap-6 mt-6">
+                            <input type="text" id="disc-msg" placeholder="Initialize matrix broadcast message..." class="flex-1 bg-white/5 border-2 border-white/10 rounded-2xl p-6 font-bold text-white text-lg outline-none focus:bg-white/10 focus:border-green-600 transition-all placeholder:text-slate-600 font-sans font-sans font-sans font-sans font-sans font-sans" required />
+                            <button type="submit" class="bg-green-600 hover:bg-green-500 p-6 rounded-2xl transition-all shadow-green-900 shadow-xl text-white font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><i data-lucide="send" size="32"></i></button>
                         </form>
                     </div>
-                    <div class="space-y-6">
+                    <div class="grid grid-cols-1 gap-8 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
                         ${state.discussions.map(d => `
-                            <div class="bg-white p-8 rounded-[2.5rem] border shadow-sm hover:border-green-100 transition-all group font-sans font-sans font-sans font-sans font-sans font-sans">
-                                <div class="flex justify-between items-center mb-4">
-                                    <div class="flex items-center gap-3">
-                                        <div class="h-10 w-10 rounded-xl bg-slate-50 flex items-center justify-center font-black text-slate-400 group-hover:bg-green-50 group-hover:text-green-600 transition-all font-sans font-sans font-sans font-sans font-sans">${getInitial(d.author_name)}</div>
-                                        <span class="font-black text-slate-800 uppercase text-xs font-sans font-sans font-sans font-sans font-sans">${d.author_name}</span>
+                            <div class="bg-white p-10 rounded-[2.5rem] border-2 border-slate-50 shadow-sm hover:border-green-100 transition-all group font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
+                                <div class="flex justify-between items-center mb-6 font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
+                                    <div class="flex items-center gap-4 font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
+                                        <div class="h-12 w-12 rounded-xl bg-slate-50 flex items-center justify-center font-black text-slate-400 group-hover:bg-green-50 group-hover:text-green-600 transition-all font-sans font-sans font-sans font-sans font-sans font-sans font-sans">${getInitial(d.author_name)}</div>
+                                        <span class="font-black text-slate-800 uppercase text-sm font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">${d.author_name}</span>
                                     </div>
-                                    <span class="text-[10px] font-bold text-slate-400 uppercase font-sans font-sans font-sans font-sans font-sans">${formatDate(d.created_at)}</span>
+                                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">${formatDate(d.created_at)}</span>
                                 </div>
-                                <p class="text-slate-600 font-bold leading-relaxed text-base font-sans font-sans font-sans font-sans font-sans font-sans">${d.message}</p>
+                                <p class="text-slate-600 font-bold leading-relaxed text-lg font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">${d.message}</p>
                             </div>`).join('')}
                     </div>
                 </div>`;
@@ -776,7 +791,7 @@
             e.preventDefault();
             const msg = document.getElementById('disc-msg').value;
             const res = await fetch(`${API_BASE}/discussions`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ employee_id: state.user.id, author_name: state.user.name, message: msg }) });
-            if(res.ok) { document.getElementById('disc-msg').value = ''; await syncData(); renderDiscussion(); notify("Identity matrix broadcast dispatched."); }
+            if(res.ok) { document.getElementById('disc-msg').value = ''; await syncData(); renderDiscussion(); notify("Broadcast Matrix Updated."); }
         }
 
         // --- CORE HANDLERS ---
@@ -806,7 +821,7 @@
 
         async function exportAttendanceCSV(isAdmin) {
             const data = state.attendance.map(l => ({ ID: l.employee_id, Date: l.date_str, Time: l.time_str, Action: l.type, Lat: l.latitude, Lng: l.longitude }));
-            exportToCSV(data, "LSAF_Attendance_Report.csv");
+            exportToCSV(data, "LSAF_Attendance_Matrix_Report.csv");
         }
 
         async function togglePublish(posted) {
@@ -816,11 +831,11 @@
         }
 
         async function wipeDateAttendance(date) {
-            if(!confirm(`DANGER: Purge logs for ${date}?`)) return;
+            if(!confirm(`DANGER: Purge matrix logs for ${date}?`)) return;
             const targetId = (state.user.role === 'admin' && state.selectedAdminEmployeeId) ? state.selectedAdminEmployeeId : state.user.id;
             const logs = state.attendance.filter(l => l.date_str === date && l.employee_id === targetId);
             for(let l of logs) { await fetch(`${API_BASE}/attendance-entry/${l.id}`, { method: 'DELETE' }); }
-            notify("Identity logs purged."); await syncData(); renderAttendance();
+            notify("Identity logs purged from Matrix."); await syncData(); renderAttendance();
         }
 
         document.getElementById('login-form').addEventListener('submit', async (e) => {
@@ -832,8 +847,8 @@
                 const list = await res.json();
                 const found = list.find(e => String(e.id).toUpperCase() === String(id).toUpperCase() && String(e.password) === String(pass));
                 if (found) { state.user = found; localStorage.setItem('hr_user', JSON.stringify(found)); await syncData(); showApp(); }
-                else alert("Matrix Access Denied.");
-            } catch(e) { alert("Matrix Offline. Port 5050?"); }
+                else alert("Identity Matrix Access Denied.");
+            } catch(e) { alert("Matrix Offline. Check Port 5050."); }
         });
 
         window.onload = init;
