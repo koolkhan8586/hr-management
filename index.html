@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LSAFHR Management System - v10.3.0</title>
+    <title>LSAFHR Management System - v10.4.1</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
@@ -22,12 +22,14 @@
             background-color: #f8fafc;
         }
 
+        /* Fluid and Responsive Animations */
         .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         
         .animate-slide-up { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
+        /* Custom Scrollbar */
         .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
@@ -90,13 +92,13 @@
         const API_BASE = '/api'; 
 
         const NAV_ITEMS = [
-            { id: 'dashboard', label: 'Dashboard', icon: Home, admin: false },
-            { id: 'attendance', label: 'Attendance', icon: Clock, admin: false },
-            { id: 'payroll', label: 'Salary Hub', icon: DollarSign, admin: false },
-            { id: 'loans', label: 'Loans Hub', icon: Wallet, admin: false },
-            { id: 'leaves', label: 'Leaves Hub', icon: Calendar, admin: false },
-            { id: 'discussion', label: 'Matrix Board', icon: MessageSquare, admin: false },
-            { id: 'directory', label: 'Staff Hub', icon: Users, admin: true }
+            { id: 'dashboard', label: 'Dashboard', icon: 'home', admin: false },
+            { id: 'attendance', label: 'Attendance', icon: 'clock', admin: false },
+            { id: 'payroll', label: 'Salary Hub', icon: 'dollar-sign', admin: false },
+            { id: 'loans', label: 'Loans Hub', icon: 'wallet', admin: false },
+            { id: 'leaves', label: 'Leaves Hub', icon: 'calendar', admin: false },
+            { id: 'discussion', label: 'Matrix Board', icon: 'message-square', admin: false },
+            { id: 'directory', label: 'Staff Hub', icon: 'users', admin: true }
         ];
 
         /**
@@ -155,28 +157,31 @@
             return { netPaid: add - sub };
         };
 
-        const exportToCSV = (data, filename) => {
-            if (!data || !data.length) return;
-            const headers = Object.keys(data[0]).join(',');
-            const rows = data.map(row => Object.values(row).map(val => '"' + String(val || '').replace(/"/g, '""') + '"').join(','));
-            const csvContent = "data:text/csv;charset=utf-8," + [headers, ...rows].join('\n');
-            const encodedUri = encodeURI(csvContent);
-            const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", filename);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        };
-
         /**
          * --- UI COMPONENTS ---
          */
+        const LucideIcon = ({ name, size = 18, className = "" }) => {
+            const ref = useRef(null);
+            useEffect(() => {
+                if (ref.current) {
+                    ref.current.innerHTML = '';
+                    const icon = lucide.icons[name];
+                    if (icon) {
+                        lucide.createIcons({
+                            icons: { [name]: icon },
+                            attrs: { strokeWidth: 2, width: size, height: size, class: className }
+                        });
+                    }
+                }
+            }, [name, size, className]);
+            return <span ref={ref} className="inline-flex items-center justify-center"></span>;
+        };
+
         const Card = ({ children, className = "" }) => (
             <div className={"bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm transition-all hover:shadow-md " + className}>{children}</div>
         );
 
-        const Button = ({ children, onClick, variant = 'primary', className = '', disabled = false, icon: Icon, type = "button" }) => {
+        const Button = ({ children, onClick, variant = 'primary', className = '', disabled = false, icon, type = "button" }) => {
             const base = "flex items-center justify-center gap-2 px-8 py-3.5 rounded-2xl font-black transition-all active:scale-95 disabled:opacity-50 text-[10px] uppercase tracking-[0.15em] whitespace-nowrap";
             const styles = {
                 primary: "bg-green-700 text-white shadow-xl hover:bg-green-800",
@@ -186,7 +191,7 @@
             };
             return (
                 <button type={type} onClick={onClick} disabled={disabled} className={base + " " + styles[variant] + " " + className}>
-                    {Icon && <Icon size={14} />}{children}
+                    {icon && <LucideIcon name={icon} size={14} />}{children}
                 </button>
             );
         };
@@ -202,15 +207,42 @@
         };
 
         /**
-         * --- SUB-VIEW COMPONENTS ---
+         * --- SUB-VIEW MODULES ---
          */
+
+        function LoginView({ onLogin, loading }) {
+            const [id, setId] = useState('');
+            const [pass, setPass] = useState('');
+            const handleSubmit = (e) => { e.preventDefault(); onLogin(id, pass); };
+            return (
+                <div className="min-h-screen flex items-center justify-center bg-slate-100 w-full px-4">
+                    <Card className="w-full max-w-md p-12 shadow-2xl animate-slide-up">
+                        <div className="text-center mb-10">
+                            <img src="/UOL-Green-V1.png" className="h-20 mx-auto mb-6" alt="LSAFHR" />
+                            <h1 className="text-3xl font-black text-slate-800 uppercase tracking-widest font-sans text-left">Matrix Hub</h1>
+                        </div>
+                        <form onSubmit={handleSubmit} className="space-y-6">
+                            <div>
+                                <label className="block text-[10px] font-black text-slate-400 uppercase ml-2 mb-1 tracking-widest">Employee ID</label>
+                                <input value={id} onChange={e=>setId(e.target.value)} className="w-full p-5 rounded-3xl border-2 font-black uppercase bg-slate-50 focus:bg-white focus:border-green-600 outline-none transition-all shadow-sm" placeholder="Enter ID" required />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-black text-slate-400 uppercase ml-2 mb-1 tracking-widest">Access Key</label>
+                                <input type="password" value={pass} onChange={e=>setPass(e.target.value)} className="w-full p-5 rounded-3xl border-2 font-black bg-slate-50 focus:bg-white focus:border-green-600 outline-none transition-all shadow-sm" placeholder="••••••••" required />
+                            </div>
+                            <Button type="submit" className="w-full py-6 text-base" disabled={loading}>{loading ? "Verifying Matrix..." : "Enter Identity Hub"}</Button>
+                        </form>
+                    </Card>
+                </div>
+            );
+        }
 
         function DashboardView({ user }) {
             const loanBal = cleanNumber(user.loan_opening_balance - user.loan_deduction);
             return (
                 <div className="animate-fade-in space-y-12">
                     <div className="flex flex-col md:flex-row justify-between items-center gap-6 border-b pb-8 border-slate-100">
-                        <div>
+                        <div className="text-left">
                             <h2 className="text-5xl font-black text-slate-800 tracking-tighter uppercase font-sans">Identity Base</h2>
                             <p className="text-slate-400 text-[11px] font-black uppercase tracking-widest mt-3">Welcome back, {user.name}</p>
                         </div>
@@ -220,18 +252,18 @@
                         </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-10 font-sans">
-                        <div className="bg-green-700 text-white p-12 rounded-[4rem] shadow-2xl relative overflow-hidden">
+                        <Card className="bg-green-700 !text-white relative overflow-hidden flex flex-col justify-center py-12">
                             <p className="text-[11px] font-black uppercase opacity-60">System Status</p>
-                            <p className="text-4xl font-black mt-3 uppercase tracking-tighter">Active Matrix</p>
-                        </div>
-                        <div className="bg-white p-12 rounded-[4rem] border-2 border-slate-100 shadow-sm flex flex-col justify-center">
+                            <p className="text-4xl font-black mt-3 uppercase tracking-tighter text-left">Active Matrix</p>
+                        </Card>
+                        <Card className="flex flex-col justify-center py-12">
                             <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Total Loan Balance</p>
-                            <p className="text-5xl font-black text-red-500 mt-2 font-mono">Rs. {loanBal.toLocaleString()}</p>
-                        </div>
-                        <div className="bg-white p-12 rounded-[4rem] border-2 border-slate-100 shadow-sm flex flex-col justify-center">
+                            <p className="text-5xl font-black text-red-500 mt-2 font-mono text-left">Rs. {loanBal.toLocaleString()}</p>
+                        </Card>
+                        <Card className="flex flex-col justify-center py-12">
                             <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Security Level</p>
-                            <p className="text-3xl font-black text-slate-800 mt-2 capitalize">{user.role}</p>
-                        </div>
+                            <p className="text-3xl font-black text-slate-800 mt-2 capitalize text-left">{user.role}</p>
+                        </Card>
                     </div>
                 </div>
             );
@@ -251,7 +283,7 @@
                     navigator.geolocation.getCurrentPosition((p) => {
                         const { latitude, longitude } = p.coords;
                         map.setView([latitude, longitude], 16);
-                        window.L.marker([latitude, longitude]).addTo(map).bindPopup("<b>Verified Identity Point</b>").openPopup();
+                        window.L.marker([latitude, longitude]).addTo(map).bindPopup("<b>Verified Entry Point</b>").openPopup();
                     }, (err) => {
                         console.warn("Geolocation permission denied.");
                     }, { enableHighAccuracy: true });
@@ -261,26 +293,24 @@
             const focusMap = (lat, lng, label, time) => {
                 if (mapRef.current && lat && lng) {
                     mapRef.current.setView([lat, lng], 17);
-                    window.L.marker([lat, lng]).addTo(mapRef.current).bindPopup("<b>" + label + ": " + time + "</b>").openPopup();
+                    window.L.marker([lat, lng]).addTo(mapRef.current).bindPopup(`<b>${label}: ${time}</b>`).openPopup();
                     window.scrollTo({ top: 100, behavior: 'smooth' });
                     notify("Centering Map: " + time);
                 }
             };
 
             const handleClock = async (type) => {
-                notify("Verifying GPS Location...");
+                notify("Verifying Geolocation...");
                 navigator.geolocation.getCurrentPosition(async (pos) => {
-                    try {
-                        const res = await fetch(API_BASE + '/attendance', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                employee_id: user.id, type, date_str: getPktDate(), time_str: getPktTime(),
-                                latitude: pos.coords.latitude, longitude: pos.coords.longitude
-                            })
-                        });
-                        if (res.ok) { notify(type + " Matrix Recorded."); fetchData(); }
-                    } catch(e) { notify("Matrix Sync Error."); }
+                    const res = await fetch(API_BASE + '/attendance', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            employee_id: user.id, type, date_str: getPktDate(), time_str: getPktTime(),
+                            latitude: pos.coords.latitude, longitude: pos.coords.longitude
+                        })
+                    });
+                    if (res.ok) { notify(type + " Recorded."); fetchData(); }
                 });
             };
 
@@ -296,7 +326,7 @@
             return (
                 <div className="space-y-8 animate-fade-in font-sans">
                     <div className="flex justify-between items-center">
-                        <h2 className="text-3xl font-black uppercase tracking-tighter text-slate-800 font-sans">Attendance Hub</h2>
+                        <h2 className="text-3xl font-black uppercase tracking-tighter text-slate-800 text-left">Attendance Center</h2>
                         <input type="month" value={selectedMonth} onChange={e=>setSelectedMonth(e.target.value)} className="p-3 border-2 rounded-2xl font-black bg-white focus:border-green-600 outline-none transition-all shadow-sm" />
                     </div>
                     <Card className="!p-0 h-[450px] overflow-hidden border-2 relative shadow-lg">
@@ -304,14 +334,14 @@
                     </Card>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <Card className="flex flex-col items-center justify-center py-16 bg-slate-50 border-2 border-dashed border-slate-200">
-                             <Clock className="text-slate-200 mb-6" size={64} />
+                             <LucideIcon name="clock" size={64} className="text-slate-200 mb-6" />
                              <h3 className="text-6xl font-black text-slate-800 font-mono mb-10 leading-none">{getPktTime()}</h3>
                              <div className="flex flex-col gap-4 w-full max-w-xs px-6">
                                 <button onClick={() => handleClock('Clock In')} className="btn-clock-in w-full py-5 text-lg uppercase tracking-widest transition-all shadow-xl">Clock In</button>
                                 <button onClick={() => handleClock('Clock Out')} className="btn-clock-out w-full py-5 text-lg uppercase border-2 tracking-widest transition-all">Clock Out</button>
                              </div>
                         </Card>
-                        <Card className="!p-0 flex flex-col max-h-[520px] border-2 shadow-sm">
+                        <Card className="!p-0 flex flex-col max-h-[520px] border-2 shadow-sm text-left">
                             <div className="p-6 border-b bg-slate-50 font-black text-xs uppercase text-slate-400 tracking-widest">Monthly Shift Matrix</div>
                             <div className="flex-1 overflow-y-auto divide-y custom-scrollbar">
                                 {Object.keys(groupedLogs).sort((a,b) => new Date(b)-new Date(a)).map(date => {
@@ -319,13 +349,13 @@
                                     const cout = [...groupedLogs[date]].reverse().find(x => x.type === 'Clock Out');
                                     return (
                                         <div key={date} className="p-6 flex justify-between items-center hover:bg-slate-50 transition-all group">
-                                            <div>
+                                            <div className="text-left">
                                                 <p className="font-black text-slate-800 text-sm group-hover:text-green-700">{date}</p>
-                                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter mt-1">Matrix Work: {calculateWorkTime(cin?.time_str, cout?.time_str)}</p>
+                                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter mt-1">Verified: {calculateWorkTime(cin?.time_str, cout?.time_str)}</p>
                                             </div>
                                             <div className="flex gap-4">
-                                                {cin && <button onClick={() => focusMap(cin.latitude, cin.longitude, 'In', cin.time_str)} className="text-green-600 font-black text-xs border-b border-green-200 transition-all hover:text-green-800 uppercase font-sans">{cin.time_str} IN</button>}
-                                                {cout && <button onClick={() => focusMap(cout.latitude, cout.longitude, 'Out', cout.time_str)} className="text-red-600 font-black text-xs border-b border-red-200 transition-all hover:text-red-800 uppercase font-sans">{cout.time_str} OUT</button>}
+                                                {cin && <button onClick={() => focusMap(cin.latitude, cin.longitude, 'Clock In', cin.time_str)} className="text-green-600 font-black text-xs border-b border-green-200 transition-all hover:text-green-800 uppercase">{cin.time_str} IN</button>}
+                                                {cout && <button onClick={() => focusMap(cout.latitude, cout.longitude, 'Clock Out', cout.time_str)} className="text-red-600 font-black text-xs border-b border-red-200 transition-all hover:text-red-800 uppercase">{cout.time_str} OUT</button>}
                                             </div>
                                         </div>
                                     )
@@ -344,8 +374,8 @@
             const isAdmin = user.role === 'admin';
             const isPosted = postedMonths.includes(month);
 
-            const handleSave = async (id) => {
-                const payload = {
+            const handleSaveSalary = async (id) => {
+                const data = {
                     basic_salary: cleanNumber(document.getElementById("eb-" + id).value),
                     invigilation: cleanNumber(document.getElementById("ei-" + id).value),
                     t_payment: cleanNumber(document.getElementById("et-" + id).value),
@@ -357,26 +387,26 @@
                     others_deduction: cleanNumber(document.getElementById("eo-" + id).value),
                     extra_leaves_deduction: cleanNumber(document.getElementById("eld-" + id).value)
                 };
-                const res = await fetch(API_BASE + "/employees/" + id, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                if (res.ok) { notify("Matrix Hub Updated."); setEditingId(null); fetchData(); }
+                const res = await fetch(API_BASE + "/employees/" + id, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+                if (res.ok) { notify("Matrix Saved."); setEditingId(null); fetchData(); }
             };
 
             return (
-                <div className="space-y-8 animate-fade-in font-sans">
+                <div className="space-y-8 animate-fade-in font-sans text-left">
                     <div className="flex flex-col md:flex-row justify-between items-center gap-4">
                         <h2 className="text-3xl font-black uppercase tracking-tighter text-slate-800">Financial Matrix</h2>
                         <div className="flex gap-2">
                              <input type="month" value={month} onChange={e=>setMonth(e.target.value)} className="p-3 border-2 rounded-2xl font-black bg-white focus:border-green-600 outline-none shadow-sm" />
-                             {isAdmin && <Button variant="secondary" onClick={() => exportToCSV(employees, 'LSAF_Payroll.csv')} icon={Download}>Export Matrix</Button>}
+                             {isAdmin && <Button variant="secondary" onClick={() => exportToCSV(employees, 'LSAF_Payroll.csv')} icon="download">Export Matrix</Button>}
                         </div>
                     </div>
                     {!isAdmin && !isPosted ? (
                         <Card className="py-40 text-center flex flex-col items-center border-dashed border-2 border-slate-200">
-                            <Lock size={64} className="text-slate-200 mb-6" />
-                            <p className="text-slate-400 font-black uppercase text-xs tracking-widest">Access Restricted - Pending Release</p>
+                            <LucideIcon name="lock" size={64} className="text-slate-200 mb-6" />
+                            <p className="text-slate-400 font-black uppercase text-xs tracking-[0.2em]">Matrix Hub Locked - Pending Release</p>
                         </Card>
                     ) : (
-                        <Card className="!p-0 overflow-hidden border-2 shadow-2xl font-sans">
+                        <Card className="!p-0 overflow-hidden border-2 shadow-2xl font-sans text-left">
                             <div className="overflow-x-auto custom-scrollbar">
                                 <table className="w-full text-[10px] text-left">
                                     <thead className="bg-slate-50 border-b font-black uppercase text-slate-400 tracking-widest">
@@ -397,8 +427,8 @@
                                             const edit = editingId === e.id;
                                             return (
                                                 <tr key={e.id} className="hover:bg-slate-50 transition-colors">
-                                                    <td className="p-5 font-mono text-slate-500">{e.id}</td>
-                                                    <td className="p-5 uppercase truncate max-w-[150px]">{e.name}</td>
+                                                    <td className="p-5 font-mono text-slate-500 text-left">{e.id}</td>
+                                                    <td className="p-5 uppercase truncate max-w-[150px] text-left">{e.name}</td>
                                                     <td className="p-5 text-right font-mono">{edit ? <input id={"eb-"+e.id} className="w-20 border rounded p-1 text-right" defaultValue={e.basic_salary}/> : cleanNumber(e.basic_salary).toLocaleString()}</td>
                                                     <td className="p-5 text-right font-mono">{edit ? <input id={"ei-"+e.id} className="w-16 border rounded p-1 text-right" defaultValue={e.invigilation}/> : cleanNumber(e.invigilation).toLocaleString()}</td>
                                                     <td className="p-5 text-right font-mono">{edit ? <input id={"et-"+e.id} className="w-16 border rounded p-1 text-right" defaultValue={e.t_payment}/> : cleanNumber(e.t_payment).toLocaleString()}</td>
@@ -411,7 +441,7 @@
                                                     <td className="p-4 text-right font-mono text-red-500">{edit ? <input id={"eld-"+e.id} className="w-16 border rounded p-1 text-right" defaultValue={e.extra_leaves_deduction}/> : cleanNumber(e.extra_leaves_deduction).toLocaleString()}</td>
                                                     <td className="p-5 text-right font-black bg-slate-50/50 text-slate-900 text-xs">Rs. {m.netPaid.toLocaleString()}</td>
                                                     {isAdmin && <td className="p-5 text-center">
-                                                        {edit ? <button onClick={() => handleSave(e.id)} className="text-green-600 hover:text-green-800"><Save size={18}/></button> : <button onClick={()=>setEditingId(e.id)} className="text-blue-500 hover:text-blue-700 transition-all"><Pencil size={18}/></button>}
+                                                        {edit ? <button onClick={() => handleSaveSalary(e.id)} className="text-green-600 hover:text-green-800 transition-all"><LucideIcon name="save" size={18}/></button> : <button onClick={()=>setEditingId(e.id)} className="text-blue-500 hover:text-blue-700 transition-all"><LucideIcon name="pencil" size={18}/></button>}
                                                     </td>}
                                                 </tr>
                                             )
@@ -431,42 +461,44 @@
             const [rsn, setRsn] = useState('');
             const isAdmin = user.role === 'admin';
             const targetUser = employees.find(e => e.id === user.id) || user;
-            const currentBal = cleanNumber(targetUser.loan_opening_balance - targetUser.loan_deduction);
+            const totalApproved = userLoans.filter(l => l.status === 'Approved').reduce((s,l) => s + cleanNumber(l.amount), 0);
+            const netOutstanding = cleanNumber(targetUser.loan_opening_balance) + totalApproved - cleanNumber(targetUser.loan_deduction);
 
             const handleApply = async (e) => {
                 e.preventDefault();
                 if(!amt || !rsn) return;
+                // Sending both standard naming conventions to prevent server 500 error
                 const res = await fetch(API_BASE + "/loans", {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
                         employeeId: user.id, 
-                        employee_id: user.id, // Support both naming conventions
+                        employee_id: user.id, 
                         amount: cleanNumber(amt), 
                         reason: rsn 
                     })
                 });
-                if(res.ok) { notify("Loan Warp Dispatched."); setTab('history'); fetchData(); setAmt(''); setRsn(''); }
+                if(res.ok) { notify("Request dispatched."); setTab('history'); fetchData(); setAmt(''); setRsn(''); }
                 else notify("Internal Server Error (500).");
             };
 
             const decide = async (id, status) => {
                 await fetch(API_BASE + "/admin/loans/" + id, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ status }) });
-                notify("Loan " + status + "."); fetchData();
+                notify("Loan Decision Recorded."); fetchData();
             };
 
             return (
-                <div className="space-y-8 animate-fade-in text-left font-sans">
+                <div className="space-y-8 animate-fade-in text-left font-sans text-left">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <Card className="border-2 border-slate-100 shadow-sm relative overflow-hidden">
+                        <Card className="border-2 border-slate-100 shadow-sm relative overflow-hidden flex flex-col justify-center">
                             <div className="absolute top-0 left-0 w-1.5 h-full bg-slate-300"></div>
                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest tracking-[0.2em]">Opening Debt Balance</p>
                             <p className="text-5xl font-black mt-4 font-mono text-slate-800">Rs. {cleanNumber(targetUser.loan_opening_balance).toLocaleString()}</p>
                         </Card>
-                        <Card className="bg-red-50 border-red-100 border-2 shadow-sm relative overflow-hidden">
+                        <Card className="bg-red-50 border-red-100 border-2 shadow-sm relative overflow-hidden flex flex-col justify-center">
                             <div className="absolute top-0 left-0 w-1.5 h-full bg-red-600"></div>
                             <p className="text-[10px] font-black text-red-400 uppercase tracking-widest tracking-[0.2em]">Current Matrix Outstanding</p>
-                            <p className="text-5xl font-black mt-4 font-mono text-red-600">Rs. {currentBal.toLocaleString()}</p>
+                            <p className="text-5xl font-black mt-4 font-mono text-red-600">Rs. {netOutstanding.toLocaleString()}</p>
                         </Card>
                     </div>
 
@@ -483,26 +515,31 @@
                             <form onSubmit={handleApply} className="space-y-8 font-sans">
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black uppercase text-slate-400 ml-2 tracking-widest tracking-[0.2em]">Amount (PKR)</label>
-                                    <input type="number" value={amt} onChange={e=>setAmt(e.target.value)} className="w-full p-5 rounded-2xl border-2 font-black text-xl bg-slate-50 focus:bg-white focus:border-green-600 outline-none transition-all" placeholder="0.00" required />
+                                    <input type="number" value={amt} onChange={e=>setAmt(e.target.value)} className="w-full p-6 rounded-2xl border-2 font-black text-xl bg-slate-50 focus:bg-white focus:border-green-600 outline-none transition-all shadow-inner" placeholder="0.00" required />
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black uppercase text-slate-400 ml-2 tracking-widest tracking-[0.2em]">Reason / Justification</label>
-                                    <textarea value={rsn} onChange={e=>setRsn(e.target.value)} className="w-full p-6 rounded-2xl border-2 font-bold h-32 bg-slate-50 focus:bg-white focus:border-green-600 outline-none transition-all text-sm" placeholder="Provide reason..." required></textarea>
+                                    <textarea value={rsn} onChange={e=>setRsn(e.target.value)} className="w-full p-6 rounded-2xl border-2 font-bold h-32 bg-slate-50 focus:bg-white focus:border-green-600 outline-none transition-all text-sm shadow-inner" placeholder="Provide clarity for your request..." required></textarea>
                                 </div>
-                                <button type="submit" className="w-full py-6 bg-green-700 text-white rounded-2xl font-black uppercase tracking-[0.3em] shadow-green-200 shadow-2xl hover:bg-green-800 transition-all active:scale-95 font-sans">Submit to Matrix Hub</button>
+                                <button type="submit" className="w-full py-6 bg-green-700 text-white rounded-2xl font-black uppercase tracking-widest shadow-green-200 shadow-2xl hover:bg-green-800 transition-all active:scale-95">Submit to Matrix Hub</button>
                             </form>
                         </Card>
                     ) : tab === 'oversight' ? (
                         <Card className="!p-0 border-2 overflow-hidden shadow-2xl">
                              <table className="w-full text-left text-xs">
-                                <thead className="bg-slate-50 border-b font-black uppercase text-slate-400 tracking-widest"><tr><th className="p-6">Requester</th><th className="p-6">Date</th><th className="p-6 text-right">Amount</th><th className="p-6 text-center">Action</th></tr></thead>
+                                <thead className="bg-slate-50 border-b font-black uppercase text-slate-400 tracking-widest text-left">
+                                    <tr><th className="p-6">Requester</th><th className="p-6">Submission Date</th><th className="p-6 text-right">Amount</th><th className="p-6 text-center">Action</th></tr>
+                                </thead>
                                 <tbody className="divide-y font-bold text-slate-700">
                                     {allLoans.map(l => (
                                         <tr key={l.id} className="hover:bg-slate-50 transition-colors">
                                             <td className="p-6 uppercase font-black">{l.name} <span className="text-slate-300 ml-1 font-mono text-[9px]">({l.employee_id})</span></td>
                                             <td className="p-6 font-mono text-slate-500 uppercase">{formatDate(l.applied_at)}</td>
                                             <td className="p-6 text-right font-black text-sm text-slate-900">Rs. {cleanNumber(l.amount).toLocaleString()}</td>
-                                            <td className="p-6 flex gap-3 justify-center"><button onClick={()=>decide(l.id, 'Approved')} className="bg-green-700 text-white px-5 py-2.5 rounded-xl text-[9px] font-black uppercase shadow-lg hover:bg-green-800">Approve</button><button onClick={()=>decide(l.id, 'Rejected')} className="bg-red-600 text-white px-5 py-2.5 rounded-xl text-[9px] font-black uppercase shadow-lg hover:bg-red-700">Reject</button></td>
+                                            <td className="p-6 flex gap-3 justify-center">
+                                                <button onClick={()=>decide(l.id, 'Approved')} className="bg-green-700 text-white px-5 py-2.5 rounded-xl text-[9px] font-black uppercase shadow-lg hover:bg-green-800 transition-all">Approve</button>
+                                                <button onClick={()=>decide(l.id, 'Rejected')} className="bg-red-600 text-white px-5 py-2.5 rounded-xl text-[9px] font-black uppercase shadow-lg hover:bg-red-700 transition-all">Reject</button>
+                                            </td>
                                         </tr>
                                     ))}
                                     {allLoans.length === 0 && <tr><td colSpan="4" className="p-32 text-center font-black uppercase text-slate-200 tracking-[0.4em]">Zero Pending Oversight</td></tr>}
@@ -512,7 +549,19 @@
                     ) : (
                         <div className="space-y-4 max-w-4xl mx-auto font-sans">
                             {userLoans.map((l, i) => (
-                                <Card key={i} className="flex justify-between items-center border-2 border-slate-100 transition-all hover:bg-slate-50 shadow-sm"><div className="flex items-center gap-6"><div className="bg-slate-50 p-4 rounded-2xl"><Wallet className="text-slate-400" /></div><div><p className="font-black text-2xl text-slate-800 leading-tight font-sans">Rs. {cleanNumber(l.amount).toLocaleString()}</p><p className="text-[10px] text-slate-400 uppercase font-black mt-1">Matrix Mark: {formatDate(l.applied_at)}</p></div></div><div className="text-right flex flex-col items-end gap-2"><Badge status={l.status} /></div></Card>
+                                <Card key={i} className="flex justify-between items-center border-2 border-slate-100 transition-all hover:bg-slate-50 shadow-sm">
+                                    <div className="flex items-center gap-6 text-left">
+                                        <div className="bg-slate-50 p-4 rounded-2xl"><LucideIcon name="wallet" className="text-slate-400" /></div>
+                                        <div className="text-left">
+                                            <p className="font-black text-2xl text-slate-800 leading-tight">Rs. {cleanNumber(l.amount).toLocaleString()}</p>
+                                            <p className="text-[10px] text-slate-400 uppercase font-black tracking-widest mt-1">Marked: {formatDate(l.applied_at)}</p>
+                                        </div>
+                                    </div>
+                                    <div className="text-right flex flex-col items-end gap-2">
+                                        <Badge status={l.status} />
+                                        <p className="text-[9px] text-slate-300 font-bold mt-2 uppercase tracking-tighter">Closing Balance: Rs. {netOutstanding.toLocaleString()}</p>
+                                    </div>
+                                </Card>
                             ))}
                         </div>
                     )}
@@ -522,7 +571,7 @@
 
         function LeavesHub({ user, allLeaves, employees, fetchData, leaves }) {
             const [tab, setTab] = useState('apply');
-            const [form, setForm] = useState({ type: 'Annual Leave', startDate: '', days: 1, reason: '' });
+            const [form, setForm] = useState({ type: 'Annual Leave', startDate: '', days: 1, reason: 'System Applied' });
             const isAdmin = user.role === 'admin';
             const targetUser = employees.find(e => e.id === user.id) || user;
 
@@ -531,67 +580,65 @@
                 const res = await fetch(API_BASE + "/leaves", {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ employee_id: user.id, employeeId: user.id, ...form })
+                    body: JSON.stringify({ employeeId: user.id, ...form })
                 });
-                if(res.ok) { notify("Leave matrix dispatched."); setTab('history'); fetchData(); }
+                if(res.ok) { notify("Leave request dispatched."); setTab('history'); fetchData(); }
             };
 
             const decide = async (id, status) => {
                 await fetch(API_BASE + "/admin/leaves/" + id, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ status }) });
-                notify("Status Warp Complete."); fetchData();
+                notify("Matrix Sync Complete."); fetchData();
             };
 
             return (
-                <div className="space-y-8 animate-fade-in text-left font-sans">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 font-sans">
-                        <Card className="bg-green-700 p-12 rounded-[4rem] text-white shadow-2xl relative overflow-hidden">
+                <div className="space-y-8 animate-fade-in text-left font-sans text-left">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <Card className="bg-green-700 p-10 rounded-[3rem] text-white shadow-2xl relative overflow-hidden flex flex-col justify-center">
                             <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
                             <p className="text-[10px] font-black uppercase opacity-60 tracking-[0.2em]">Annual Matrix</p>
-                            <p className="text-7xl font-black mt-6 tracking-tighter font-mono">{targetUser.leave_annual || 0} <span className="text-xl uppercase opacity-40">Days</span></p>
+                            <p className="text-6xl font-black mt-4 tracking-tighter">${targetUser.leave_annual || 0} Days</p>
                         </Card>
-                        <Card className="bg-white p-12 rounded-[4rem] border-2 border-slate-50 shadow-sm relative">
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest tracking-[0.2em]">Casual Warp Balance</p>
-                            <p className="text-7xl font-black mt-6 tracking-tighter font-mono text-slate-800">{targetUser.leave_casual || 0} <span className="text-xl uppercase text-slate-200">Days</span></p>
+                        <Card className="bg-white p-10 rounded-[3rem] border-2 border-slate-50 shadow-sm flex flex-col justify-center">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest tracking-[0.2em]">Casual Balance Matrix</p>
+                            <p className="text-6xl font-black mt-4 tracking-tighter text-slate-800">${targetUser.leave_casual || 0} Days</p>
                         </Card>
                     </div>
-                    <div className="flex bg-slate-200 p-2 rounded-[2rem] max-w-sm mx-auto shadow-inner font-sans">
-                        <button onClick={()=>setTab('apply')} className={"flex-1 py-4 text-[10px] font-black rounded-2xl uppercase transition-all " + (tab==='apply'?'bg-white text-green-700 shadow-lg':'text-slate-500 hover:text-slate-700')}>Apply</button>
-                        <button onClick={()=>setTab('history')} className={"flex-1 py-4 text-[10px] font-black rounded-2xl uppercase transition-all " + (tab==='history'?'bg-white text-green-700 shadow-lg':'text-slate-500 hover:text-slate-700')}>History</button>
-                        {isAdmin && <button onClick={()=>setTab('oversight')} className={"flex-1 py-4 text-[10px] font-black rounded-2xl uppercase transition-all " + (tab==='oversight'?'bg-white text-green-700 shadow-lg':'text-slate-500 hover:text-slate-700')}>Oversight</button>}
+                    <div className="flex bg-slate-200 p-2 rounded-[2rem] max-w-sm mx-auto shadow-inner">
+                        <button onClick={()=>setTab('apply')} className={"flex-1 py-3 text-[10px] font-black rounded-2xl uppercase transition-all " + (tab==='apply'?'bg-white text-green-700 shadow-sm':'text-slate-500')}>Apply</button>
+                        <button onClick={()=>setTab('history')} className={"flex-1 py-3 text-[10px] font-black rounded-2xl uppercase transition-all " + (tab==='history'?'bg-white text-green-700 shadow-sm':'text-slate-500')}>History</button>
+                        {isAdmin && <button onClick={()=>setTab('oversight')} className={"flex-1 py-3 text-[10px] font-black rounded-2xl uppercase transition-all " + (tab==='oversight'?'bg-white text-green-700 shadow-sm':'text-slate-500')}>Oversight</button>}
                     </div>
 
                     {tab === 'apply' ? (
-                        <Card className="max-w-3xl mx-auto border-2 shadow-2xl animate-slide-up !p-12 relative overflow-hidden">
-                            <div className="absolute top-0 left-0 w-2 h-full bg-green-700"></div>
-                            <h3 className="font-black text-3xl mb-10 uppercase tracking-tighter text-slate-800">New Leave Request</h3>
-                            <form onSubmit={handleApply} className="space-y-8 font-sans">
-                                <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 ml-2 tracking-widest">Select Category Matrix</label><select value={form.type} onChange={e=>setForm({...form, type:e.target.value})} className="w-full p-5 rounded-2xl border-2 font-black bg-slate-50 outline-none focus:bg-white focus:border-green-600 transition-all font-sans font-sans font-sans"><option>Annual Leave</option><option>WOP (Without Pay)</option></select></div>
-                                <div className="grid grid-cols-2 gap-8">
-                                    <div className="space-y-2 font-sans font-sans font-sans"><label className="text-[10px] font-black uppercase text-slate-400 ml-2 tracking-widest">Identity Date</label><input type="date" value={form.startDate} onChange={e=>setForm({...form, startDate:e.target.value})} className="w-full p-5 rounded-2xl border-2 font-black bg-slate-50 focus:bg-white focus:border-green-600 outline-none font-sans" required /></div>
-                                    <div className="space-y-2 font-sans font-sans font-sans"><label className="text-[10px] font-black uppercase text-slate-400 ml-2 tracking-widest">Qty (Days)</label><input type="number" value={form.days} onChange={e=>setForm({...form, days:e.target.value})} className="w-full p-5 rounded-2xl border-2 font-black bg-slate-50 focus:bg-white focus:border-green-600 outline-none font-sans" required /></div>
+                        <Card className="bg-white p-16 rounded-[4rem] max-w-2xl mx-auto border-2 shadow-2xl animate-slide-up">
+                            <form onSubmit={handleApply} className="space-y-6">
+                                <div className="text-left"><label className="text-[10px] font-black uppercase text-slate-400 ml-2 tracking-widest">Select Leave Category</label><select value={form.type} onChange={e=>setForm({...form, type:e.target.value})} className="w-full p-4 rounded-xl border-2 font-black bg-slate-50 outline-none"><option>Annual Leave</option><option>WOP (Without Pay)</option></select></div>
+                                <div className="grid grid-cols-2 gap-8 text-left">
+                                    <div><label className="text-[10px] font-black uppercase text-slate-400 ml-2 tracking-widest">Start Date</label><input type="date" value={form.startDate} onChange={e=>setForm({...form, startDate:e.target.value})} className="w-full p-4 rounded-xl border-2 font-black bg-slate-50 focus:bg-white" required /></div>
+                                    <div><label className="text-[10px] font-black uppercase text-slate-400 ml-2 tracking-widest">Duration (Days)</label><input type="number" value={form.days} onChange={e=>setForm({...form, days:e.target.value})} className="w-full p-4 rounded-xl border-2 font-black bg-slate-50 focus:bg-white" required /></div>
                                 </div>
-                                <button type="submit" className="w-full py-8 bg-green-700 text-white rounded-2xl font-black uppercase tracking-[0.4em] shadow-2xl hover:bg-green-800 transition-all font-sans font-sans font-sans font-sans">Transmit Matrix Request</button>
+                                <button type="submit" className="w-full py-6 bg-green-700 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl hover:bg-green-800 transition-all active:scale-95 font-sans">Request Leave Matrix</button>
                             </form>
                         </Card>
                     ) : tab === 'oversight' ? (
                         <Card className="!p-0 border-2 overflow-hidden shadow-2xl font-sans">
-                             <table className="w-full text-left text-[11px] font-bold font-sans">
-                                <thead className="bg-slate-50 border-b font-black uppercase text-slate-400 tracking-widest"><tr><th className="p-6">Staff</th><th className="p-6">Allowance</th><th className="p-6">Days</th><th className="p-6 text-center">Audit</th></tr></thead>
-                                <tbody className="divide-y font-bold">
-                                    {allLeaves.map((l, idx) => {
+                             <table className="w-full text-left text-[11px] font-bold">
+                                <thead className="bg-slate-50 border-b font-black uppercase text-slate-400 tracking-widest"><tr><th className="p-6">Staff</th><th className="p-6">Balance</th><th className="p-6">Qty</th><th className="p-6 text-center">Action</th></tr></thead>
+                                <tbody className="divide-y font-bold text-slate-700">
+                                    {allLeaves.map(l => {
                                         const r = employees.find(e => e.id === l.employee_id) || {};
-                                        return (<tr key={idx} className="hover:bg-slate-50 transition-all group font-sans"><td className="p-6 uppercase font-black">{l.name} <span className="text-slate-300 font-mono text-[9px]">({l.employee_id})</span></td><td className="p-6 text-green-700 font-black">{r.leave_annual || 0} ANN / {r.leave_casual || 0} WOP</td><td className="p-6 font-black text-slate-500 uppercase">{l.days} Days ({l.leave_type})</td><td className="p-6 flex gap-3 justify-center"><button onClick={()=>decide(l.id, 'Approved')} className="bg-green-700 text-white px-5 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-xl hover:bg-green-800 transition-all">Approve</button><button onClick={()=>decide(l.id, 'Rejected')} className="bg-red-600 text-white px-5 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-xl hover:bg-red-700 transition-all">Reject</button></td></tr>)
+                                        return (<tr key={l.id} className="hover:bg-slate-50 transition-all group text-left"><td className="p-6 uppercase font-black">{l.name} <span className="text-slate-300 font-mono">(${l.employee_id})</span></td><td className="p-6 text-green-600 font-mono">{r.leave_annual || 0}A / {r.leave_casual || 0}W</td><td className="p-6 font-black text-slate-500 uppercase">{l.days} Days</td><td className="p-6 flex gap-2 justify-center"><button onClick={()=>decide(l.id, 'Approved')} className="bg-green-700 text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase shadow-lg">Approve</button><button onClick={()=>decide(l.id, 'Rejected')} className="bg-red-600 text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase shadow-lg">Reject</button></td></tr>)
                                     })}
                                 </tbody>
                              </table>
                         </Card>
                     ) : (
-                        <div className="space-y-6 max-w-4xl mx-auto font-sans">
+                        <div className="space-y-4 max-w-4xl mx-auto font-sans">
                             {leaves.map((l, i) => (
                                 <Card key={i} className="flex justify-between items-center border-2 border-slate-100 hover:border-green-200 transition-all shadow-sm">
-                                    <div className="flex gap-6 items-center">
-                                        <div className="bg-slate-50 p-4 rounded-2xl"><Calendar className="text-slate-400" /></div>
-                                        <div><p className="font-black text-2xl uppercase tracking-tighter text-slate-800 font-sans">{l.leave_type}</p><p className="text-[10px] text-slate-400 font-black mt-1 tracking-widest">{formatDate(l.start_date)} • {l.days} Days</p></div>
+                                    <div className="flex gap-6 items-center text-left">
+                                        <div className="bg-slate-50 p-4 rounded-2xl"><LucideIcon name="calendar" className="text-slate-400" /></div>
+                                        <div className="text-left"><p className="font-black text-2xl uppercase tracking-tighter text-slate-800 font-sans">{l.leave_type}</p><p className="text-[10px] text-slate-400 font-black mt-1 tracking-widest">{formatDate(l.start_date)} • {l.days} Days</p></div>
                                     </div>
                                     <Badge status={l.status} />
                                 </Card>
@@ -616,43 +663,43 @@
             };
 
             const deleteMember = async (id) => {
-                if(!window.confirm("WIPE IDENTITY " + id + " FROM HUB?")) return;
+                if(!window.confirm("PURGE IDENTITY " + id + " FROM MATRIXHUB?")) return;
                 const res = await fetch(API_BASE + "/employees/" + id, { method: 'DELETE' });
                 if(res.ok) { notify("Identity Purged."); fetchData(); }
             };
 
             return (
                 <div className="space-y-10 animate-fade-in text-left font-sans">
-                    <div className="flex justify-between items-center border-b pb-8 border-slate-100 font-sans">
+                    <div className="flex justify-between items-center border-b pb-8 border-slate-100 font-sans text-left">
                         <h2 className="text-4xl font-black uppercase tracking-tighter text-slate-800 font-sans">Staff Hub Matrix</h2>
-                        <Button onClick={() => { setIsOpen(true); setEditMember(null); setForm({ id:'', name:'', email:'', password:'', role:'employee', leave_annual:14, leave_casual:10, loan_opening_balance:0 }); }} icon={Users}>Add Identity</Button>
+                        <Button onClick={() => { setIsOpen(true); setEditMember(null); setForm({ id:'', name:'', email:'', password:'', role:'employee', leave_annual:14, leave_casual:10, loan_opening_balance:0 }); }} icon="users">Add Identity</Button>
                     </div>
 
                     {isOpen && (
-                        <Card className="bg-white border-2 border-green-100 shadow-2xl mb-12 animate-slide-up relative !p-12 font-sans font-sans">
+                        <Card className="bg-white border-2 border-green-100 shadow-2xl mb-12 animate-slide-up relative !p-12 font-sans text-left">
                             <button onClick={()=>setIsOpen(false)} className="absolute top-8 right-8 text-slate-300 hover:text-red-500 transition-colors"><X size={32}/></button>
-                            <form onSubmit={submit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 font-sans">
-                                <div className="space-y-1 font-sans"><label className="text-[10px] font-black uppercase text-slate-400 ml-3 tracking-widest font-sans">ID</label><input type="text" className="w-full p-4 rounded-2xl border-2 font-bold bg-slate-50 uppercase focus:bg-white outline-none focus:border-green-600 transition-all font-sans font-sans" value={form.id} onChange={e=>setForm({...form, id:e.target.value})} disabled={!!editMember} required /></div>
-                                <div className="space-y-1 font-sans"><label className="text-[10px] font-black uppercase text-slate-400 ml-3 tracking-widest font-sans">Name</label><input type="text" className="w-full p-4 rounded-2xl border-2 font-bold bg-slate-50 focus:bg-white outline-none focus:border-green-600 transition-all font-sans font-sans" value={form.name} onChange={e=>setForm({...form, name:e.target.value})} required /></div>
-                                <div className="space-y-1 font-sans"><label className="text-[10px] font-black uppercase text-slate-400 ml-3 tracking-widest font-sans">Email</label><input type="email" className="w-full p-4 rounded-2xl border-2 font-bold bg-slate-50 focus:bg-white outline-none focus:border-green-600 transition-all font-sans font-sans" value={form.email} onChange={e=>setForm({...form, email:e.target.value})} required /></div>
-                                <div className="space-y-1 font-sans"><label className="text-[10px] font-black uppercase text-slate-400 ml-3 tracking-widest font-sans">Key</label><input type="text" className="w-full p-4 rounded-2xl border-2 font-bold bg-slate-50 focus:bg-white outline-none focus:border-green-600 transition-all font-sans font-sans" value={form.password} onChange={e=>setForm({...form, password:e.target.value})} required /></div>
-                                <div className="col-span-full pt-10 border-t flex justify-end gap-6 font-sans">
-                                    <Button variant="ghost" onClick={()=>setIsOpen(false)}>Cancel Matrix Warp</Button>
-                                    <Button type="submit" className="px-16 shadow-2xl font-sans">{editMember ? 'Update Profile' : 'Initialize warp'}</Button>
+                            <form onSubmit={submit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                                <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-400 ml-3 tracking-widest">ID</label><input type="text" className="w-full p-4 rounded-2xl border-2 font-bold bg-slate-50 uppercase focus:bg-white" value={form.id} onChange={e=>setForm({...form, id:e.target.value})} disabled={!!editMember} required /></div>
+                                <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-400 ml-3 tracking-widest">Name</label><input type="text" className="w-full p-4 rounded-2xl border-2 font-bold bg-slate-50 focus:bg-white" value={form.name} onChange={e=>setForm({...form, name:e.target.value})} required /></div>
+                                <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-400 ml-3 tracking-widest">Email</label><input type="email" className="w-full p-4 rounded-2xl border-2 font-bold bg-slate-50 focus:bg-white" value={form.email} onChange={e=>setForm({...form, email:e.target.value})} required /></div>
+                                <div className="space-y-1"><label className="text-[10px] font-black uppercase text-slate-400 ml-3 tracking-widest">Key</label><input type="text" className="w-full p-4 rounded-2xl border-2 font-bold bg-slate-50 focus:bg-white" value={form.password} onChange={e=>setForm({...form, password:e.target.value})} required /></div>
+                                <div className="col-span-full pt-10 border-t flex justify-end gap-4">
+                                    <Button variant="ghost" onClick={()=>{setIsOpen(false); setEditMember(null);}}>Cancel Matrix Warp</Button>
+                                    <Button type="submit" className="px-16 shadow-2xl font-black">{editMember ? 'Save Profile' : 'Initialize Warp'}</Button>
                                 </div>
                             </form>
                         </Card>
                     )}
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 font-sans font-sans font-sans">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 font-sans text-left">
                         {employees.map(e => (
                             <Card key={e.id} className="text-center group relative overflow-hidden flex flex-col items-center hover:border-green-300 transition-all border-slate-100 p-10 font-sans">
-                                <div className="h-24 w-24 bg-green-50 text-green-700 flex items-center justify-center font-black rounded-[3rem] text-4xl mb-6 shadow-inner transition-all group-hover:scale-95 group-hover:shadow-green-100 uppercase">{getInitial(e.name)}</div>
-                                <p className="font-black uppercase text-slate-800 text-lg tracking-tight mb-1 truncate w-full font-sans">{e.name}</p>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] font-sans">{e.id} • {e.role}</p>
-                                <div className="mt-8 flex gap-3 opacity-0 group-hover:opacity-100 transition-all transform translate-y-2 group-hover:translate-y-0 font-sans">
-                                    <button onClick={()=>{setEditMember(e); setForm(e); setIsOpen(true);}} className="bg-blue-50 text-blue-600 p-3 rounded-2xl hover:bg-blue-600 hover:text-white transition-all shadow-md font-sans"><Pencil size={20}/></button>
-                                    <button onClick={()=>deleteMember(e.id)} className="bg-red-50 text-red-600 p-3 rounded-2xl hover:bg-red-600 hover:text-white transition-all shadow-md font-sans"><Trash2 size={20}/></button>
+                                <div className="h-24 w-24 bg-green-50 text-green-700 flex items-center justify-center font-black rounded-[3rem] text-4xl mb-6 shadow-inner transition-all group-hover:scale-95 uppercase">{getInitial(e.name)}</div>
+                                <p className="font-black uppercase text-slate-800 text-lg tracking-tight mb-1 truncate w-full">{e.name}</p>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">{e.id} • {e.role}</p>
+                                <div className="mt-8 flex gap-3 opacity-0 group-hover:opacity-100 transition-all transform translate-y-2 group-hover:translate-y-0">
+                                    <button onClick={()=>{setEditMember(e); setForm(e); setIsOpen(true);}} className="bg-blue-50 text-blue-600 p-3 rounded-2xl hover:bg-blue-600 hover:text-white transition-all shadow-md"><Pencil size={20}/></button>
+                                    <button onClick={()=>deleteMember(e.id)} className="bg-red-50 text-red-600 p-3 rounded-2xl hover:bg-red-600 hover:text-white transition-all shadow-md"><Trash2 size={20}/></button>
                                 </div>
                             </Card>
                         ))}
@@ -667,31 +714,26 @@
                 e.preventDefault();
                 if(!val.trim()) return;
                 await fetch(API_BASE + "/discussions", { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ employee_id: user.id, author_name: user.name, message: val }) });
-                setVal(''); fetchData(); notify("Broadcast Transmitted.");
+                setVal(''); fetchData(); notify("Broadcast Matrix Updated.");
             };
             return (
-                <div className="space-y-12 max-w-5xl mx-auto animate-fade-in font-sans font-sans font-sans">
-                    <h2 className="text-4xl font-black uppercase tracking-tighter text-slate-800 border-b pb-6 border-slate-100 font-sans">Identity Matrix Board</h2>
-                    <div className="bg-slate-900 p-12 rounded-[5rem] shadow-2xl relative font-sans">
-                        <div className="absolute top-6 right-10 flex items-center gap-2"><div className="h-2 w-2 rounded-full bg-green-500 animate-pulse"></div><span className="text-[9px] font-black text-slate-500 uppercase tracking-widest font-sans">Verified Live Hub</span></div>
-                        <form onSubmit={post} className="flex gap-6 mt-6 font-sans">
-                            <input value={val} onChange={e=>setVal(e.target.value)} className="flex-1 bg-white/5 border-2 border-white/10 rounded-[3rem] p-10 font-bold text-white text-xl outline-none focus:bg-white/10 focus:border-green-600 transition-all font-sans font-sans" placeholder="Initialize broadcast..." required />
-                            <button type="submit" className="bg-green-600 hover:bg-green-500 p-10 rounded-[3rem] text-white shadow-green-900 shadow-2xl active:scale-95 font-sans"><Send size={48}/></button>
-                        </form>
+                <div className="space-y-12 max-w-5xl mx-auto animate-fade-in font-sans text-left">
+                    <h2 className="text-4xl font-black uppercase tracking-tighter text-slate-800 border-b pb-6 border-slate-100">Identity Matrix Board</h2>
+                    <div className="bg-slate-900 p-12 rounded-[5rem] shadow-2xl relative">
+                        <div className="absolute top-6 right-10 flex items-center gap-2"><div className="h-2 w-2 rounded-full bg-green-500 animate-pulse"></div><span className="text-[9px] font-black text-slate-500 uppercase tracking-widest font-sans">Verified Live Broadcast Hub</span></div>
+                        <form onSubmit={post} className="flex gap-6 mt-4"><input value={val} onChange={e=>setVal(e.target.value)} className="flex-1 bg-white/5 border-2 border-white/10 rounded-[2.5rem] p-8 font-bold text-white text-xl outline-none focus:border-green-600 transition-all font-sans font-sans" placeholder="Initialize broadcast..." required /><button type="submit" className="bg-green-600 p-8 rounded-[2.5rem] text-white shadow-xl hover:bg-green-500 transition-all"><LucideIcon name="send" size={40}/></button></form>
                     </div>
-                    <div className="space-y-10 font-sans font-sans font-sans">
+                    <div className="space-y-10 font-sans">
                         {discussions.map((d, i) => (
-                            <div key={i} className="bg-white p-12 rounded-[4rem] border border-slate-100 shadow-sm transition-all hover:shadow-md group text-left">
-                                <div className="flex justify-between items-center mb-8 font-sans font-sans font-sans">
-                                    <div className="flex items-center gap-6 font-sans font-sans">
-                                        <div className="h-16 w-16 rounded-[2.5rem] bg-green-50 text-green-700 flex items-center justify-center font-black text-3xl shadow-inner group-hover:scale-90 transition-all uppercase">{getInitial(d.author_name)}</div>
-                                        <div><span className="font-black text-slate-800 uppercase text-lg group-hover:text-green-700 transition-all font-sans font-sans font-sans">{d.author_name}</span><p className="text-[11px] font-black text-slate-400 uppercase mt-2 tracking-widest font-sans">Verified Broadcaster</p></div>
-                                    </div>
-                                    <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest font-sans font-sans">{formatDate(d.created_at)}</span>
+                            <div key={i} className="bg-white p-10 rounded-[3rem] border-2 border-slate-50 shadow-sm transition-all hover:border-slate-100">
+                                <div className="flex justify-between items-center mb-6">
+                                    <div className="flex items-center gap-5"><div className="h-16 w-16 rounded-[2rem] bg-green-50 text-green-700 flex items-center justify-center font-black text-2xl uppercase font-sans">{getInitial(d.author_name)}</div><div><span className="font-black text-slate-800 uppercase text-base">{d.author_name}</span><p className="text-[10px] font-black text-slate-400 uppercase mt-1 tracking-widest">Verified Identity Matrix Broadcaster</p></div></div>
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter font-sans">{formatDate(d.created_at)}</span>
                                 </div>
-                                <p className="text-slate-700 font-bold leading-relaxed text-2xl font-sans font-sans">{d.message}</p>
+                                <p className="text-slate-700 font-bold leading-relaxed text-xl font-sans">{d.message}</p>
                             </div>
                         ))}
+                        {discussions.length === 0 && <div className="p-32 text-center font-black uppercase text-slate-200 tracking-widest opacity-20">Matrix Board Quiet</div>}
                     </div>
                 </div>
             );
@@ -747,7 +789,7 @@
                     const found = list.find(e => String(e.id).toUpperCase() === String(id).toUpperCase() && String(e.password) === String(pass));
                     if(found) { setUser(found); localStorage.setItem('hr_user', JSON.stringify(found)); } 
                     else alert("Identity Matrix Validation Failed.");
-                } catch(e) { alert("Matrix Core Offline."); } finally { setLoading(false); }
+                } catch(e) { alert("Core Matrix Offline."); } finally { setLoading(false); }
             };
 
             const logout = () => { localStorage.clear(); window.location.reload(); };
@@ -755,7 +797,7 @@
             if(loading && !user) return (
                 <div className="h-screen flex flex-col items-center justify-center bg-white">
                     <div className="loader w-20 h-20 border-4 border-slate-50 border-t-green-700 rounded-full mb-10 shadow-xl"></div>
-                    <p className="font-black text-slate-300 uppercase tracking-[0.8em] animate-pulse font-sans">Initializing LSAFHR Engine Matrix...</p>
+                    <p className="font-black text-slate-300 uppercase tracking-[0.8em] animate-pulse">Initializing Core Engine Matrix...</p>
                 </div>
             );
             
@@ -775,19 +817,19 @@
             };
 
             return (
-                <div className="min-h-screen bg-slate-50 flex text-slate-900 font-sans font-sans font-sans font-sans font-sans">
+                <div className="min-h-screen bg-slate-50 flex text-slate-900 font-sans text-left">
                     <aside className="hidden md:flex flex-col w-72 bg-white border-r fixed h-full z-50 shadow-sm text-left font-sans">
-                        <div className="p-10 border-b text-center font-sans font-sans"><img src="/UOL-Green-V1.png" className="h-12 mx-auto mb-3" alt="Logo" /><span className="text-[10px] font-black text-green-700 uppercase tracking-widest font-sans tracking-widest font-sans font-sans">Identity Hub Matrix v10</span></div>
+                        <div className="p-10 border-b text-center font-sans"><img src="/UOL-Green-V1.png" className="h-12 mx-auto mb-3" alt="Logo" /><span className="text-[10px] font-black text-green-700 uppercase tracking-widest font-sans tracking-widest font-sans">Identity Hub Matrix v10</span></div>
                         <nav className="flex-1 p-6 space-y-2 overflow-y-auto custom-scrollbar font-sans font-sans">
                             {NAV_ITEMS.filter(n => !n.admin || user.role === 'admin').map(n => (
                                 <button key={n.id} onClick={()=>setView(n.id)} className={"w-full flex items-center gap-5 p-5 rounded-3xl font-black transition-all " + (view === n.id ? 'bg-green-700 text-white shadow-2xl scale-105' : 'text-slate-500 hover:bg-slate-50')}>
-                                    <n.icon size={20} /><span className="text-[11px] uppercase tracking-widest text-left font-sans font-sans font-sans">{n.label}</span>
+                                    <LucideIcon name={n.id === 'dashboard' ? 'home' : (n.id === 'attendance' ? 'clock' : (n.id === 'payroll' ? 'dollar-sign' : (n.id === 'loans' ? 'wallet' : (n.id === 'leaves' ? 'calendar' : (n.id === 'discussion' ? 'message-square' : 'users')))))} size={20} /><span className="text-[11px] uppercase tracking-widest text-left font-sans font-sans font-sans">{n.label}</span>
                                 </button>
                             ))}
                         </nav>
-                        <div className="p-8 border-t flex justify-between items-center bg-slate-50/50 backdrop-blur font-sans font-sans">
+                        <div className="p-8 border-t flex justify-between items-center bg-slate-50/50 backdrop-blur font-sans font-sans font-sans">
                             <div className="overflow-hidden font-sans font-sans font-sans"><p className="font-black text-[12px] uppercase truncate font-sans text-slate-800 font-sans">{user.name}</p><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 font-sans tracking-tighter font-sans">{user.role}</p></div>
-                            <button onClick={logout} className="text-red-500 hover:bg-red-50 p-3 rounded-2xl transition-all active:scale-90 font-sans font-sans"><LogOut size={24} /></button>
+                            <button onClick={logout} className="text-red-500 hover:bg-red-50 p-3 rounded-2xl transition-all active:scale-90 font-sans font-sans"><LucideIcon name="log-out" size={24} /></button>
                         </div>
                     </aside>
                     <main className="flex-1 md:ml-72 p-12 font-sans font-sans font-sans font-sans"><div className="max-w-[1600px] mx-auto font-sans font-sans">{renderContent()}</div></main>
