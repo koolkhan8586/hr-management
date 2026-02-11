@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LSAFHR Management System - v10.2.0</title>
+    <title>LSAFHR Management System - v10.2.1</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <!-- Leaflet Map Assets -->
@@ -226,6 +226,17 @@
             return { netPaid: add - sub };
         }
 
+        function exportToCSV(data, filename) {
+            if (!data || !data.length) return;
+            const headers = Object.keys(data[0]).join(',');
+            const rows = data.map(row => Object.values(row).map(val => '"' + String(val || '').replace(/"/g, '""') + '"').join(','));
+            const csvContent = "data:text/csv;charset=utf-8," + [headers, ...rows].join('\n');
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri); link.setAttribute("download", filename);
+            document.body.appendChild(link); link.click(); document.body.removeChild(link);
+        }
+
         // --- CORE LOGIC ---
         async function init() {
             const saved = localStorage.getItem('hr_user');
@@ -317,7 +328,7 @@
                 case 'directory': renderDirectoryView(container); break;
                 case 'loans': renderLoansView(container); break;
                 case 'leaves': renderLeavesView(container); break;
-                case 'discussion': renderDiscussionView(container); break;
+                case 'discussion': renderDiscussionBoard(container); break;
             }
             lucide.createIcons();
         }
@@ -420,7 +431,7 @@
             
             setTimeout(() => {
                 if(window.L) {
-                    if (state.map) state.map.remove();
+                    if (state.map) { state.map.remove(); }
                     const map = L.map('attendance-map').setView([31.5204, 74.3587], 13);
                     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
                     state.map = map;
@@ -431,7 +442,9 @@
                             const lng = pos.coords.longitude;
                             map.setView([lat, lng], 16);
                             L.marker([lat, lng]).addTo(map).bindPopup("<b>Your Current Location</b>").openPopup();
-                        }, (err) => console.warn("Geolocation denied."));
+                        }, (err) => {
+                            console.warn("Geolocation denied or error:", err);
+                        });
                     }
                 }
             }, 300);
@@ -443,7 +456,7 @@
         }
 
         async function handleClock(type) {
-            notify("Processing Verification...");
+            notify("Processing Matrix Verification...");
             navigator.geolocation.getCurrentPosition(async (pos) => {
                 const payload = { 
                     employee_id: state.user.id, type, date_str: getPktDate(), 
@@ -545,7 +558,7 @@
                 extra_leaves_deduction: cleanNumber(document.getElementById("eld-" + id).value)
             };
             const res = await fetch(API_BASE + "/employees/" + id, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
-            if(res.ok) { state.editingSalaryId = null; await syncData(); renderPayrollView(document.getElementById('view-container')); notify("Salary Matrix Saved."); }
+            if(res.ok) { state.editingSalaryId = null; await syncData(); renderPayrollView(document.getElementById('view-container')); notify("Salary Hub Updated."); }
         }
 
         function updateMonth(v) { state.selectedMonth = v; renderPayrollView(document.getElementById('view-container')); }
@@ -557,7 +570,7 @@
             if(res.ok) { await syncData(); renderPayrollView(document.getElementById('view-container')); notify(current ? "Revoked" : "Published"); }
         }
 
-        // --- LOANS HUB ---
+        // --- LOANS HUB VIEW ---
         function renderLoansView(container) {
             const isAdmin = state.user && state.user.role === 'admin';
             const targetUser = state.employees.find(e => e.id === state.user.id) || state.user;
@@ -565,7 +578,7 @@
             const netOutstanding = cleanNumber(targetUser.loan_opening_balance) + totalApproved - cleanNumber(targetUser.loan_deduction);
 
             container.innerHTML = `
-                <div class="animate-fade-in space-y-12 text-left font-sans font-sans">
+                <div class="animate-fade-in space-y-12 text-left font-sans">
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                         <div class="bg-white p-10 rounded-[3rem] border-2 border-slate-100 shadow-sm relative overflow-hidden">
                             <div class="absolute top-0 left-0 w-1.5 h-full bg-slate-300"></div>
@@ -589,7 +602,7 @@
                         <div class="bg-white rounded-[4rem] max-w-2xl mx-auto border-2 border-slate-50 shadow-2xl animate-slide-up relative !p-12">
                             <div class="absolute top-0 left-0 w-2 h-full bg-green-700"></div>
                             <h3 class="font-black text-2xl mb-8 uppercase text-slate-800 tracking-tighter">New Application Request</h3>
-                            <form id="loan-apply-form" class="space-y-8 font-sans">
+                            <form id="loan-apply-form" onsubmit="handleLoanApply(event)" class="space-y-8 font-sans">
                                 <div class="space-y-2">
                                     <label class="text-[10px] font-black uppercase text-slate-400 ml-2 tracking-widest tracking-[0.2em]">Amount (PKR)</label>
                                     <input type="number" id="ln-amt-val-hub" class="w-full p-6 rounded-2xl border-2 font-black text-xl bg-slate-50 focus:bg-white focus:border-green-600 outline-none transition-all shadow-inner" placeholder="0.00" required />
@@ -606,7 +619,7 @@
                                 <span class="font-black text-xs uppercase text-slate-500 tracking-widest">Loan Control Matrix</span>
                             </div>
                             <div class="overflow-x-auto"><table class="w-full text-left text-[12px] font-bold">
-                                <thead class="bg-slate-50 border-b font-black uppercase text-slate-400 tracking-widest"><tr><th class="p-6">Requester</th><th class="p-6">Date</th><th class="p-6 text-right">Amount</th><th class="p-6 text-center">Action</th></tr></thead>
+                                <thead class="bg-slate-50 border-b font-black uppercase text-slate-400 tracking-widest"><tr><th class="p-6">Requester</th><th class="p-6">Date</th><th class="p-8 text-right">Amount</th><th class="p-6 text-center">Action Hub</th></tr></thead>
                                 <tbody class="divide-y divide-slate-100">
                                     ${state.allLoans.map(ln => `
                                         <tr class="hover:bg-slate-50 transition-colors">
@@ -639,12 +652,6 @@
                             ${state.userLoans.length === 0 ? '<div class="p-32 text-center font-black uppercase text-slate-200 tracking-[0.4em]">Zero Matrix History</div>' : ''}
                         </div>`}
                 </div>`;
-            
-            // Re-attach form listener manually if on Apply tab
-            if(state.loanTab === 'apply') {
-                const form = document.getElementById('loan-apply-form');
-                if(form) form.addEventListener('submit', handleLoanApply);
-            }
             lucide.createIcons();
         }
 
@@ -653,7 +660,7 @@
             const amt_el = document.getElementById('ln-amt-val-hub');
             const rsn_el = document.getElementById('ln-rsn-val-hub');
             if(!amt_el || !rsn_el) return;
-            const payload = { employeeId: state.user.id, amount: cleanNumber(amt_el.value), reason: rsn_el.value };
+            const payload = { employee_id: state.user.id, amount: cleanNumber(amt_el.value), reason: rsn_el.value };
             const res = await fetch(API_BASE + "/loans", { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
             if(res.ok) { notify("Request sent."); state.loanTab = 'history'; await syncData(); renderLoansView(document.getElementById('view-container')); }
         }
@@ -663,7 +670,7 @@
             await syncData(); renderLoansView(document.getElementById('view-container'));
         }
 
-        // --- STAFF HUB ---
+        // --- DIRECTORY / STAFF HUB ---
         function renderDirectoryView(container) {
             container.innerHTML = `
                 <div class="animate-fade-in space-y-10 animate-fade-in text-left font-sans">
@@ -694,7 +701,7 @@
             area.innerHTML = `
                 <div class="bg-white border-2 border-green-100 shadow-2xl mb-12 animate-slide-up relative p-12 rounded-[3rem] font-sans">
                     <button onclick="toggleStaffForm()" class="absolute top-8 right-8 text-slate-300 hover:text-red-500"><i data-lucide="x" size="32"></i></button>
-                    <form id="staff-submit-form" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                    <form id="staff-submit-form" onsubmit="handleStaffSubmit(event)" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                         <div><label class="text-[10px] font-black uppercase text-slate-400 ml-3 tracking-widest">ID</label><input id="s-id" class="w-full p-4 rounded-2xl border-2 font-bold uppercase" value="${emp?emp.id:''}" ${emp?'disabled':''} required></div>
                         <div><label class="text-[10px] font-black uppercase text-slate-400 ml-3 tracking-widest">Name</label><input id="s-name" class="w-full p-4 rounded-2xl border-2 font-bold" value="${emp?emp.name:''}" required></div>
                         <div><label class="text-[10px] font-black uppercase text-slate-400 ml-3 tracking-widest">Email</label><input id="s-email" type="email" class="w-full p-4 rounded-2xl border-2 font-bold" value="${emp?emp.email:''}" required></div>
@@ -704,7 +711,6 @@
                         </div>
                     </form>
                 </div>`;
-            document.getElementById('staff-submit-form').addEventListener('submit', handleStaffSubmit);
             lucide.createIcons();
         }
 
@@ -732,13 +738,13 @@
         }
 
         // --- MATRIX BOARD ---
-        function renderDiscussionView(container) {
+        function renderDiscussionBoard(container) {
             container.innerHTML = `
                 <div class="space-y-12 max-w-5xl mx-auto animate-fade-in font-sans">
                     <h2 class="text-4xl font-black uppercase tracking-tighter text-slate-800 border-b pb-6 border-slate-100 font-sans">Identity Matrix Board</h2>
                     <div class="bg-slate-900 p-12 rounded-[5rem] shadow-2xl relative">
                         <div class="absolute top-6 right-10 flex items-center gap-2"><div class="h-2 w-2 rounded-full bg-green-500 animate-pulse"></div><span class="text-[9px] font-black text-slate-500 uppercase tracking-widest">Verified Live Hub</span></div>
-                        <form id="board-form-submit" class="flex gap-6 mt-6 font-sans">
+                        <form id="board-form-submit" onsubmit="handleBroadcastSubmit(event)" class="flex gap-6 mt-6 font-sans">
                             <input type="text" id="board-msg-input" class="flex-1 bg-white/5 border-2 border-white/10 rounded-[3rem] p-10 font-bold text-white text-xl outline-none focus:bg-white/10 focus:border-green-600 transition-all" placeholder="Initialize broadcast..." required />
                             <button type="submit" class="bg-green-600 hover:bg-green-500 p-10 rounded-[3rem] text-white shadow-green-900 shadow-2xl active:scale-95"><i data-lucide="send" size="48"></i></button>
                         </form>
@@ -757,15 +763,15 @@
                             </div>`).join('')}
                     </div>
                 </div>`;
-            
-            document.getElementById('board-form-submit').addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const msg = document.getElementById('board-msg-input').value;
-                if(!msg.trim()) return;
-                const res = await fetch(`${API_BASE}/discussions`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ employee_id: state.user.id, author_name: state.user.name, message: msg }) });
-                if(res.ok) { await syncData(); renderDiscussionView(document.getElementById('view-container')); notify("Broadcast Matrix Updated."); }
-            });
             lucide.createIcons();
+        }
+
+        async function handleBroadcastSubmit(e) {
+            e.preventDefault();
+            const msg = document.getElementById('board-msg-input').value;
+            if(!msg.trim()) return;
+            const res = await fetch(`${API_BASE}/discussions`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ employee_id: state.user.id, author_name: state.user.name, message: msg }) });
+            if(res.ok) { await syncData(); renderDiscussionBoard(document.getElementById('view-container')); notify("Broadcast Matrix Updated."); }
         }
 
         // --- LEAVES HUB ---
@@ -843,7 +849,7 @@
 
         async function handleLeaveApply(e) {
             e.preventDefault();
-            const payload = { employeeId: state.user.id, type: document.getElementById('lv-type').value, startDate: document.getElementById('lv-date').value, days: document.getElementById('lv-days').value, reason: 'System Applied' };
+            const payload = { employee_id: state.user.id, leave_type: document.getElementById('lv-type').value, start_date: document.getElementById('lv-date').value, days: document.getElementById('lv-days').value, reason: 'System Applied' };
             const res = await fetch(API_BASE + "/leaves", { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
             if(res.ok) { notify("Request sent."); state.leaveTab = 'history'; await syncData(); renderLeavesView(document.getElementById('view-container')); }
         }
@@ -861,7 +867,7 @@
             const id = document.getElementById('login-id').value.toUpperCase();
             const pass = document.getElementById('login-pass').value;
             try {
-                const res = await fetch(API_BASE + "/employees");
+                const res = await fetch(`${API_BASE}/employees`);
                 const list = await res.json();
                 const found = list.find(e => String(e.id).toUpperCase() === String(id).toUpperCase() && String(e.password) === String(pass));
                 if (found) { state.user = found; localStorage.setItem('hr_user', JSON.stringify(found)); await syncData(); showApp(); }
