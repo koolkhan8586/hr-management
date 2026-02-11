@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LSAFHR Management System - v10.1.1</title>
+    <title>LSAFHR Management System - v10.2.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <!-- Leaflet Map Assets -->
@@ -101,7 +101,7 @@
             <div class="mb-10">
                 <img src="UOL-Green-V1.png" alt="Logo" class="h-20 mx-auto mb-4 object-contain" onerror="this.src='https://placehold.co/150x150?text=LSAFHR'">
                 <h1 class="text-2xl font-black text-slate-800 leading-tight uppercase tracking-widest">LSAFHR Core</h1>
-                <p class="text-slate-400 text-xs font-bold mt-2 uppercase tracking-widest">Identity Auth v10.1</p>
+                <p class="text-slate-400 text-xs font-bold mt-2 uppercase tracking-widest">Identity Auth v10.2</p>
             </div>
             <form id="login-form" class="space-y-5 text-left">
                 <div>
@@ -420,9 +420,19 @@
             
             setTimeout(() => {
                 if(window.L) {
+                    if (state.map) state.map.remove();
                     const map = L.map('attendance-map').setView([31.5204, 74.3587], 13);
                     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
                     state.map = map;
+
+                    if (navigator.geolocation) {
+                        navigator.geolocation.getCurrentPosition((pos) => {
+                            const lat = pos.coords.latitude;
+                            const lng = pos.coords.longitude;
+                            map.setView([lat, lng], 16);
+                            L.marker([lat, lng]).addTo(map).bindPopup("<b>Your Current Location</b>").openPopup();
+                        }, (err) => console.warn("Geolocation denied."));
+                    }
                 }
             }, 300);
         }
@@ -511,7 +521,7 @@
                             <td class="p-4 text-right font-mono text-red-500">${isEditing ? `<input type="number" id="eld-${emp.id}" class="w-16 border-2 rounded-xl p-2 text-right" value="${emp.extra_leaves_deduction}">` : cleanNumber(emp.extra_leaves_deduction).toLocaleString()}</td>
                             <td class="p-8 text-right font-black text-slate-900 font-mono bg-slate-100/50">Rs. ${m.netPaid.toLocaleString()}</td>
                             ${isAdmin ? `<td class="p-8 text-center font-sans">
-                                ${isEditing ? `<button onclick="saveSalary('${emp.id}')" class="bg-green-700 text-white p-3 rounded-2xl shadow-lg font-sans font-sans"><i data-lucide="save" size="20"></i></button>` : `<button onclick="state.editingSalaryId='${emp.id}'; renderPayrollView(document.getElementById('view-container'))" class="text-blue-500 p-2 hover:bg-blue-50 rounded-xl font-sans"><i data-lucide="pencil" size="20"></i></button>`}
+                                ${isEditing ? `<button onclick="saveSalary('${emp.id}')" class="bg-green-700 text-white p-3 rounded-2xl shadow-lg"><i data-lucide="save" size="20"></i></button>` : `<button onclick="state.editingSalaryId='${emp.id}'; renderPayrollView(document.getElementById('view-container'))" class="text-blue-500 p-2 hover:bg-blue-50 rounded-xl"><i data-lucide="pencil" size="20"></i></button>`}
                             </td>` : ''}
                         </tr>`;
                 });
@@ -535,7 +545,7 @@
                 extra_leaves_deduction: cleanNumber(document.getElementById("eld-" + id).value)
             };
             const res = await fetch(API_BASE + "/employees/" + id, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
-            if(res.ok) { state.editingSalaryId = null; await syncData(); renderPayrollView(document.getElementById('view-container')); notify("Salary Hub Updated."); }
+            if(res.ok) { state.editingSalaryId = null; await syncData(); renderPayrollView(document.getElementById('view-container')); notify("Salary Matrix Saved."); }
         }
 
         function updateMonth(v) { state.selectedMonth = v; renderPayrollView(document.getElementById('view-container')); }
@@ -544,7 +554,7 @@
             const method = current ? 'DELETE' : 'POST';
             const url = current ? API_BASE + "/payroll-post/" + state.selectedMonth : API_BASE + "/payroll-post";
             const res = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify({ month: state.selectedMonth }) });
-            if(res.ok) { await syncData(); renderPayrollView(document.getElementById('view-container')); notify(current ? "Unpublished" : "Published"); }
+            if(res.ok) { await syncData(); renderPayrollView(document.getElementById('view-container')); notify(current ? "Revoked" : "Published"); }
         }
 
         // --- LOANS HUB ---
@@ -576,19 +586,19 @@
                     </div>
 
                     ${state.loanTab === 'apply' ? `
-                        <div class="bg-white p-16 rounded-[4rem] max-w-2xl mx-auto border-2 border-slate-50 shadow-2xl animate-slide-up relative !p-12">
+                        <div class="bg-white rounded-[4rem] max-w-2xl mx-auto border-2 border-slate-50 shadow-2xl animate-slide-up relative !p-12">
                             <div class="absolute top-0 left-0 w-2 h-full bg-green-700"></div>
                             <h3 class="font-black text-2xl mb-8 uppercase text-slate-800 tracking-tighter">New Application Request</h3>
-                            <form onsubmit="handleLoanApply(event)" class="space-y-8 font-sans">
+                            <form id="loan-apply-form" class="space-y-8 font-sans">
                                 <div class="space-y-2">
                                     <label class="text-[10px] font-black uppercase text-slate-400 ml-2 tracking-widest tracking-[0.2em]">Amount (PKR)</label>
-                                    <input type="number" id="ln-amt-val-hub" class="w-full p-6 rounded-2xl border-2 font-black text-xl bg-slate-50 focus:bg-white focus:border-green-600 outline-none transition-all" placeholder="0.00" required />
+                                    <input type="number" id="ln-amt-val-hub" class="w-full p-6 rounded-2xl border-2 font-black text-xl bg-slate-50 focus:bg-white focus:border-green-600 outline-none transition-all shadow-inner" placeholder="0.00" required />
                                 </div>
                                 <div class="space-y-2">
                                     <label class="text-[10px] font-black uppercase text-slate-400 ml-2 tracking-widest tracking-[0.2em]">Reason / Justification</label>
-                                    <textarea id="ln-rsn-val-hub" class="w-full p-6 rounded-2xl border-2 font-bold h-32 bg-slate-50 focus:bg-white focus:border-green-600 outline-none transition-all text-sm" placeholder="Provide reason..." required></textarea>
+                                    <textarea id="ln-rsn-val-hub" class="w-full p-6 rounded-2xl border-2 font-bold h-32 bg-slate-50 focus:bg-white focus:border-green-600 outline-none transition-all text-sm shadow-inner" placeholder="Provide reason..." required></textarea>
                                 </div>
-                                <button type="submit" class="w-full py-6 bg-green-700 text-white rounded-2xl font-black uppercase tracking-[0.3em] shadow-green-200 shadow-2xl hover:bg-green-800 transition-all">Submit to Matrix Hub</button>
+                                <button type="submit" class="w-full py-6 bg-green-700 text-white rounded-2xl font-black uppercase tracking-[0.3em] shadow-green-200 shadow-2xl hover:bg-green-800 transition-all active:scale-95">Submit to Matrix Hub</button>
                             </form>
                         </div>` : state.loanTab === 'oversight' ? `
                         <div class="bg-white rounded-[3rem] border-2 border-slate-50 shadow-2xl overflow-hidden">
@@ -596,12 +606,12 @@
                                 <span class="font-black text-xs uppercase text-slate-500 tracking-widest">Loan Control Matrix</span>
                             </div>
                             <div class="overflow-x-auto"><table class="w-full text-left text-[12px] font-bold">
-                                <thead class="bg-slate-50 border-b font-black uppercase text-slate-400 tracking-widest"><tr><th class="p-6">Requester</th><th class="p-6">Submission Date</th><th class="p-6 text-right">Amount</th><th class="p-6 text-center">Action</th></tr></thead>
+                                <thead class="bg-slate-50 border-b font-black uppercase text-slate-400 tracking-widest"><tr><th class="p-6">Requester</th><th class="p-6">Date</th><th class="p-6 text-right">Amount</th><th class="p-6 text-center">Action</th></tr></thead>
                                 <tbody class="divide-y divide-slate-100">
                                     ${state.allLoans.map(ln => `
                                         <tr class="hover:bg-slate-50 transition-colors">
                                             <td class="p-6 uppercase font-black">${ln.name} <span class="text-slate-300 ml-1 font-mono text-[9px]">(${ln.employee_id})</span></td>
-                                            <td class="p-6 font-mono text-slate-500 uppercase">${formatDate(ln.applied_at)}</td>
+                                            <td class="p-6 font-mono text-slate-500 uppercase font-sans">${formatDate(ln.applied_at)}</td>
                                             <td class="p-6 text-right font-black text-sm text-slate-900">Rs. ${cleanNumber(ln.amount).toLocaleString()}</td>
                                             <td class="p-6 flex gap-3 justify-center">
                                                 <button onclick="approveLoanRequest('${ln.id}', 'Approved')" class="bg-green-700 text-white px-5 py-2.5 rounded-xl text-[9px] font-black uppercase shadow-lg">Approve</button>
@@ -614,21 +624,27 @@
                         <div class="space-y-4 max-w-4xl mx-auto font-sans">
                             ${state.userLoans.map((l, i) => `
                                 <div class="bg-white p-8 rounded-[2.5rem] border border-slate-100 transition-all hover:bg-slate-50 shadow-sm flex justify-between items-center group">
-                                    <div class="flex items-center gap-6">
-                                        <div class="bg-slate-50 p-4 rounded-2xl group-hover:bg-green-50 transition-all"><i data-lucide="wallet" class="text-slate-400 group-hover:text-green-600"></i></div>
+                                    <div class="flex items-center gap-6 text-left">
+                                        <div class="bg-slate-50 p-4 rounded-2xl"><i data-lucide="wallet" class="text-slate-400"></i></div>
                                         <div>
                                             <p class="font-black text-2xl text-slate-800 leading-tight">Rs. ${cleanNumber(l.amount).toLocaleString()}</p>
                                             <p class="text-[10px] text-slate-400 uppercase font-black tracking-widest mt-1">Marked: ${formatDate(l.applied_at)}</p>
                                         </div>
                                     </div>
                                     <div class="text-right flex flex-col items-end gap-2">
-                                        <span class="status-badge ${l.status === 'Approved' ? 'status-approved' : 'status-pending'}">${l.status}</span>
-                                        <p class="text-[9px] text-slate-300 font-bold uppercase tracking-tighter">Current Balance: Rs. ${netOutstanding.toLocaleString()}</p>
+                                        <span class="status-badge ${l.status === 'Approved' ? 'status-approved' : (l.status === 'Rejected' ? 'status-rejected' : 'status-pending')}">${l.status}</span>
+                                        <p class="text-[9px] text-slate-300 font-bold uppercase tracking-tighter">Balance Context: Rs. ${netOutstanding.toLocaleString()}</p>
                                     </div>
                                 </div>`).join('')}
-                            ${state.userLoans.length === 0 ? '<div class="p-32 text-center font-black uppercase text-slate-200 tracking-[0.4em]">Matrix history Clear</div>' : ''}
+                            ${state.userLoans.length === 0 ? '<div class="p-32 text-center font-black uppercase text-slate-200 tracking-[0.4em]">Zero Matrix History</div>' : ''}
                         </div>`}
                 </div>`;
+            
+            // Re-attach form listener manually if on Apply tab
+            if(state.loanTab === 'apply') {
+                const form = document.getElementById('loan-apply-form');
+                if(form) form.addEventListener('submit', handleLoanApply);
+            }
             lucide.createIcons();
         }
 
@@ -639,7 +655,7 @@
             if(!amt_el || !rsn_el) return;
             const payload = { employeeId: state.user.id, amount: cleanNumber(amt_el.value), reason: rsn_el.value };
             const res = await fetch(API_BASE + "/loans", { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
-            if(res.ok) { notify("Matrix Hub Updated."); state.loanTab = 'history'; await syncData(); renderLoansView(document.getElementById('view-container')); }
+            if(res.ok) { notify("Request sent."); state.loanTab = 'history'; await syncData(); renderLoansView(document.getElementById('view-container')); }
         }
 
         async function approveLoanRequest(id, status) {
@@ -678,7 +694,7 @@
             area.innerHTML = `
                 <div class="bg-white border-2 border-green-100 shadow-2xl mb-12 animate-slide-up relative p-12 rounded-[3rem] font-sans">
                     <button onclick="toggleStaffForm()" class="absolute top-8 right-8 text-slate-300 hover:text-red-500"><i data-lucide="x" size="32"></i></button>
-                    <form onsubmit="handleStaffSubmit(event)" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                    <form id="staff-submit-form" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                         <div><label class="text-[10px] font-black uppercase text-slate-400 ml-3 tracking-widest">ID</label><input id="s-id" class="w-full p-4 rounded-2xl border-2 font-bold uppercase" value="${emp?emp.id:''}" ${emp?'disabled':''} required></div>
                         <div><label class="text-[10px] font-black uppercase text-slate-400 ml-3 tracking-widest">Name</label><input id="s-name" class="w-full p-4 rounded-2xl border-2 font-bold" value="${emp?emp.name:''}" required></div>
                         <div><label class="text-[10px] font-black uppercase text-slate-400 ml-3 tracking-widest">Email</label><input id="s-email" type="email" class="w-full p-4 rounded-2xl border-2 font-bold" value="${emp?emp.email:''}" required></div>
@@ -688,6 +704,7 @@
                         </div>
                     </form>
                 </div>`;
+            document.getElementById('staff-submit-form').addEventListener('submit', handleStaffSubmit);
             lucide.createIcons();
         }
 
@@ -709,7 +726,7 @@
         function editStaff(id) { state.editingMemberId = id; const emp = state.employees.find(e => e.id === id); toggleStaffForm(emp); }
 
         async function deleteStaff(id) {
-            if(!window.confirm("WIPE IDENTITY " + id + " FROM MATRIXHUB?")) return;
+            if(!window.confirm("Purge Identity?")) return;
             const res = await fetch(API_BASE + "/employees/" + id, { method: 'DELETE' });
             if(res.ok) { notify("Identity Purged."); await syncData(); renderDirectoryView(document.getElementById('view-container')); }
         }
@@ -720,7 +737,7 @@
                 <div class="space-y-12 max-w-5xl mx-auto animate-fade-in font-sans">
                     <h2 class="text-4xl font-black uppercase tracking-tighter text-slate-800 border-b pb-6 border-slate-100 font-sans">Identity Matrix Board</h2>
                     <div class="bg-slate-900 p-12 rounded-[5rem] shadow-2xl relative">
-                        <div class="absolute top-6 right-10 flex items-center gap-2"><div class="h-2 w-2 rounded-full bg-green-500 animate-pulse"></div><span class="text-[9px] font-black text-slate-500 uppercase tracking-widest font-sans">Verified Live Hub</span></div>
+                        <div class="absolute top-6 right-10 flex items-center gap-2"><div class="h-2 w-2 rounded-full bg-green-500 animate-pulse"></div><span class="text-[9px] font-black text-slate-500 uppercase tracking-widest">Verified Live Hub</span></div>
                         <form id="board-form-submit" class="flex gap-6 mt-6 font-sans">
                             <input type="text" id="board-msg-input" class="flex-1 bg-white/5 border-2 border-white/10 rounded-[3rem] p-10 font-bold text-white text-xl outline-none focus:bg-white/10 focus:border-green-600 transition-all" placeholder="Initialize broadcast..." required />
                             <button type="submit" class="bg-green-600 hover:bg-green-500 p-10 rounded-[3rem] text-white shadow-green-900 shadow-2xl active:scale-95"><i data-lucide="send" size="48"></i></button>
@@ -732,7 +749,7 @@
                                 <div class="flex justify-between items-center mb-8 font-sans">
                                     <div class="flex items-center gap-6">
                                         <div class="h-16 w-16 rounded-[2.5rem] bg-green-50 text-green-700 flex items-center justify-center font-black text-3xl shadow-inner uppercase">${getInitial(d.author_name)}</div>
-                                        <div><span class="font-black text-slate-800 uppercase text-lg group-hover:text-green-700 transition-all font-sans">${d.author_name}</span><p class="text-[11px] font-black text-slate-400 uppercase mt-2 tracking-widest font-sans">Verified Broadcaster</p></div>
+                                        <div><span class="font-black text-slate-800 uppercase text-lg group-hover:text-green-700 transition-all font-sans font-sans">${d.author_name}</span><p class="text-[11px] font-black text-slate-400 uppercase mt-2 tracking-widest font-sans">Verified Broadcaster</p></div>
                                     </div>
                                     <span class="text-[11px] font-black text-slate-400 uppercase tracking-widest font-sans">${formatDate(d.created_at)}</span>
                                 </div>
@@ -760,10 +777,10 @@
                 <div class="animate-fade-in space-y-12 text-left font-sans">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-10 mb-12">
                         <div class="bg-green-700 text-white shadow-2xl p-12 rounded-[4rem] text-left relative overflow-hidden"><p class="text-[12px] font-black uppercase opacity-60">Annual Matrix</p><p class="text-7xl font-black mt-4 font-mono">${targetUser.leave_annual || 0} <span class="text-xl opacity-40 uppercase">Days</span></p></div>
-                        <div class="bg-white border-2 border-slate-50 shadow-2xl p-12 rounded-[4rem] text-left"><p class="text-[12px] font-black text-slate-400 uppercase">Casual Matrix</p><p class="text-7xl font-black mt-4 font-mono text-slate-800">${targetUser.leave_casual || 0} <span class="text-xl text-slate-200 uppercase">Days</span></p></div>
+                        <div class="bg-white border-2 border-slate-50 shadow-2xl p-12 rounded-[4rem] text-left font-sans"><p class="text-[12px] font-black text-slate-400 uppercase">Casual Matrix</p><p class="text-7xl font-black mt-4 font-mono text-slate-800">${targetUser.leave_casual || 0} <span class="text-xl text-slate-200 uppercase">Days</span></p></div>
                     </div>
 
-                    <div class="flex bg-slate-200 p-2 rounded-[2.5rem] max-w-md mx-auto mb-16 shadow-inner">
+                    <div class="flex bg-slate-200 p-2 rounded-[2.5rem] max-w-md mx-auto mb-16 shadow-inner font-sans">
                         <button onclick="state.leaveTab='apply'; renderLeavesView(document.getElementById('view-container'))" class="flex-1 py-5 text-[12px] font-black rounded-[2rem] uppercase tracking-widest transition-all ${state.leaveTab === 'apply' ? 'bg-white text-green-700 shadow-2xl' : 'text-slate-500'}">Apply</button>
                         <button onclick="state.leaveTab='history'; renderLeavesView(document.getElementById('view-container'))" class="flex-1 py-5 text-[12px] font-black rounded-[2rem] uppercase tracking-widest transition-all ${state.leaveTab === 'history' ? 'bg-white text-green-700 shadow-2xl' : 'text-slate-500'}">History</button>
                         ${isAdmin ? `<button onclick="state.leaveTab='oversight'; renderLeavesView(document.getElementById('view-container'))" class="flex-1 py-5 text-[12px] font-black rounded-[2rem] uppercase tracking-widest transition-all ${state.leaveTab === 'oversight' ? 'bg-white text-green-700 shadow-2xl' : 'text-slate-500'}">Oversight</button>` : ''}
@@ -771,9 +788,9 @@
 
                     ${state.leaveTab === 'oversight' ? `
                         <div class="bg-white rounded-[4rem] border-2 border-slate-50 shadow-2xl font-sans overflow-hidden">
-                             <table class="w-full text-left text-[11px] font-bold">
+                             <table class="w-full text-left text-[11px] font-bold font-sans">
                                 <thead class="bg-slate-50 border-b font-black uppercase text-slate-400 tracking-widest"><tr><th class="p-6">Staff</th><th class="p-6">Balance</th><th class="p-6">Qty</th><th class="p-6 text-center">Audit</th></tr></thead>
-                                <tbody class="divide-y divide-slate-100">
+                                <tbody class="divide-y divide-slate-100 font-sans">
                                     ${state.allLeaves.map((l, idx) => {
                                         const r = state.employees.find(e => e.id === l.employee_id) || {};
                                         return `
@@ -782,29 +799,29 @@
                                             <td class="p-6 text-green-700 font-black">${r.leave_annual || 0} ANN / ${r.leave_casual || 0} CAS</td>
                                             <td class="p-6 font-black text-slate-500 uppercase">${l.days} Days (${l.leave_type})</td>
                                             <td class="p-6 flex gap-3 justify-center">
-                                                <button onclick="approveLeave('${l.id}', 'Approved')" class="bg-green-700 text-white px-5 py-2.5 rounded-xl text-[9px] font-black uppercase shadow-xl hover:bg-green-800 transition-all">Approve</button>
-                                                <button onclick="approveLeave('${l.id}', 'Rejected')" class="bg-red-600 text-white px-5 py-2.5 rounded-xl text-[9px] font-black uppercase shadow-xl hover:bg-red-700 transition-all">Reject</button>
+                                                <button onclick="approveLeave('${l.id}', 'Approved')" class="bg-green-700 text-white px-5 py-2.5 rounded-xl text-[9px] font-black uppercase shadow-xl hover:bg-green-800 transition-all font-sans">Approve</button>
+                                                <button onclick="approveLeave('${l.id}', 'Rejected')" class="bg-red-600 text-white px-5 py-2.5 rounded-xl text-[9px] font-black uppercase shadow-xl hover:bg-red-700 transition-all font-sans">Reject</button>
                                             </td>
                                         </tr>`;
                                     }).join('')}
                                 </tbody>
                              </table>
                         </div>` : (state.leaveTab === 'apply' ? `
-                        <div class="bg-white p-20 rounded-[5rem] max-w-4xl mx-auto border-2 border-slate-50 shadow-2xl animate-slide-up relative">
+                        <div class="bg-white p-20 rounded-[5rem] max-w-4xl mx-auto border-2 border-slate-50 shadow-2xl animate-slide-up relative font-sans">
                             <div class="absolute top-0 left-0 w-2 h-full bg-green-700 font-sans"></div>
-                            <h3 class="font-black text-4xl mb-16 uppercase tracking-tighter text-slate-800">New Application</h3>
+                            <h3 class="font-black text-4xl mb-16 uppercase tracking-tighter text-slate-800 font-sans">New Application</h3>
                             <form onsubmit="handleLeaveApply(event)" class="space-y-12">
-                                <div class="space-y-4"><label class="text-[12px] font-black uppercase text-slate-400 ml-6 tracking-widest">Type</label><select id="lv-type" class="w-full p-8 rounded-[2.5rem] border-2 font-black bg-slate-50 outline-none"><option>Annual Leave</option><option>WOP (Without Pay)</option></select></div>
-                                <div class="grid grid-cols-2 gap-12">
+                                <div class="space-y-4 font-sans"><label class="text-[12px] font-black uppercase text-slate-400 ml-6 tracking-widest">Type</label><select id="lv-type" class="w-full p-8 rounded-[2.5rem] border-2 font-black bg-slate-50 outline-none"><option>Annual Leave</option><option>WOP (Without Pay)</option></select></div>
+                                <div class="grid grid-cols-2 gap-12 font-sans">
                                     <div class="space-y-4"><label class="text-[12px] font-black uppercase text-slate-400 ml-6 tracking-widest">Start Date</label><input type="date" id="lv-date" class="w-full p-8 rounded-[2.5rem] border-2 font-black bg-slate-50" required /></div>
                                     <div class="space-y-4"><label class="text-[12px] font-black uppercase text-slate-400 ml-6 tracking-widest">Days</label><input type="number" id="lv-days" class="w-full p-8 rounded-[2.5rem] border-2 font-black bg-slate-50" required /></div>
                                 </div>
-                                <button type="submit" class="w-full py-10 bg-green-700 text-white rounded-[3rem] font-black uppercase tracking-[0.4em] shadow-2xl">Transmit Request</button>
+                                <button type="submit" class="w-full py-10 bg-green-700 text-white rounded-[3rem] font-black uppercase tracking-[0.4em] shadow-2xl font-sans">Transmit Request</button>
                             </form>
                         </div>` : `
-                        <div class="space-y-8 max-w-5xl mx-auto font-sans">
+                        <div class="space-y-8 max-w-5xl mx-auto font-sans font-sans">
                             <div class="bg-white rounded-[4rem] border-2 border-slate-50 shadow-2xl overflow-hidden font-sans">
-                                <table class="w-full text-left">
+                                <table class="w-full text-left font-sans">
                                     <thead class="bg-slate-50 border-b font-black uppercase text-[12px] text-slate-400 tracking-widest font-sans">
                                         <tr><th class="p-10 font-sans">Period Start</th><th class="p-10 font-sans">Category</th><th class="p-10 font-sans">Duration</th><th class="p-10 text-right">Status</th></tr>
                                     </thead>
@@ -812,9 +829,9 @@
                                         ${state.leaves.map(l => `
                                             <tr class="hover:bg-slate-50 transition-all font-sans">
                                                 <td class="p-10 font-mono text-slate-500 uppercase font-sans">${formatDate(l.start_date)}</td>
-                                                <td class="p-10 font-black uppercase text-slate-700 font-sans">${l.leave_type}</td>
+                                                <td class="p-10 font-black uppercase text-slate-700 font-sans font-sans">${l.leave_type}</td>
                                                 <td class="p-10 font-black text-slate-400 uppercase font-sans">${l.days} Days</td>
-                                                <td class="p-10 text-right"><span class="status-badge ${l.status === 'Approved' ? 'status-approved' : l.status === 'Rejected' ? 'status-rejected' : 'status-pending'}">${l.status}</span></td>
+                                                <td class="p-10 text-right"><span class="status-badge ${l.status === 'Approved' ? 'status-approved' : (l.status === 'Rejected' ? 'status-rejected' : 'status-pending')}">${l.status}</span></td>
                                             </tr>`).join('')}
                                     </tbody>
                                 </table>
