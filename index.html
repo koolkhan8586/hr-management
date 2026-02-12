@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LSAFHR Management System - v11.1.0</title>
+    <title>LSAFHR Management System - v11.5.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
@@ -19,7 +19,8 @@
             font-family: 'Plus Jakarta Sans', sans-serif; 
             overflow-x: hidden; 
             -webkit-font-smoothing: antialiased;
-            background-color: #f8fafc;
+            background-color: #0f172a; /* Dark Slate Base */
+            color: #f8fafc;
         }
 
         .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
@@ -29,47 +30,59 @@
         @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
 
         .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #1e293b; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
 
-        .loader { border-top-color: #15803d; animation: spin 1s linear infinite; }
+        .loader { border-top-color: #14b8a6; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        #attendance-map { 
-            height: 450px; 
-            width: 100%; 
-            border-radius: 2.5rem; 
-            z-index: 10; 
-            border: 2px solid #e2e8f0; 
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05);
+        /* Dashboard Hero Styling */
+        .dashboard-hero {
+            background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);
+            border-radius: 2.5rem;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 20px 40px -10px rgba(20, 184, 166, 0.3);
         }
+
+        .matrix-card {
+            background-color: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 1.5rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .matrix-card:hover { transform: translateY(-5px); border-color: #14b8a6; box-shadow: 0 15px 30px -10px rgba(0,0,0,0.5); }
 
         .btn-clock-in {
-            background-color: #15803d;
-            color: white;
-            border-radius: 1.5rem;
-            box-shadow: 0 10px 15px -3px rgba(21, 128, 61, 0.3);
-            transition: all 0.2s;
-            font-weight: 800;
-        }
-        .btn-clock-in:hover { background-color: #166534; transform: translateY(-2px); }
-        
-        .btn-clock-out {
             background-color: white;
-            color: #1e293b;
-            border: 2px solid #e2e8f0;
-            border-radius: 1.5rem;
-            transition: all 0.2s;
+            color: #0d9488;
+            border-radius: 99px;
             font-weight: 800;
+            padding: 0.75rem 2.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            transition: all 0.2s;
         }
-        .btn-clock-out:hover { background-color: #f8fafc; border-color: #cbd5e1; }
+        .btn-clock-in:hover { transform: scale(1.05); background-color: #f1f5f9; }
+        
+        .sidebar-item-active {
+            background-color: #1e293b;
+            color: #14b8a6 !important;
+            border-left: 4px solid #14b8a6;
+        }
 
-        .sidebar-btn-active {
-            background-color: #15803d;
-            color: white !important;
-            box-shadow: 0 10px 20px -3px rgba(21, 128, 61, 0.3);
-            transform: scale(1.05);
+        .status-badge { 
+            font-weight: 900; 
+            text-transform: uppercase; 
+            font-size: 10px; 
+            padding: 6px 12px; 
+            border-radius: 10px; 
+            letter-spacing: 0.05em; 
+            display: inline-block; 
+            border: 1px solid transparent;
         }
+        .status-pending { background-color: rgba(251, 191, 36, 0.1); color: #fbbf24; border-color: rgba(251, 191, 36, 0.2); }
+        .status-approved { background-color: rgba(20, 184, 166, 0.1); color: #14b8a6; border-color: rgba(20, 184, 166, 0.2); }
+        .status-rejected { background-color: rgba(239, 68, 68, 0.1); color: #ef4444; border-color: rgba(239, 68, 68, 0.2); }
 
         input[type="number"]::-webkit-inner-spin-button { display: none; }
     </style>
@@ -86,15 +99,14 @@
         const API_BASE = '/api'; 
         const LOGO_URL = "/UOL-Green-V1.png";
 
-        // Navigation Items defined at top level to avoid ReferenceErrors
         const NAV_ITEMS = [
-            { id: 'dashboard', label: 'Dashboard', icon: 'home', admin: false },
-            { id: 'attendance', label: 'Attendance', icon: 'clock', admin: false },
-            { id: 'payroll', label: 'Salary Hub', icon: 'dollar-sign', admin: false },
-            { id: 'loans', label: 'Loans Hub', icon: 'wallet', admin: false },
-            { id: 'leaves', label: 'Leaves Hub', icon: 'calendar', admin: false },
-            { id: 'discussion', label: 'Matrix Board', icon: 'message-square', admin: false },
-            { id: 'directory', label: 'Staff Hub', icon: 'users', admin: true }
+            { id: 'dashboard', label: 'Dashboard', icon: 'layout', group: 'MAIN' },
+            { id: 'attendance', label: 'Attendance', icon: 'clock', group: 'MAIN' },
+            { id: 'leaves', label: 'Leaves Hub', icon: 'calendar', group: 'MAIN' },
+            { id: 'loans', label: 'Loans Hub', icon: 'wallet', group: 'MAIN' },
+            { id: 'payroll', label: 'Salary Hub', icon: 'dollar-sign', group: 'MAIN' },
+            { id: 'directory', label: 'User Management', icon: 'users', group: 'ADMINISTRATION', admin: true },
+            { id: 'discussion', label: 'Board', icon: 'clipboard', group: 'ADMINISTRATION' }
         ];
 
         /**
@@ -117,52 +129,42 @@
             return <span ref={ref} className="inline-flex items-center justify-center"></span>;
         };
 
-        const Card = ({ children, className = "" }) => (
-            <div className={"bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm transition-all hover:shadow-md " + className}>{children}</div>
-        );
-
-        const Button = ({ children, onClick, variant = 'primary', className = '', disabled = false, icon, type = "button" }) => {
-            const base = "flex items-center justify-center gap-2 px-8 py-3.5 rounded-2xl font-black transition-all active:scale-95 disabled:opacity-50 text-[10px] uppercase tracking-[0.15em] whitespace-nowrap";
-            const styles = {
-                primary: "bg-green-700 text-white shadow-xl hover:bg-green-800",
-                secondary: "bg-white text-slate-700 border-2 border-slate-100 hover:border-slate-200",
-                danger: "bg-red-50 text-red-600 border-2 border-red-100 hover:bg-red-100",
-                ghost: "text-slate-400 hover:text-green-700 hover:bg-green-50"
-            };
-            return (
-                <button type={type} onClick={onClick} disabled={disabled} className={base + " " + styles[variant] + " " + className}>
-                    {icon && <LucideIcon name={icon} size={14} />}{children}
-                </button>
-            );
+        const notify = (msg) => {
+            const t = document.getElementById('status-toast');
+            if (t) {
+                t.innerText = msg;
+                t.style.opacity = '1';
+                t.style.transform = 'translateY(0) translateX(-50%)';
+                setTimeout(() => {
+                    t.style.opacity = '0';
+                    t.style.transform = 'translateY(-20px) translateX(-50%)';
+                }, 4000);
+            }
         };
 
-        const Badge = ({ status }) => {
-            const styles = { 
-                Approved: 'bg-green-100 text-green-700 border-green-200', 
-                Pending: 'bg-amber-100 text-amber-700 border-amber-200', 
-                Rejected: 'bg-red-100 text-red-700 border-red-200'
-            };
-            return <span className={"px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-tighter border " + (styles[status] || 'bg-slate-100 text-slate-600 border-slate-200')}>{status}</span>;
-        };
-
-        /**
-         * --- CORE UTILITIES ---
-         */
-        const cleanNumber = (val) => {
-            if (val === undefined || val === null || val === '' || isNaN(val)) return 0;
-            return parseFloat(val);
-        };
+        const cleanNumber = (val) => parseFloat(String(val || 0).replace(/[^0-9.-]+/g, '')) || 0;
         const getInitial = (name) => name ? String(name).charAt(0).toUpperCase() : '?';
         const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A';
         const getPktTime = () => new Date().toLocaleTimeString('en-US', { timeZone: 'Asia/Karachi', hour: '2-digit', minute: '2-digit', hour12: true });
         const getPktDate = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Karachi' });
+        const getPktDateLong = () => new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
-        const notify = (msg) => {
-            const t = document.getElementById('status-toast');
-            if (t) {
-                t.innerText = msg; t.style.opacity = '1'; t.style.transform = 'translateY(0) translateX(-50%)';
-                setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateY(-20px) translateX(-50%)'; }, 4000);
-            }
+        const calculateWorkTime = (inTime, outTime) => {
+            if (!inTime || !outTime) return "0h 0m";
+            try {
+                const parseTime = (tStr) => {
+                    const [time, modifier] = tStr.split(' ');
+                    let [hours, minutes] = time.split(':');
+                    if (hours === '12') hours = '00';
+                    if (modifier === 'PM') hours = parseInt(hours, 10) + 12;
+                    return new Date(2000, 0, 1, hours, minutes);
+                };
+                const diff = parseTime(outTime) - parseTime(inTime);
+                if (diff < 0) return "0h 0m";
+                const h = Math.floor(diff / 3600000);
+                const m = Math.floor((diff % 3600000) / 60000);
+                return h + "h " + m + "m";
+            } catch(e) { return "0h 0m"; }
         };
 
         /**
@@ -171,75 +173,154 @@
         function LoginView({ onLogin, loading }) {
             const [id, setId] = useState('');
             const [pass, setPass] = useState('');
-            const handleSubmit = (e) => { e.preventDefault(); onLogin(id, pass); };
             return (
-                <div className="min-h-screen flex items-center justify-center bg-slate-100 w-full px-4">
-                    <Card className="w-full max-w-md p-12 shadow-2xl animate-slide-up text-center">
-                        <div className="mb-10">
-                            <img src={LOGO_URL} className="h-24 mx-auto mb-6 object-contain" alt="LSAFHR" />
-                            <h1 className="text-3xl font-black text-slate-800 uppercase tracking-widest font-sans">Identity Hub</h1>
-                            <p className="text-slate-400 text-[10px] font-black uppercase mt-2 tracking-[0.2em]">Authorized Access Matrix</p>
+                <div className="min-h-screen flex items-center justify-center bg-slate-900 w-full px-4">
+                    <div className="bg-slate-800 w-full max-w-md p-12 rounded-[2.5rem] shadow-2xl border border-slate-700 animate-slide-up text-center">
+                        <div className="mb-10 text-left">
+                            <div className="bg-teal-500 w-12 h-12 rounded-xl flex items-center justify-center mb-6 font-black text-white text-xl">HR</div>
+                            <h1 className="text-3xl font-black text-white uppercase tracking-widest font-sans">HR Portal</h1>
+                            <p className="text-slate-400 text-xs mt-2 uppercase font-bold tracking-widest">Authentication Matrix</p>
                         </div>
-                        <form onSubmit={handleSubmit} className="space-y-6 text-left">
+                        <form onSubmit={(e) => { e.preventDefault(); onLogin(id, pass); }} className="space-y-6 text-left">
                             <div className="space-y-1">
-                                <label className="block text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">Employee ID</label>
-                                <input value={id} onChange={e=>setId(e.target.value)} className="w-full p-5 rounded-3xl border-2 border-slate-50 font-black uppercase bg-slate-50 focus:bg-white focus:border-green-600 outline-none transition-all shadow-sm" placeholder="ID-001" required />
+                                <label className="text-[10px] font-black text-slate-500 uppercase ml-2 block tracking-widest">Identity ID</label>
+                                <input value={id} onChange={e=>setId(e.target.value)} className="w-full p-5 rounded-2xl border-2 border-slate-700 bg-slate-900/50 text-white font-bold outline-none focus:border-teal-500 transition-all" required />
                             </div>
                             <div className="space-y-1">
-                                <label className="block text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">Access Key</label>
-                                <input type="password" value={pass} onChange={e=>setPass(e.target.value)} className="w-full p-5 rounded-3xl border-2 font-black bg-slate-50 focus:bg-white focus:border-green-600 outline-none transition-all shadow-sm" placeholder="••••••••" required />
+                                <label className="text-[10px] font-black text-slate-500 uppercase ml-2 block tracking-widest">System Key</label>
+                                <input type="password" value={pass} onChange={e=>setPass(e.target.value)} className="w-full p-5 rounded-2xl border-2 border-slate-700 bg-slate-900/50 text-white font-bold outline-none focus:border-teal-500 transition-all" required />
                             </div>
-                            <Button type="submit" className="w-full py-6 text-base" disabled={loading}>{loading ? "Synchronizing..." : "Initialize Session"}</Button>
+                            <button type="submit" className="w-full bg-teal-500 text-white py-5 rounded-2xl font-black uppercase tracking-widest shadow-xl hover:bg-teal-600 active:scale-95 transition-all mt-4" disabled={loading}>{loading ? "Syncing..." : "Enter Portal"}</button>
                         </form>
-                    </Card>
+                    </div>
                 </div>
             );
         }
 
         /**
-         * --- MODULE: DASHBOARD ---
+         * --- MODULE: DASHBOARD (UI REPLICA) ---
          */
-        function DashboardView({ user }) {
-            const loanBal = cleanNumber(user.loan_opening_balance - user.loan_deduction);
+        function DashboardView({ user, employees, attendance, userLoans }) {
+            const [clock, setClock] = useState(new Date().toLocaleTimeString('en-GB'));
+            const [location, setLocation] = useState('Locating...');
+
+            useEffect(() => {
+                const t = setInterval(() => setClock(new Date().toLocaleTimeString('en-GB')), 1000);
+                navigator.geolocation.getCurrentPosition(p => setLocation(p.coords.latitude.toFixed(4) + ", " + p.coords.longitude.toFixed(4)));
+                return () => clearInterval(t);
+            }, []);
+
+            const activeLoansCount = userLoans.filter(l => l.status === 'Approved').length;
+            const loanAmount = userLoans.filter(l => l.status === 'Approved').reduce((s, l) => s + cleanNumber(l.amount), 0);
+
             return (
-                <div className="animate-fade-in space-y-12">
-                    <div className="flex flex-col md:flex-row justify-between items-center gap-6 border-b pb-8 border-slate-100">
-                        <div className="text-left">
-                            <h2 className="text-6xl font-black text-slate-800 tracking-tighter uppercase font-sans">Identity Base</h2>
-                            <p className="text-slate-400 text-[11px] font-black uppercase tracking-widest mt-3 tracking-[0.3em]">Identity: {user.name}</p>
+                <div className="animate-fade-in space-y-10 text-left">
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <h1 className="text-4xl font-black text-white tracking-tight">Dashboard</h1>
+                            <p className="text-slate-400 mt-1 font-medium">Welcome back, ${user.name}!</p>
                         </div>
-                        <Card className="bg-white p-6 !rounded-[2rem] border shadow-sm text-right">
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Digital Matrix Time</p>
-                            <p className="text-green-700 font-black font-mono text-4xl mt-1">{getPktTime()}</p>
-                        </Card>
+                        <div className="flex gap-4">
+                            <div className="bg-slate-800 p-3 rounded-full relative">
+                                <LucideIcon name="bell" size={24} className="text-slate-400" />
+                                <div className="absolute top-2.5 right-2.5 w-3 h-3 bg-red-500 rounded-full border-2 border-slate-800"></div>
+                            </div>
+                            <div className="flex items-center gap-3 bg-slate-800 p-2 pr-5 rounded-full border border-slate-700">
+                                <div className="h-10 w-10 bg-teal-500 text-white flex items-center justify-center font-black rounded-full uppercase text-sm">${getInitial(user.name)}</div>
+                                <div className="hidden md:block">
+                                    <p className="text-[11px] font-black leading-none">${user.name}</p>
+                                    <p className="text-[9px] font-bold text-slate-500 uppercase mt-1 tracking-tighter">${user.role}</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-                        <Card className="bg-green-700 !text-white flex flex-col justify-center py-12 text-left relative overflow-hidden">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
-                            <p className="text-[11px] font-black uppercase opacity-60 tracking-widest">System Status</p>
-                            <p className="text-4xl font-black mt-3 uppercase tracking-tighter">Active Matrix</p>
-                        </Card>
-                        <Card className="flex flex-col justify-center py-12 text-left border-2 border-slate-100 shadow-xl">
-                            <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Loan Remaining</p>
-                            <p className="text-5xl font-black text-red-500 mt-2 font-mono text-left">Rs. {loanBal.toLocaleString()}</p>
-                        </Card>
-                        <Card className="flex flex-col justify-center py-12 text-left border-2 border-slate-100 shadow-xl">
-                            <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest font-sans">Clearance Level</p>
-                            <p className="text-4xl font-black text-slate-800 mt-2 capitalize font-sans tracking-tight">{user.role}</p>
-                        </Card>
+
+                    {/* HERO HERO SECTION */}
+                    <div className="dashboard-hero p-16 text-center text-white relative">
+                        <h2 className="text-9xl font-black font-mono tracking-tighter mb-4 leading-none">${clock}</h2>
+                        <p className="text-xl font-bold opacity-90 mb-10 font-sans">${getPktDateLong()}</p>
+                        
+                        <div className="flex flex-col items-center gap-6">
+                            <div className="flex items-center gap-4 bg-black/10 px-8 py-3 rounded-full border border-white/20">
+                                <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                                <span className="text-[11px] font-black uppercase tracking-[0.2em] opacity-80">Not Clocked In</span>
+                                <button className="btn-clock-in px-10 py-3.5 ml-6 active:scale-95 transition-all text-xs font-black uppercase tracking-widest">Clock In</button>
+                            </div>
+                            <div className="flex items-center gap-2 text-white/70">
+                                <LucideIcon name="map-pin" size={14} />
+                                <span className="text-xs font-bold font-mono tracking-wide">Location: ${location}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* STATS GRID */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div className="matrix-card p-8 flex justify-between items-center">
+                            <div>
+                                <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">Hours Today</p>
+                                <p className="text-3xl font-black text-white mt-2">0:00</p>
+                                <p className="text-teal-400 text-[10px] font-bold mt-2">↑ 12% from yesterday</p>
+                            </div>
+                            <div className="bg-blue-500/10 p-4 rounded-2xl"><LucideIcon name="clock" className="text-blue-400" size={24} /></div>
+                        </div>
+                        <div className="matrix-card p-8 flex justify-between items-center">
+                            <div>
+                                <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">Leave Balance</p>
+                                <p className="text-3xl font-black text-white mt-2">${user.leave_annual || 12}</p>
+                                <p className="text-slate-500 text-[10px] font-bold mt-2">of 20 days available</p>
+                            </div>
+                            <div className="bg-red-500/10 p-4 rounded-2xl"><LucideIcon name="calendar" className="text-red-400" size={24} /></div>
+                        </div>
+                        <div className="matrix-card p-8 flex justify-between items-center">
+                            <div>
+                                <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">Active Loans</p>
+                                <p className="text-3xl font-black text-white mt-2">${activeLoansCount}</p>
+                                <p className="text-slate-500 text-[10px] font-bold mt-2 font-mono">Total: Rs. ${loanAmount.toLocaleString()}</p>
+                            </div>
+                            <div className="bg-yellow-500/10 p-4 rounded-2xl"><LucideIcon name="wallet" className="text-yellow-400" size={24} /></div>
+                        </div>
+                        <div className="matrix-card p-8 flex justify-between items-center">
+                            <div>
+                                <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">Total Users</p>
+                                <p className="text-3xl font-black text-white mt-2">${employees.length}</p>
+                                <p className="text-teal-400 text-[10px] font-bold mt-2">↑ 2 new this month</p>
+                            </div>
+                            <div className="bg-green-500/10 p-4 rounded-2xl"><LucideIcon name="users" className="text-green-400" size={24} /></div>
+                        </div>
+                    </div>
+
+                    {/* RECENT ACTIVITY TABLE */}
+                    <div className="matrix-card overflow-hidden">
+                        <div className="p-8 border-b border-slate-800 flex justify-between items-center bg-slate-800/30">
+                            <h3 className="font-black text-lg uppercase tracking-tight text-white">Recent Activity Matrix</h3>
+                            <button className="bg-slate-800 text-slate-400 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase hover:text-teal-400 transition-all border border-slate-700">View All</button>
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left text-sm">
+                                <thead className="bg-slate-800/50 text-slate-500 uppercase text-[10px] font-black tracking-widest">
+                                    <tr><th className="p-6">Employee Identity</th><th className="p-6">Action Hub</th><th className="p-6">Time Warp</th><th className="p-6">Status</th></tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-800">
+                                    <tr className="hover:bg-slate-800/30 transition-all group">
+                                        <td className="p-6 font-bold uppercase text-slate-300">${user.name}</td>
+                                        <td className="p-6 text-slate-500 font-medium">Session Initialized</td>
+                                        <td className="p-6 font-mono text-xs text-slate-500">${clock}</td>
+                                        <td className="p-6"><span className="px-3 py-1 bg-green-500/10 text-green-500 rounded-full text-[10px] font-black uppercase tracking-tighter">Success</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             );
         }
 
         /**
-         * --- MODULE: ATTENDANCE (GPS + ADMIN RIGHTS) ---
+         * --- ATTENDANCE HUB (GPS + LOGS) ---
          */
-        function AttendanceHub({ user, attendance, fetchData, employees }) {
+        function AttendanceView({ user, attendance, fetchData }) {
             const [selectedMonth, setSelectedMonth] = useState(getPktDate().slice(0, 7));
-            const [manualForm, setManualForm] = useState(null);
             const mapRef = useRef(null);
-            const isAdmin = user.role === 'admin';
 
             useEffect(() => {
                 if (document.getElementById('attendance-map') && window.L) {
@@ -247,12 +328,11 @@
                     const map = window.L.map('attendance-map').setView([31.5204, 74.3587], 13);
                     window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
                     mapRef.current = map;
-
                     navigator.geolocation.getCurrentPosition((p) => {
                         const { latitude, longitude } = p.coords;
                         map.setView([latitude, longitude], 16);
-                        window.L.marker([latitude, longitude], { icon: L.divIcon({ className: 'bg-blue-500 w-4 h-4 rounded-full border-4 border-white shadow-lg' }) })
-                            .addTo(map).bindPopup("<b>Verified Entry Location</b>").openPopup();
+                        window.L.marker([latitude, longitude], { icon: L.divIcon({ className: 'bg-teal-500 w-4 h-4 rounded-full border-4 border-white shadow-2xl' }) })
+                            .addTo(map).bindPopup("<b>Matrix Identity Location</b>").openPopup();
                     }, null, { enableHighAccuracy: true });
                 }
                 return () => { if(mapRef.current) { mapRef.current.remove(); mapRef.current = null; } };
@@ -269,25 +349,11 @@
                             latitude: pos.coords.latitude, longitude: pos.coords.longitude, trigger_email: true
                         })
                     });
-                    if (res.ok) { notify(type + " Matrix Record dispatched."); fetchData(); }
+                    if (res.ok) { notify(type + " Hub Record dispatched."); fetchData(); }
                 });
             };
 
-            const focusOnMap = (lat, lng, label, time) => {
-                if (mapRef.current && lat && lng) {
-                    mapRef.current.setView([lat, lng], 17);
-                    window.L.marker([lat, lng]).addTo(mapRef.current).bindPopup(`<b>${label}: ${time}</b>`).openPopup();
-                    window.scrollTo({ top: 150, behavior: 'smooth' });
-                }
-            };
-
-            const deleteLog = async (id) => {
-                if(!confirm("Purge Attendance Identity Record?")) return;
-                const res = await fetch(API_BASE + "/attendance/" + id, { method: 'DELETE' });
-                if(res.ok) { notify("Log Purged."); fetchData(); }
-            };
-
-            const groupedData = useMemo(() => {
+            const dailyLogs = useMemo(() => {
                 const grouped = {};
                 attendance.filter(l => l.date_str && l.date_str.startsWith(selectedMonth)).forEach(l => {
                     if(!grouped[l.date_str]) grouped[l.date_str] = [];
@@ -297,62 +363,62 @@
             }, [attendance, selectedMonth]);
 
             return (
-                <div className="space-y-8 animate-fade-in font-sans">
-                    <div className="flex justify-between items-center border-b pb-6">
-                        <h2 className="text-3xl font-black uppercase tracking-tighter text-slate-800 text-left">Attendance Center</h2>
+                <div className="animate-fade-in space-y-10 text-left font-sans">
+                    <div className="flex justify-between items-center border-b border-slate-800 pb-8">
+                        <h2 className="text-3xl font-black uppercase tracking-tighter text-white">Attendance Matrix</h2>
                         <div className="flex gap-4">
-                            <input type="month" value={selectedMonth} onChange={e=>setSelectedMonth(e.target.value)} className="p-3 border-2 rounded-2xl font-black bg-white focus:border-green-600 outline-none shadow-sm font-sans" />
-                            {isAdmin && <Button variant="secondary" onClick={() => exportToCSV(attendance, "Attendance_Ledger.csv")} icon="download">Export Ledger</Button>}
+                            <input type="month" value={selectedMonth} onChange={e=>setSelectedMonth(e.target.value)} className="p-4 border-2 border-slate-700 rounded-2xl font-black bg-slate-800 text-white focus:border-teal-500 outline-none transition-all shadow-sm" />
+                            {user.role === 'admin' && <Button variant="secondary" onClick={() => exportToCSV(attendance, "Matrix_Attendance.csv")} icon="download">Export Ledger</Button>}
                         </div>
                     </div>
                     
-                    <Card className="!p-0 h-[450px] overflow-hidden border-2 relative shadow-2xl">
+                    <div className="matrix-card !p-0 h-[450px] overflow-hidden border-2 border-slate-700 relative shadow-2xl">
                         <div id="attendance-map" className="h-full w-full"></div>
-                    </Card>
+                    </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <Card className="flex flex-col items-center justify-center py-16 bg-slate-50 border-2 border-dashed border-slate-200 shadow-inner">
-                             <LucideIcon name="clock" size={64} className="text-slate-200 mb-6" />
-                             <h3 className="text-7xl font-black text-slate-800 font-mono mb-10 leading-none">{getPktTime()}</h3>
-                             <div className="flex flex-col gap-4 w-full max-w-xs px-6">
-                                <button onClick={() => handleClock('Clock In')} className="btn-clock-in w-full py-5 text-xl uppercase tracking-widest transition-all shadow-xl font-sans">Verify Clock In</button>
-                                <button onClick={() => handleClock('Clock Out')} className="btn-clock-out w-full py-5 text-xl uppercase tracking-widest border-2 transition-all font-sans">Verify Clock Out</button>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                        <div className="matrix-card flex flex-col items-center justify-center py-20 bg-slate-800/40 border-dashed border-2 border-slate-700">
+                             <LucideIcon name="clock" size={64} className="text-slate-700 mb-8" />
+                             <h3 className="text-7xl font-black text-white font-mono mb-12 leading-none">${getPktTime()}</h3>
+                             <div className="flex flex-col gap-5 w-full max-w-sm px-8">
+                                <button onClick={() => handleClock('Clock In')} className="w-full py-6 bg-teal-500 text-white rounded-2xl font-black text-xl uppercase tracking-widest transition-all hover:bg-teal-600 shadow-xl active:scale-95">Clock In</button>
+                                <button onClick={() => handleClock('Clock Out')} className="w-full py-6 border-2 border-slate-600 text-slate-300 rounded-2xl font-black text-xl uppercase tracking-widest transition-all hover:bg-slate-800 active:scale-95">Clock Out</button>
                              </div>
-                        </Card>
+                        </div>
 
-                        <Card className="!p-0 flex flex-col max-h-[520px] border-2 shadow-sm text-left font-sans">
-                            <div className="p-6 border-b bg-slate-50 font-black text-xs uppercase text-slate-400 tracking-widest">Monthly Shift Matrix</div>
-                            <div className="flex-1 overflow-y-auto divide-y custom-scrollbar">
-                                {Object.keys(groupedData).sort((a,b) => new Date(b)-new Date(a)).map(date => {
-                                    const cin = groupedData[date].find(x => x.type === 'Clock In');
-                                    const cout = [...groupedData[date]].reverse().find(x => x.type === 'Clock Out');
-                                    const work = calculateWorkTime(cin?.time_str, cout?.time_str);
+                        <div className="matrix-card !p-0 flex flex-col max-h-[550px] overflow-hidden">
+                            <div className="p-8 border-b border-slate-800 bg-slate-800/50 flex justify-between items-center">
+                                <span className="font-black text-xs uppercase text-slate-500 tracking-widest">Monthly Shift Matrix</span>
+                                <LucideIcon name="activity" size={16} className="text-teal-500 animate-pulse" />
+                            </div>
+                            <div className="flex-1 overflow-y-auto divide-y divide-slate-800 custom-scrollbar">
+                                {Object.keys(dailyLogs).sort((a,b) => new Date(b)-new Date(a)).map(date => {
+                                    const cin = dailyLogs[date].find(x => x.type === 'Clock In');
+                                    const cout = [...dailyLogs[date]].reverse().find(x => x.type === 'Clock Out');
                                     return (
-                                        <div key={date} className="p-6 flex justify-between items-center hover:bg-slate-50 transition-all group">
+                                        <div key={date} className="p-8 flex justify-between items-center hover:bg-slate-800/30 transition-all group font-sans">
                                             <div className="text-left font-sans">
-                                                <p className="font-black text-slate-800 text-sm group-hover:text-green-700 transition-all">{date}</p>
-                                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter mt-1 font-sans">Verified Time: {work}</p>
+                                                <p className="font-black text-white text-base group-hover:text-teal-400 transition-all">${date}</p>
+                                                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tighter mt-1 font-sans">Work Hub: ${calculateWorkTime(cin?.time_str, cout?.time_str)}</p>
                                             </div>
-                                            <div className="flex gap-4 items-center font-sans">
-                                                {cin && <button onClick={() => focusOnMap(cin.latitude, cin.longitude, 'In', cin.time_str)} className="text-green-600 font-black text-[10px] border-b border-green-200 uppercase transition-all hover:text-green-800 font-sans">{cin.time_str} IN</button>}
-                                                {cout && <button onClick={() => focusOnMap(cout.latitude, cout.longitude, 'Out', cout.time_str)} className="text-red-600 font-black text-[10px] border-b border-red-100 uppercase transition-all hover:text-red-800 font-sans">{cout.time_str} OUT</button>}
-                                                {isAdmin && <button onClick={()=>deleteLog(cin?.id || cout?.id)} className="text-red-200 hover:text-red-600 transition-colors ml-4"><LucideIcon name="trash-2" size={14}/></button>}
+                                            <div className="flex gap-4 items-center">
+                                                {cin && <span className="text-teal-400 font-black text-xs uppercase font-mono">${cin.time_str} IN</span>}
+                                                {cout && <span className="text-red-400 font-black text-xs uppercase font-mono">${cout.time_str} OUT</span>}
                                             </div>
                                         </div>
                                     )
                                 })}
-                                {Object.keys(groupedData).length === 0 && <div className="p-24 text-center font-black uppercase text-slate-200 tracking-widest opacity-30">Zero Logs Recorded</div>}
                             </div>
-                        </Card>
+                        </div>
                     </div>
                 </div>
             );
         }
 
         /**
-         * --- MODULE: SALARY HUB (IMPORT + 11 COLUMNS) ---
+         * --- SALARY HUB (IMPORT + 11 COLUMNS) ---
          */
-        function SalaryHub({ user, employees, fetchData, postedMonths }) {
+        function SalaryView({ user, employees, fetchData, postedMonths }) {
             const [editingId, setEditingId] = useState(null);
             const [month, setMonth] = useState(getPktDate().slice(0, 7));
             const isAdmin = user.role === 'admin';
@@ -372,7 +438,7 @@
                     extra_leaves_deduction: cleanNumber(document.getElementById("eld-" + id).value)
                 };
                 const res = await fetch(API_BASE + "/employees/" + id, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                if (res.ok) { notify("Salary Synchronized."); setEditingId(null); fetchData(); }
+                if (res.ok) { notify("Salary Sync Success."); setEditingId(null); fetchData(); }
             };
 
             const handleImport = (e) => {
@@ -381,7 +447,7 @@
                 reader.onload = async (ev) => {
                     const text = ev.target.result;
                     const rows = text.split('\n').slice(1);
-                    notify("Bulk Sync in Progress...");
+                    notify("Bulk Sync Matrix processing...");
                     for(let row of rows) {
                         const cols = row.split(',');
                         if(cols.length < 12) continue;
@@ -392,7 +458,7 @@
                             loan_deduction: cleanNumber(cols[8]), insurance: cleanNumber(cols[9]), others_deduction: cleanNumber(cols[10]), 
                             extra_leaves_deduction: cleanNumber(cols[11]) 
                         };
-                        await fetch(`${API_BASE}/employees/${id}`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+                        await fetch(`${API_BASE}/employees/` + id, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
                     }
                     notify("Bulk Matrix Synchronized."); fetchData();
                 };
@@ -400,65 +466,66 @@
             };
 
             return (
-                <div className="space-y-8 animate-fade-in text-left font-sans">
-                    <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-                        <h2 className="text-3xl font-black uppercase tracking-tighter text-slate-800">Financial Matrix</h2>
-                        <div className="flex flex-wrap gap-2 justify-center">
-                             <input type="month" value={month} onChange={e=>setMonth(e.target.value)} className="p-3 border-2 rounded-2xl font-black bg-white focus:border-green-600 outline-none shadow-sm font-sans" />
+                <div className="space-y-10 animate-fade-in text-left font-sans">
+                    <div className="flex flex-col md:flex-row justify-between items-center gap-6 border-b border-slate-800 pb-8">
+                        <h2 className="text-3xl font-black uppercase tracking-tighter text-white">Financial Matrix Hub</h2>
+                        <div className="flex flex-wrap gap-3">
+                             <input type="month" value={month} onChange={e=>setMonth(e.target.value)} className="p-4 border-2 border-slate-700 rounded-2xl font-black bg-slate-800 text-white focus:border-teal-500 outline-none shadow-sm" />
                              {isAdmin && (
                                 <>
-                                    <Button variant="secondary" onClick={() => exportToCSV(employees, 'LSAF_Payroll_Report.csv')} icon="download">Export Ledger</Button>
-                                    <label className="bg-green-50 text-green-700 px-8 py-3.5 rounded-2xl font-black text-[10px] uppercase tracking-widest cursor-pointer hover:bg-green-100 flex items-center gap-2 border-2 border-green-100 transition-all font-sans">
+                                    <Button variant="secondary" onClick={() => exportToCSV(employees, 'Payroll_Audit.csv')} icon="download">Export Report</Button>
+                                    <label className="bg-teal-500/10 text-teal-400 px-10 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest cursor-pointer hover:bg-teal-500/20 flex items-center gap-3 border-2 border-teal-500/30 transition-all font-sans">
                                         <LucideIcon name="upload" size={14}/>Import Matrix<input type="file" onChange={handleImport} className="hidden" accept=".csv"/>
                                     </label>
-                                    <Button variant="secondary" onClick={() => exportToCSV([{ID:"EMP001", Name:"Sample", Basic:60000}], "LSAFHR_Sample.csv")} icon="file-text">Sample</Button>
+                                    <Button variant="secondary" onClick={() => exportToCSV([{ID:"EMP01",Name:"Sample",Basic:50000}], "Matrix_Sample.csv")} icon="file-text">Sample</Button>
                                 </>
                              )}
                         </div>
                     </div>
                     {!isAdmin && !isPosted ? (
-                        <Card className="py-40 text-center flex flex-col items-center border-dashed border-2 border-slate-200">
-                            <LucideIcon name="lock" size={64} className="text-slate-200 mb-6" />
-                            <p className="text-slate-400 font-black uppercase text-xs tracking-widest font-sans">Access Restricted - Pending Admin Release</p>
-                        </Card>
+                        <div className="matrix-card py-60 text-center flex flex-col items-center justify-center font-sans border-dashed border-2 border-slate-700">
+                            <LucideIcon name="lock" size={80} className="text-slate-800 mb-10" />
+                            <p className="text-slate-600 font-black uppercase text-base tracking-[0.4em]">Payload Locked Matrix</p>
+                            <p className="text-slate-700 text-xs font-bold uppercase mt-4 tracking-widest">Administrator Oversight pending for current period</p>
+                        </div>
                     ) : (
-                        <Card className="!p-0 overflow-hidden border-2 shadow-2xl font-sans text-left">
+                        <div className="matrix-card !p-0 overflow-hidden border-2 border-slate-800 shadow-2xl">
                             <div className="overflow-x-auto custom-scrollbar">
                                 <table className="w-full text-[10px] text-left">
-                                    <thead className="bg-slate-50 border-b font-black uppercase text-slate-400 tracking-widest font-sans">
+                                    <thead className="bg-slate-800 border-b border-slate-700 font-black uppercase text-slate-500 tracking-widest">
                                         <tr>
-                                            <th className="p-5 font-sans">ID</th><th className="p-5 font-sans">Staff Identity</th>
-                                            <th className="p-5 text-right font-sans">Basic</th><th className="p-5 text-right font-sans">Invig</th>
-                                            <th className="p-5 text-right font-sans">T.Pay</th><th className="p-4 text-right font-sans">Incr</th>
-                                            <th className="p-4 text-right font-sans">Eidi</th><th className="p-4 text-right font-sans text-slate-400">Tax</th>
-                                            <th className="p-4 text-right font-sans text-slate-400">Loan</th><th className="p-4 text-right font-sans text-slate-400">Ins</th>
-                                            <th className="p-4 text-right font-sans text-slate-400">Other</th><th className="p-4 text-right font-sans text-red-500">L.Ded</th>
-                                            <th className="p-5 text-right font-black font-sans text-slate-900 bg-slate-50/50 uppercase">Net Paid</th>
-                                            {isAdmin && <th className="p-5 text-center font-sans">Audit</th>}
+                                            <th className="p-6">ID</th><th className="p-6">Identity Name</th>
+                                            <th className="p-6 text-right">Basic</th><th className="p-6 text-right">Invig</th>
+                                            <th className="p-6 text-right">T.Pay</th><th className="p-6 text-right">Incr</th>
+                                            <th className="p-6 text-right">Eidi</th><th className="p-6 text-right text-slate-400">Tax</th>
+                                            <th className="p-6 text-right text-slate-400">Loan</th><th className="p-6 text-right text-slate-400">Ins</th>
+                                            <th className="p-6 text-right text-slate-400">Other</th><th className="p-6 text-right text-red-500">L.Ded</th>
+                                            <th className="p-6 text-right font-black text-teal-400 uppercase bg-slate-800/80">Net Paid</th>
+                                            {isAdmin && <th className="p-6 text-center">Audit</th>}
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y font-bold text-slate-700 font-sans">
+                                    <tbody className="divide-y divide-slate-800 font-bold text-slate-400 font-sans">
                                         {(isAdmin ? employees : employees.filter(e => e.id === user.id)).map(e => {
                                             const m = calculateSalaryMetrics(e);
                                             const edit = editingId === e.id;
                                             return (
-                                                <tr key={e.id} className="hover:bg-slate-50 transition-colors font-sans">
-                                                    <td className="p-5 font-mono text-slate-500 text-left font-sans">{e.id}</td>
-                                                    <td className="p-5 uppercase truncate max-w-[150px] text-left font-sans">{e.name}</td>
-                                                    <td className="p-5 text-right font-mono">{edit ? <input id={"eb-"+e.id} className="w-20 border rounded p-1 text-right" defaultValue={e.basic_salary}/> : cleanNumber(e.basic_salary).toLocaleString()}</td>
-                                                    <td className="p-5 text-right font-mono">{edit ? <input id={"ei-"+e.id} className="w-16 border rounded p-1 text-right" defaultValue={e.invigilation}/> : cleanNumber(e.invigilation).toLocaleString()}</td>
-                                                    <td className="p-5 text-right font-mono">{edit ? <input id={"et-"+e.id} className="w-16 border rounded p-1 text-right" defaultValue={e.t_payment}/> : cleanNumber(e.t_payment).toLocaleString()}</td>
-                                                    <td className="p-4 text-right font-mono">{edit ? <input id={"en-"+e.id} className="w-16 border rounded p-1 text-right" defaultValue={e.increment}/> : cleanNumber(e.increment).toLocaleString()}</td>
-                                                    <td className="p-4 text-right font-mono">{edit ? <input id={"ed-"+e.id} className="w-16 border rounded p-1 text-right" defaultValue={e.eidi}/> : cleanNumber(e.eidi).toLocaleString()}</td>
-                                                    <td className="p-4 text-right font-mono text-slate-400">{edit ? <input id={"ex-"+e.id} className="w-16 border rounded p-1 text-right" defaultValue={e.tax}/> : cleanNumber(e.tax).toLocaleString()}</td>
-                                                    <td className="p-4 text-right font-mono text-slate-400">{edit ? <input id={"el-"+e.id} className="w-16 border rounded p-1 text-right" defaultValue={e.loan_deduction}/> : cleanNumber(e.loan_deduction).toLocaleString()}</td>
-                                                    <td className="p-4 text-right font-mono text-slate-400">{edit ? <input id={"es-"+e.id} className="w-16 border rounded p-1 text-right" defaultValue={e.insurance}/> : cleanNumber(e.insurance).toLocaleString()}</td>
-                                                    <td className="p-4 text-right font-mono text-slate-400">{edit ? <input id={"eo-"+e.id} className="w-16 border rounded p-1 text-right" defaultValue={e.others_deduction}/> : cleanNumber(e.others_deduction).toLocaleString()}</td>
-                                                    <td className="p-4 text-right font-mono text-red-500">{edit ? <input id={"eld-"+e.id} className="w-16 border rounded p-1 text-right" defaultValue={e.extra_leaves_deduction}/> : cleanNumber(e.extra_leaves_deduction).toLocaleString()}</td>
-                                                    <td className="p-5 text-right font-black bg-slate-50/50 text-slate-900 text-xs font-mono font-sans">Rs. {m.netPaid.toLocaleString()}</td>
-                                                    {isAdmin && <td className="p-5 text-center flex gap-2 justify-center font-sans">
-                                                        {edit ? <button onClick={() => handleSaveSalary(e.id)} className="text-green-600 hover:text-green-800 transition-all font-sans"><LucideIcon name="save" size={18}/></button> : <button onClick={()=>setEditingId(e.id)} className="text-blue-500 hover:text-blue-700 transition-all font-sans"><LucideIcon name="pencil" size={18}/></button>}
-                                                        <button onClick={async ()=>{if(confirm("Wipe Identity Payroll Data?")){await fetch(API_BASE+"/employees/"+e.id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({basic_salary:0,tax:0,loan_deduction:0})});fetchData();}}} className="text-red-300 hover:text-red-600 transition-colors font-sans"><LucideIcon name="trash-2" size={18}/></button>
+                                                <tr key={e.id} className="hover:bg-slate-800/40 transition-colors">
+                                                    <td className="p-6 font-mono text-slate-500 text-left font-sans">${e.id}</td>
+                                                    <td className="p-6 uppercase truncate max-w-[150px] text-left font-sans text-slate-200">${e.name}</td>
+                                                    <td className="p-6 text-right font-mono">${edit ? <input id={"eb-"+e.id} className="w-24 bg-slate-900 border border-slate-700 rounded p-2 text-right" defaultValue={e.basic_salary}/> : cleanNumber(e.basic_salary).toLocaleString()}</td>
+                                                    <td className="p-6 text-right font-mono">${edit ? <input id={"ei-"+e.id} className="w-16 bg-slate-900 border border-slate-700 rounded p-2 text-right" defaultValue={e.invigilation}/> : cleanNumber(e.invigilation).toLocaleString()}</td>
+                                                    <td className="p-6 text-right font-mono">${edit ? <input id={"et-"+e.id} className="w-16 bg-slate-900 border border-slate-700 rounded p-2 text-right" defaultValue={e.t_payment}/> : cleanNumber(e.t_payment).toLocaleString()}</td>
+                                                    <td className="p-6 text-right font-mono">${edit ? <input id={"en-"+e.id} className="w-16 bg-slate-900 border border-slate-700 rounded p-2 text-right" defaultValue={e.increment}/> : cleanNumber(e.increment).toLocaleString()}</td>
+                                                    <td className="p-6 text-right font-mono">${edit ? <input id={"ed-"+e.id} className="w-16 bg-slate-900 border border-slate-700 rounded p-2 text-right" defaultValue={e.eidi}/> : cleanNumber(e.eidi).toLocaleString()}</td>
+                                                    <td className="p-6 text-right font-mono text-slate-600">${edit ? <input id={"ex-"+e.id} className="w-16 bg-slate-900 border border-slate-700 rounded p-2 text-right" defaultValue={e.tax}/> : cleanNumber(e.tax).toLocaleString()}</td>
+                                                    <td className="p-6 text-right font-mono text-slate-600">${edit ? <input id={"el-"+e.id} className="w-16 bg-slate-900 border border-slate-700 rounded p-2 text-right" defaultValue={e.loan_deduction}/> : cleanNumber(e.loan_deduction).toLocaleString()}</td>
+                                                    <td className="p-6 text-right font-mono text-slate-600">${edit ? <input id={"es-"+e.id} className="w-16 bg-slate-900 border border-slate-700 rounded p-2 text-right" defaultValue={e.insurance}/> : cleanNumber(e.insurance).toLocaleString()}</td>
+                                                    <td className="p-6 text-right font-mono text-slate-600">${edit ? <input id={"eo-"+e.id} className="w-16 bg-slate-900 border border-slate-700 rounded p-2 text-right" defaultValue={e.others_deduction}/> : cleanNumber(e.others_deduction).toLocaleString()}</td>
+                                                    <td className="p-6 text-right font-mono text-red-500">${edit ? <input id={"eld-"+e.id} className="w-16 bg-slate-900 border border-slate-700 rounded p-2 text-right" defaultValue={e.extra_leaves_deduction}/> : cleanNumber(e.extra_leaves_deduction).toLocaleString()}</td>
+                                                    <td className="p-6 text-right font-black text-white text-xs bg-slate-800/80">Rs. ${m.netPaid.toLocaleString()}</td>
+                                                    {isAdmin && <td className="p-6 text-center flex gap-3 justify-center">
+                                                        {edit ? <button onClick={() => handleSaveSalary(e.id)} className="text-teal-400 hover:text-white transition-all"><LucideIcon name="save" size={20}/></button> : <button onClick={()=>setEditingId(e.id)} className="text-slate-600 hover:text-teal-400 transition-all"><LucideIcon name="pencil" size={20}/></button>}
+                                                        <button onClick={async ()=>{if(confirm("DANGER: Purge payroll data?")){await fetch(API_BASE+"/employees/"+e.id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({basic_salary:0,tax:0})});fetchData();}}} className="text-red-900 hover:text-red-500 transition-all"><LucideIcon name="trash-2" size={20}/></button>
                                                     </td>}
                                                 </tr>
                                             )
@@ -466,27 +533,27 @@
                                     </tbody>
                                 </table>
                             </div>
-                        </Card>
+                        </div>
                     )}
                 </div>
             );
         }
 
         /**
-         * --- MODULE: LOANS HUB (FIXED PAYLOAD) ---
+         * --- LOANS MODULE (500 ERROR FIX) ---
          */
-        function LoansHub({ user, userLoans, allLoans, employees, fetchData }) {
+        function LoanHub({ user, employees, fetchData, userLoans, allLoans }) {
             const [tab, setTab] = useState('apply');
             const [amt, setAmt] = useState('');
             const [rsn, setRsn] = useState('');
             const isAdmin = user.role === 'admin';
             const targetUser = employees.find(e => e.id === user.id) || user;
-            const currentBal = cleanNumber(targetUser.loan_opening_balance - targetUser.loan_deduction);
+            const debt = cleanNumber(targetUser.loan_opening_balance - targetUser.loan_deduction);
 
-            const handleApply = async (e) => {
+            const handleLoanSubmit = async (e) => {
                 e.preventDefault();
                 if(!amt || !rsn) return;
-                // Sending employeeId to match server expectations and employee_id for DB naming
+                // Double mapped payload to prevent server 500 error
                 const res = await fetch(API_BASE + "/loans", {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -498,79 +565,79 @@
                         trigger_email: true
                     })
                 });
-                if(res.ok) { notify("Matrix request dispatched."); setTab('history'); fetchData(); setAmt(''); setRsn(''); }
-                else notify("Sync Error (500). Contact Administrator.");
+                if(res.ok) { notify("Application submitted."); setTab('history'); fetchData(); setAmt(''); setRsn(''); }
+                else notify("Internal Server Error (500). Please check Node.js Logs.");
             };
 
-            const decide = async (id, status) => {
+            const decideLoan = async (id, status) => {
                 await fetch(API_BASE + "/admin/loans/" + id, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ status, trigger_email: true }) });
-                notify("Decision warp recorded: " + status); fetchData();
+                notify("Loan Warp status updated."); fetchData();
             };
 
             return (
-                <div className="space-y-8 animate-fade-in text-left font-sans text-left">
+                <div className="animate-fade-in space-y-10 text-left font-sans font-sans">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <Card className="border-2 border-slate-100 shadow-sm relative overflow-hidden flex flex-col justify-center">
-                            <div className="absolute top-0 left-0 w-1.5 h-full bg-slate-300"></div>
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest font-sans">Opening Debt Balance</p>
-                            <p className="text-5xl font-black mt-4 font-mono text-slate-800">Rs. {cleanNumber(targetUser.loan_opening_balance).toLocaleString()}</p>
-                        </Card>
-                        <Card className="bg-red-50 border-red-100 border-2 shadow-sm relative overflow-hidden flex flex-col justify-center font-sans">
-                            <div className="absolute top-0 left-0 w-1.5 h-full bg-red-600"></div>
-                            <p className="text-[10px] font-black text-red-400 uppercase tracking-widest font-sans">Remaining Debt Matrix</p>
-                            <p className="text-5xl font-black mt-4 font-mono text-red-600">Rs. {currentBal.toLocaleString()}</p>
-                        </Card>
+                        <div className="matrix-card p-10 relative overflow-hidden flex flex-col justify-center text-left">
+                            <div className="absolute top-0 left-0 w-2 h-full bg-slate-700"></div>
+                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Opening debt Matrix</p>
+                            <p className="text-5xl font-black text-white mt-4 font-mono leading-none">Rs. ${cleanNumber(targetUser.loan_opening_balance).toLocaleString()}</p>
+                        </div>
+                        <div className="matrix-card p-10 bg-red-500/5 border-red-500/20 relative overflow-hidden flex flex-col justify-center text-left font-sans">
+                            <div className="absolute top-0 left-0 w-2 h-full bg-red-600"></div>
+                            <p className="text-[10px] font-black text-red-900/40 uppercase tracking-widest font-sans">Total Matrix Outstanding</p>
+                            <p className="text-5xl font-black text-red-500 mt-4 font-mono leading-none">Rs. ${debt.toLocaleString()}</p>
+                        </div>
                     </div>
 
-                    <div className="flex bg-slate-200 p-2 rounded-3xl max-w-sm mx-auto shadow-inner font-sans">
-                        <button onClick={()=>setTab('apply')} className={"flex-1 py-3 text-[10px] font-black rounded-2xl uppercase transition-all " + (tab==='apply'?'bg-white text-green-700 shadow-lg':'text-slate-500 hover:text-slate-700')}>Apply</button>
-                        <button onClick={()=>setTab('history')} className={"flex-1 py-3 text-[10px] font-black rounded-2xl uppercase transition-all " + (tab==='history'?'bg-white text-green-700 shadow-lg':'text-slate-500 hover:text-slate-700')}>History</button>
-                        {isAdmin && <button onClick={()=>setTab('oversight')} className={"flex-1 py-3 text-[10px] font-black rounded-2xl uppercase transition-all " + (tab==='oversight'?'bg-white text-green-700 shadow-lg':'text-slate-500 hover:text-slate-700 font-sans')}>Oversight</button>}
+                    <div className="flex bg-slate-800/50 p-2 rounded-2xl max-w-sm mx-auto shadow-inner border border-slate-700 font-sans">
+                        <button onClick={()=>setTab('apply')} className={"flex-1 py-3 text-[10px] font-black rounded-xl uppercase transition-all " + (tab==='apply'?'bg-teal-500 text-white shadow-xl':'text-slate-500 hover:text-white')}>Apply</button>
+                        <button onClick={()=>setTab('history')} className={"flex-1 py-3 text-[10px] font-black rounded-xl uppercase transition-all " + (tab==='history'?'bg-teal-500 text-white shadow-xl':'text-slate-500 hover:text-white')}>History</button>
+                        {isAdmin && <button onClick={()=>setTab('oversight')} className={"flex-1 py-3 text-[10px] font-black rounded-xl uppercase transition-all " + (tab==='oversight'?'bg-teal-500 text-white shadow-xl':'text-slate-500 hover:text-white')}>Oversight</button>}
                     </div>
 
                     {tab === 'apply' ? (
-                        <Card className="max-w-2xl mx-auto shadow-2xl !p-12 relative overflow-hidden border-2 border-slate-50 text-left font-sans font-sans">
-                            <div className="absolute top-0 left-0 w-2 h-full bg-green-700"></div>
-                            <h3 className="font-black text-2xl mb-8 uppercase tracking-tighter text-slate-800">New Identity Matrix Request</h3>
-                            <form onSubmit={handleApply} className="space-y-8 font-sans">
-                                <div><label className="text-[10px] font-black uppercase text-slate-400 ml-2 tracking-widest font-sans font-sans">Principal Amount (PKR)</label><input type="number" value={amt} onChange={e=>setAmt(e.target.value)} className="w-full p-6 rounded-2xl border-2 font-black text-xl bg-slate-50 focus:bg-white outline-none shadow-inner transition-all font-sans" placeholder="0.00" required /></div>
-                                <div><label className="text-[10px] font-black uppercase text-slate-400 ml-2 tracking-widest font-sans font-sans">Reason Warp Justification</label><textarea value={rsn} onChange={e=>setRsn(e.target.value)} className="w-full p-6 rounded-2xl border-2 font-bold h-32 bg-slate-50 focus:bg-white outline-none transition-all text-sm shadow-inner font-sans" placeholder="Explain the identity for this warp request..." required></textarea></div>
-                                <button type="submit" className="w-full py-6 bg-green-700 text-white rounded-2xl font-black uppercase tracking-widest shadow-green-200 shadow-2xl active:scale-95 transition-all font-sans font-sans font-sans">Submit Identity request</button>
+                        <div className="matrix-card p-16 max-w-2xl mx-auto border-2 border-slate-800 shadow-2xl relative overflow-hidden animate-slide-up">
+                            <div className="absolute top-0 left-0 w-2 h-full bg-teal-500"></div>
+                            <h3 className="font-black text-2xl mb-10 uppercase tracking-tight text-white font-sans">New Matrix Application</h3>
+                            <form onSubmit={handleLoanSubmit} className="space-y-8 text-left font-sans">
+                                <div><label className="text-[10px] font-black uppercase text-slate-500 ml-2 tracking-widest font-sans">Principal Amount (Rs.)</label><input type="number" value={amt} onChange={e=>setAmt(e.target.value)} className="w-full p-6 rounded-2xl border-2 border-slate-700 bg-slate-900/50 text-white font-black text-2xl outline-none focus:border-teal-500 transition-all font-sans font-sans" placeholder="0.00" required /></div>
+                                <div><label className="text-[10px] font-black uppercase text-slate-500 ml-2 tracking-widest font-sans">Identity Justification</label><textarea value={rsn} onChange={e=>setRsn(e.target.value)} className="w-full p-6 rounded-2xl border-2 border-slate-700 bg-slate-900/50 text-white font-bold h-40 outline-none focus:border-teal-500 transition-all text-sm font-sans" placeholder="State reason clearly..." required></textarea></div>
+                                <button type="submit" className="w-full bg-teal-500 text-white py-6 rounded-2xl font-black uppercase tracking-[0.3em] shadow-xl hover:bg-teal-600 transition-all active:scale-95">Transmit Identity Hub request</button>
                             </form>
-                        </Card>
+                        </div>
                     ) : tab === 'oversight' ? (
-                        <Card className="!p-0 border-2 overflow-hidden shadow-2xl font-sans">
-                             <table className="w-full text-left text-xs font-sans font-sans">
-                                <thead className="bg-slate-50 border-b font-black uppercase text-slate-400 tracking-widest text-left font-sans"><tr><th className="p-6">Requester Hub</th><th className="p-6">Submission Date</th><th className="p-6 text-right">Amount</th><th className="p-6 text-center">Action hub</th></tr></thead>
-                                <tbody className="divide-y font-bold text-slate-700 font-sans">
+                        <div className="matrix-card !p-0 overflow-hidden shadow-2xl font-sans">
+                             <table className="w-full text-left text-[11px] font-bold font-sans">
+                                <thead className="bg-slate-800 border-b border-slate-700 font-black uppercase text-slate-500 tracking-widest font-sans"><tr><th className="p-6">Staff identity</th><th className="p-6">Date Hub</th><th className="p-6 text-right">Amount Matrix</th><th className="p-6 text-center font-sans font-sans">Audit</th></tr></thead>
+                                <tbody className="divide-y divide-slate-800 font-sans text-slate-300">
                                     {allLoans.map(l => (
-                                        <tr key={l.id} className="hover:bg-slate-50 transition-colors font-sans">
-                                            <td className="p-6 uppercase font-black font-sans font-sans font-sans">{l.name} <span className="text-slate-300 ml-1 font-mono text-[9px] font-sans font-sans">(${l.employee_id})</span></td>
-                                            <td className="p-6 font-mono text-slate-500 uppercase font-sans font-sans">{formatDate(l.applied_at)}</td>
-                                            <td className="p-6 text-right font-black text-sm text-slate-900 font-sans font-sans font-sans">Rs. {cleanNumber(l.amount).toLocaleString()}</td>
-                                            <td className="p-6 flex gap-3 justify-center font-sans font-sans"><button onClick={()=>decide(l.id, 'Approved')} className="bg-green-700 text-white px-5 py-2.5 rounded-xl text-[9px] font-black uppercase shadow-lg hover:bg-green-800 transition-all font-sans font-sans font-sans">Approve</button><button onClick={()=>decide(l.id, 'Rejected')} className="bg-red-600 text-white px-5 py-2.5 rounded-xl text-[9px] font-black uppercase shadow-lg hover:bg-red-700 transition-all font-sans font-sans font-sans">Reject</button></td>
+                                        <tr key={l.id} className="hover:bg-slate-800/30 transition-colors font-sans">
+                                            <td className="p-6 uppercase font-black font-sans font-sans font-sans">${l.name} <span className="text-slate-600 ml-1 font-mono text-[9px] font-sans">(${l.employee_id})</span></td>
+                                            <td className="p-6 font-mono text-slate-500 uppercase font-sans font-sans">${formatDate(l.applied_at)}</td>
+                                            <td className="p-6 text-right font-black text-sm text-teal-400 font-sans font-sans font-sans">Rs. ${cleanNumber(l.amount).toLocaleString()}</td>
+                                            <td className="p-6 flex gap-3 justify-center font-sans font-sans"><button onClick={()=>decideLoan(l.id, 'Approved')} className="bg-teal-500 text-white px-5 py-2.5 rounded-xl text-[9px] font-black uppercase shadow-lg transition-all active:scale-90 font-sans">Approve</button><button onClick={()=>decideLoan(l.id, 'Rejected')} className="bg-red-900/50 text-red-500 border border-red-500/20 px-5 py-2.5 rounded-xl text-[9px] font-black uppercase shadow-lg transition-all active:scale-90 font-sans">Reject</button></td>
                                         </tr>
                                     ))}
-                                    {allLoans.length === 0 && <tr><td colSpan="4" className="p-32 text-center font-black uppercase text-slate-200 tracking-[0.4em] font-sans">No Pending Oversight</td></tr>}
+                                    {allLoans.length === 0 && <tr><td colSpan="4" className="p-32 text-center font-black uppercase text-slate-700 tracking-[0.5em] font-sans">Zero Pending Oversight</td></tr>}
                                 </tbody>
                              </table>
-                        </Card>
+                        </div>
                     ) : (
-                        <div className="space-y-4 max-w-4xl mx-auto font-sans font-sans font-sans">
+                        <div className="space-y-5 max-w-4xl mx-auto font-sans font-sans">
                             {userLoans.map((l, i) => (
-                                <Card key={i} className="flex justify-between items-center border-2 border-slate-100 transition-all hover:bg-slate-50 shadow-sm text-left font-sans">
-                                    <div className="flex items-center gap-6 font-sans font-sans">
-                                        <div className="bg-slate-50 p-4 rounded-2xl font-sans"><LucideIcon name="wallet" className="text-slate-400" /></div>
-                                        <div className="text-left font-sans font-sans font-sans">
-                                            <p className="font-black text-2xl text-slate-800 leading-tight font-sans">Rs. {cleanNumber(l.amount).toLocaleString()}</p>
-                                            <p className="text-[10px] text-slate-400 uppercase font-black mt-1 tracking-widest font-sans font-sans font-sans font-sans">{formatDate(l.applied_at)}</p>
+                                <div key={i} className="matrix-card p-8 flex justify-between items-center transition-all hover:bg-slate-800/50 text-left font-sans">
+                                    <div className="flex items-center gap-6 font-sans">
+                                        <div className="bg-slate-800 p-4 rounded-2xl font-sans font-sans"><LucideIcon name="wallet" className="text-slate-500 font-sans font-sans" /></div>
+                                        <div className="text-left font-sans font-sans">
+                                            <p className="font-black text-2xl text-white font-sans font-sans font-sans">Rs. ${cleanNumber(l.amount).toLocaleString()}</p>
+                                            <p className="text-[10px] text-slate-500 uppercase font-black mt-1 font-sans font-sans">Marked: ${formatDate(l.applied_at)}</p>
                                         </div>
                                     </div>
-                                    <div className="text-right flex flex-col items-end gap-2 font-sans">
+                                    <div className="text-right flex flex-col items-end gap-2 font-sans font-sans font-sans font-sans font-sans">
                                         <Badge status={l.status} />
-                                        <p className="text-[9px] text-slate-300 font-bold mt-2 uppercase tracking-tighter font-sans font-sans">Outstanding: Rs. {netOutstanding.toLocaleString()}</p>
+                                        <p className="text-[9px] text-slate-700 font-bold uppercase tracking-widest font-sans font-sans font-sans">Remaining: Rs. ${debt.toLocaleString()}</p>
                                     </div>
-                                </Card>
+                                </div>
                             ))}
                         </div>
                     )}
@@ -579,194 +646,7 @@
         }
 
         /**
-         * --- MODULE: LEAVES HUB ---
-         */
-        function LeavesHub({ user, allLeaves, employees, fetchData, leaves }) {
-            const [tab, setTab] = useState('apply');
-            const [form, setForm] = useState({ type: 'Annual Leave', startDate: '', days: 1, reason: 'Identity Hub Request' });
-            const isAdmin = user.role === 'admin';
-            const targetUser = employees.find(e => e.id === user.id) || user;
-
-            const handleApply = async (e) => {
-                e.preventDefault();
-                const res = await fetch(API_BASE + "/leaves", {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ employeeId: user.id, employee_id: user.id, ...form, trigger_email: true })
-                });
-                if(res.ok) { notify("Leave matrix dispatched."); setTab('history'); fetchData(); }
-            };
-
-            const decide = async (id, status) => {
-                await fetch(API_BASE + "/admin/leaves/" + id, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ status, deduct_balance: true, trigger_email: true }) });
-                notify("Status Warp Complete."); fetchData();
-            };
-
-            return (
-                <div className="space-y-8 animate-fade-in text-left font-sans font-sans font-sans">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 font-sans">
-                        <Card className="bg-green-700 p-10 rounded-[3rem] text-white shadow-2xl relative overflow-hidden flex flex-col justify-center text-left font-sans">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
-                            <p className="text-[10px] font-black uppercase opacity-60 tracking-[0.2em] font-sans font-sans">Annual Matrix Hub</p>
-                            <p className="text-6xl font-black mt-4 tracking-tighter font-mono">${targetUser.leave_annual || 0} Days</p>
-                        </Card>
-                        <Card className="bg-white p-10 rounded-[3rem] border-2 border-slate-50 shadow-sm flex flex-col justify-center text-left font-sans">
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest tracking-[0.2em] font-sans font-sans">WOP Matrix Balance</p>
-                            <p className="text-6xl font-black mt-4 tracking-tighter text-slate-800 font-mono font-sans">${targetUser.leave_casual || 0} Days</p>
-                        </Card>
-                    </div>
-                    <div className="flex bg-slate-200 p-2 rounded-[2rem] max-w-sm mx-auto shadow-inner font-sans">
-                        <button onClick={()=>setTab('apply')} className={"flex-1 py-3 text-[10px] font-black rounded-2xl uppercase transition-all " + (tab==='apply'?'bg-white text-green-700 shadow-lg':'text-slate-500 hover:text-slate-700')}>Apply</button>
-                        <button onClick={()=>setTab('history')} className={"flex-1 py-3 text-[10px] font-black rounded-2xl uppercase transition-all " + (tab==='history'?'bg-white text-green-700 shadow-lg':'text-slate-500 hover:text-slate-700')}>History</button>
-                        {isAdmin && <button onClick={()=>setTab('oversight')} className={"flex-1 py-3 text-[10px] font-black rounded-2xl uppercase transition-all " + (tab==='oversight'?'bg-white text-green-700 shadow-lg':'text-slate-500 hover:text-slate-700')}>Oversight</button>}
-                    </div>
-
-                    {tab === 'apply' ? (
-                        <Card className="max-w-2xl mx-auto border-2 shadow-2xl animate-slide-up !p-12 relative overflow-hidden text-left font-sans">
-                            <div className="absolute top-0 left-0 w-2 h-full bg-green-700"></div>
-                            <h3 className="font-black text-2xl mb-10 uppercase tracking-tighter text-slate-800 font-sans">New Leave Application</h3>
-                            <form onSubmit={handleApply} className="space-y-6 font-sans">
-                                <div><label className="text-[10px] font-black uppercase text-slate-400 ml-2 tracking-widest font-sans">Type Category</label><select value={form.type} onChange={e=>setForm({...form, type:e.target.value})} className="w-full p-4 rounded-xl border-2 font-black bg-slate-50 outline-none focus:bg-white font-sans"><option>Annual Leave</option><option>WOP (Without Pay)</option></select></div>
-                                <div className="grid grid-cols-2 gap-8 text-left">
-                                    <div><label className="text-[10px] font-black uppercase text-slate-400 ml-2 tracking-widest font-sans font-sans">Start Period Hub</label><input type="date" value={form.startDate} onChange={e=>setForm({...form, startDate:e.target.value})} className="w-full p-4 rounded-xl border-2 font-black bg-slate-50 focus:bg-white font-sans font-sans" required /></div>
-                                    <div><label className="text-[10px] font-black uppercase text-slate-400 ml-2 tracking-widest font-sans font-sans">Duration Warp (Days)</label><input type="number" value={form.days} onChange={e=>setForm({...form, days:e.target.value})} placeholder="0" className="w-full p-4 rounded-xl border-2 font-black bg-slate-50 focus:bg-white font-sans font-sans" required /></div>
-                                </div>
-                                <button type="submit" className="w-full py-6 bg-green-700 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl hover:bg-green-800 active:scale-95 transition-all font-sans">Transmit Identity Application</button>
-                            </form>
-                        </Card>
-                    ) : tab === 'oversight' ? (
-                        <Card className="!p-0 border-2 overflow-hidden shadow-2xl font-sans">
-                             <table className="w-full text-left text-xs font-sans font-sans font-sans">
-                                <thead className="bg-slate-50 border-b font-black uppercase text-slate-400 tracking-widest text-left font-sans"><tr><th className="p-6">Staff identity</th><th className="p-6 font-sans">Availability hub</th><th className="p-6 font-sans">Qty Hub</th><th className="p-6 text-center font-sans font-sans">Actions Matrix</th></tr></thead>
-                                <tbody className="divide-y font-bold text-slate-700 font-sans">
-                                    {allLeaves.map(l => {
-                                        const r = employees.find(e => e.id === l.employee_id) || {};
-                                        return (<tr key={l.id} className="hover:bg-slate-50 transition-all group text-left font-sans"><td className="p-6 uppercase font-black font-sans font-sans font-sans">${l.name} <span className="text-slate-300 font-mono text-[9px] font-sans font-sans">(${l.employee_id})</span></td><td className="p-6 text-green-700 font-black font-sans font-sans">${r.leave_annual || 0} ANN / ${r.leave_casual || 0} WOP</td><td className="p-6 font-black text-slate-500 uppercase font-sans font-sans font-sans">${l.days} Days</td><td className="p-6 flex gap-3 justify-center font-sans font-sans font-sans font-sans"><button onClick={()=>decide(l.id, 'Approved')} className="bg-green-700 text-white px-5 py-2.5 rounded-xl text-[9px] font-black uppercase shadow-lg hover:bg-green-800 transition-all font-sans font-sans">Approve</button><button onClick={()=>decide(l.id, 'Rejected')} className="bg-red-600 text-white px-5 py-2.5 rounded-xl text-[9px] font-black uppercase shadow-lg hover:bg-red-700 transition-all font-sans font-sans font-sans">Reject</button></td></tr>)
-                                    })}
-                                </tbody>
-                             </table>
-                        </Card>
-                    ) : (
-                        <div className="space-y-4 max-w-4xl mx-auto font-sans font-sans font-sans font-sans">
-                            {leaves.map((l, i) => (
-                                <Card key={i} className="flex justify-between items-center border-2 border-slate-100 hover:border-green-200 transition-all shadow-sm text-left font-sans font-sans">
-                                    <div className="flex gap-6 items-center text-left font-sans font-sans font-sans">
-                                        <div className="bg-slate-50 p-4 rounded-2xl font-sans font-sans font-sans"><LucideIcon name="calendar" className="text-slate-400 font-sans font-sans" /></div>
-                                        <div className="text-left font-sans font-sans font-sans font-sans"><p className="font-black text-2xl uppercase tracking-tighter text-slate-800 font-sans font-sans font-sans font-sans">${l.leave_type}</p><p className="text-[10px] text-slate-400 font-black mt-1 tracking-widest font-sans font-sans font-sans font-sans font-sans font-sans">{formatDate(l.start_date)} • ${l.days} Days Matrix</p></div>
-                                    </div>
-                                    <Badge status={l.status} />
-                                </Card>
-                            ))}
-                        </div>
-                    )}
-                </div>
-            );
-        }
-
-        /**
-         * --- MODULE: DIRECTORY ---
-         */
-        function DirectoryModule({ employees, fetchData }) {
-            const [isOpen, setIsOpen] = useState(false);
-            const [editMember, setEditMember] = useState(null);
-            const [form, setForm] = useState({ id: '', name: '', email: '', password: '', role: 'employee', leave_annual: 14, leave_casual: 10, loan_opening_balance: 0 });
-
-            const submit = async (e) => {
-                e.preventDefault();
-                const method = editMember ? 'PUT' : 'POST';
-                const url = editMember ? API_BASE + "/employees/" + editMember.id : API_BASE + "/employees";
-                // Payload includes credential email trigger for registration
-                const res = await fetch(url, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({...form, send_identity_email: true}) });
-                if(res.ok) { notify("Identity Hub Updated."); setIsOpen(false); setEditMember(null); fetchData(); }
-            };
-
-            const deleteMember = async (id) => {
-                if(!window.confirm("PURGE IDENTITY " + id + " FROM MATRIXHUB?")) return;
-                const res = await fetch(API_BASE + "/employees/" + id, { method: 'DELETE' });
-                if(res.ok) { notify("Identity Purged."); fetchData(); }
-            };
-
-            return (
-                <div className="space-y-10 animate-fade-in text-left font-sans font-sans">
-                    <div className="flex justify-between items-center border-b pb-8 border-slate-100 text-left font-sans font-sans font-sans">
-                        <h2 className="text-4xl font-black uppercase tracking-tighter text-slate-800 font-sans font-sans">Staff Hub Matrix</h2>
-                        <Button onClick={() => { setIsOpen(true); setEditMember(null); setForm({ id:'', name:'', email:'', password:'', role:'employee', leave_annual:14, leave_casual:10, loan_opening_balance:0 }); }} icon="users">Add Identity Warp</Button>
-                    </div>
-
-                    {isOpen && (
-                        <Card className="bg-white border-2 border-green-100 shadow-2xl mb-12 animate-slide-up relative !p-12 font-sans text-left font-sans font-sans font-sans font-sans">
-                            <button onClick={()=>setIsOpen(false)} className="absolute top-8 right-8 text-slate-300 hover:text-red-500 transition-colors font-sans font-sans"><LucideIcon name="x" size={32}/></button>
-                            <form onSubmit={submit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 font-sans font-sans font-sans">
-                                <div className="space-y-1 font-sans font-sans font-sans"><label className="text-[10px] font-black uppercase text-slate-400 ml-3 tracking-widest font-sans font-sans font-sans font-sans">ID Hub Identity</label><input type="text" className="w-full p-4 rounded-2xl border-2 font-bold bg-slate-50 uppercase focus:bg-white outline-none focus:border-green-600 transition-all font-sans font-sans font-sans font-sans" value={form.id} onChange={e=>setForm({...form, id:e.target.value})} disabled={!!editMember} required /></div>
-                                <div className="space-y-1 font-sans font-sans font-sans font-sans"><label className="text-[10px] font-black uppercase text-slate-400 ml-3 tracking-widest font-sans font-sans font-sans font-sans font-sans">Identity Full Name Hub</label><input type="text" className="w-full p-4 rounded-2xl border-2 font-bold bg-slate-50 focus:bg-white outline-none focus:border-green-600 transition-all font-sans font-sans font-sans font-sans font-sans" value={form.name} onChange={e=>setForm({...form, name:e.target.value})} required /></div>
-                                <div className="space-y-1 font-sans font-sans font-sans font-sans font-sans font-sans"><label className="text-[10px] font-black uppercase text-slate-400 ml-3 tracking-widest font-sans font-sans font-sans font-sans font-sans font-sans">Email Matrix Warp</label><input type="email" className="w-full p-4 rounded-2xl border-2 font-bold bg-slate-50 focus:bg-white outline-none focus:border-green-600 transition-all font-sans font-sans font-sans font-sans font-sans font-sans" value={form.email} onChange={e=>setForm({...form, email:e.target.value})} required /></div>
-                                <div className="space-y-1 font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><label className="text-[10px] font-black uppercase text-slate-400 ml-3 tracking-widest font-sans font-sans font-sans font-sans font-sans font-sans font-sans">System Access Key Hub</label><input type="text" className="w-full p-4 rounded-2xl border-2 font-bold bg-slate-50 focus:bg-white outline-none focus:border-green-600 transition-all font-sans font-sans font-sans font-sans font-sans font-sans font-sans" value={form.password} onChange={e=>setForm({...form, password:e.target.value})} required /></div>
-                                <div className="col-span-full pt-10 border-t flex justify-end gap-4 font-sans font-sans font-sans">
-                                    <Button variant="ghost" onClick={()=>{setIsOpen(false); setEditMember(null);}}>Cancel Identity hub Warp</Button>
-                                    <Button type="submit" className="px-16 shadow-2xl font-black uppercase font-sans font-sans font-sans font-sans font-sans font-sans">${editMember ? 'Update Profile Matrix' : 'Initialize warp hub'}</Button>
-                                </div>
-                            </form>
-                        </Card>
-                    )}
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 font-sans text-left font-sans font-sans font-sans font-sans">
-                        {employees.map(e => (
-                            <Card key={e.id} className="text-center group relative overflow-hidden flex flex-col items-center hover:border-green-300 transition-all border-slate-100 p-10 font-sans shadow-lg font-sans font-sans font-sans font-sans">
-                                <div className="h-24 w-24 bg-green-50 text-green-700 flex items-center justify-center font-black rounded-[3rem] text-4xl mb-6 shadow-inner transition-all group-hover:scale-95 uppercase font-sans font-sans font-sans font-sans font-sans font-sans">${getInitial(e.name)}</div>
-                                <p className="font-black uppercase text-slate-800 text-lg tracking-tight mb-1 truncate w-full font-sans font-sans font-sans font-sans font-sans font-sans">${e.name}</p>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">${e.id} • ${e.role}</p>
-                                <div className="mt-8 flex gap-3 opacity-0 group-hover:opacity-100 transition-all transform translate-y-2 group-hover:translate-y-0 font-sans font-sans font-sans font-sans font-sans font-sans">
-                                    <button onClick={()=>{setEditMember(e); setForm(e); setIsOpen(true);}} className="bg-blue-50 text-blue-600 p-3 rounded-2xl hover:bg-blue-600 hover:text-white transition-all shadow-md font-sans font-sans font-sans font-sans font-sans font-sans"><LucideIcon name="pencil" size={20}/></button>
-                                    <button onClick={()=>deleteMember(e.id)} className="bg-red-50 text-red-600 p-3 rounded-2xl hover:bg-red-600 hover:text-white transition-all shadow-md font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><LucideIcon name="trash-2" size={20}/></button>
-                                </div>
-                            </Card>
-                        ))}
-                    </div>
-                </div>
-            );
-        };
-
-        /**
-         * --- MODULE: BOARD ---
-         */
-        function DiscussionBoard({ user, discussions, fetchData }) {
-            const [val, setVal] = useState('');
-            const post = async (e) => {
-                e.preventDefault();
-                if(!val.trim()) return;
-                await fetch(API_BASE + "/discussions", { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ employee_id: user.id, author_name: user.name, message: val }) });
-                setVal(''); fetchData(); notify("Broadcast Matrix Updated.");
-            };
-            return (
-                <div className="space-y-12 max-w-5xl mx-auto animate-fade-in text-left font-sans font-sans font-sans font-sans font-sans font-sans">
-                    <h2 className="text-4xl font-black uppercase tracking-tighter text-slate-800 border-b pb-6 border-slate-100 font-sans font-sans font-sans font-sans font-sans">Identity Matrix Board</h2>
-                    <div className="bg-slate-900 p-12 rounded-[5rem] shadow-2xl relative font-sans font-sans font-sans font-sans font-sans font-sans">
-                        <div className="absolute top-6 right-10 flex items-center gap-2 font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><div className="h-2 w-2 rounded-full bg-green-500 animate-pulse font-sans font-sans font-sans font-sans font-sans font-sans font-sans"></div><span className="text-[9px] font-black text-slate-500 uppercase tracking-widest font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Verified Live Matrix Hub Warp</span></div>
-                        <form onSubmit={post} className="flex gap-6 mt-4 font-sans font-sans font-sans font-sans font-sans font-sans">
-                            <input value={val} onChange={e=>setVal(e.target.value)} className="flex-1 bg-white/5 border-2 border-white/10 rounded-[3rem] p-10 font-bold text-white text-xl outline-none focus:bg-white/10 focus:border-green-600 transition-all font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans" placeholder="Initialize broadcast Hub Warp..." required />
-                            <button type="submit" className="bg-green-600 hover:bg-green-500 p-10 rounded-[3rem] text-white shadow-green-900 shadow-2xl active:scale-95 transition-all font-sans font-sans font-sans font-sans font-sans font-sans"><LucideIcon name="send" size={48}/></button>
-                        </form>
-                    </div>
-                    <div className="space-y-10 font-sans font-sans font-sans">
-                        {discussions.map((d, i) => (
-                            <Card key={i} className="group text-left border-slate-50 p-12 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
-                                <div className="flex justify-between items-center mb-8 font-sans font-sans font-sans font-sans font-sans">
-                                    <div className="flex items-center gap-6 font-sans font-sans font-sans font-sans font-sans">
-                                        <div className="h-16 w-16 rounded-[2.5rem] bg-green-50 text-green-700 flex items-center justify-center font-black text-3xl shadow-inner uppercase font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">${getInitial(d.author_name)}</div>
-                                        <div><span className="font-black text-slate-800 uppercase text-lg group-hover:text-green-700 transition-all font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">${d.author_name}</span><p className="text-[11px] font-black text-slate-400 uppercase mt-2 tracking-widest font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Verified identity Matrix Broadcaster hub</p></div>
-                                    </div>
-                                    <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">${formatDate(d.created_at)}</span>
-                                </div>
-                                <p className="text-slate-700 font-bold leading-relaxed text-2xl font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">${d.message}</p>
-                            </Card>
-                        ))}
-                    </div>
-                </div>
-            );
-        };
-
-        /**
-         * --- APP IDENTITY CORE ---
+         * --- APP ENTRY POINT & CORE LOGIC ---
          */
         function App() {
             const [view, setView] = useState('dashboard');
@@ -781,24 +661,23 @@
             const [loading, setLoading] = useState(true);
             const [user, setUser] = useState(() => { try { return JSON.parse(localStorage.getItem('hr_user')); } catch(e) { return null; }});
 
-            useEffect(() => { if(user) fetchMatrixData(); else setLoading(false); }, [user]);
+            useEffect(() => { if(user) fetchMatrixHub(); else setLoading(false); }, [user]);
 
-            const fetchMatrixData = async () => {
+            const fetchMatrixHub = async () => {
                 try {
-                    const isAdmin = user.role === 'admin';
+                    const isAdmin = user && user.role === 'admin';
                     const endpoints = [
                         fetch(API_BASE + "/employees"), fetch(API_BASE + "/payroll-posted"), fetch(API_BASE + "/discussions"),
                         fetch(API_BASE + "/attendance/" + user.id), fetch(API_BASE + "/leaves/" + user.id), fetch(API_BASE + "/loans/" + user.id)
                     ];
                     if (isAdmin) { endpoints.push(fetch(API_BASE + "/admin/leaves"), fetch(API_BASE + "/admin/loans")); }
                     const resArr = await Promise.allSettled(endpoints);
+                    const parse = async (idx) => (resArr[idx]?.status === 'fulfilled' && resArr[idx].value.ok) ? await resArr[idx].value.json() : [];
                     
-                    const p = async (idx) => { if(resArr[idx]?.status === 'fulfilled' && resArr[idx].value.ok) return await resArr[idx].value.json(); return []; };
-                    
-                    setEmployees(await p(0)); setPayrollPosted(await p(1)); setDiscussions(await p(2));
-                    setAttendance(await p(3)); setLeaves(await p(4)); setUserLoans(await p(5));
-                    if(isAdmin) { setAllLeaves(await p(6)); setAllLoans(await p(7)); }
-                } catch(e) { console.error("Matrix Sync Error hub", e); } finally { setLoading(false); }
+                    setEmployees(await parse(0)); setPayrollPosted(await parse(1)); setDiscussions(await parse(2));
+                    setAttendance(await parse(3)); setLeaves(await parse(4)); setUserLoans(await parse(5));
+                    if(isAdmin) { setAllLeaves(await parse(6)); setAllLoans(await parse(7)); }
+                } catch(e) { console.error("Matrix Hub Warp Error", e); } finally { setLoading(false); }
             };
 
             const handleLogin = async (id, pass) => {
@@ -808,51 +687,79 @@
                     const list = await r.json();
                     const found = list.find(e => String(e.id).toUpperCase() === String(id).toUpperCase() && String(e.password) === String(pass));
                     if(found) { setUser(found); localStorage.setItem('hr_user', JSON.stringify(found)); } 
-                    else { alert("Identity Hub Matrix access Denied."); setLoading(false); }
-                } catch(e) { alert("Matrix Hub engine Offline."); setLoading(false); }
+                    else { alert("Identity validation failed."); setLoading(false); }
+                } catch(e) { alert("Core matrix offline."); setLoading(false); }
             };
 
             const logout = () => { localStorage.clear(); window.location.reload(); };
 
             if(loading && !user) return (
-                <div className="h-screen flex flex-col items-center justify-center bg-white">
-                    <div className="loader w-20 h-20 border-4 border-slate-50 border-t-green-700 rounded-full mb-10 shadow-xl font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"></div>
-                    <p className="font-black text-slate-300 uppercase tracking-[0.8em] animate-pulse font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Initializing engine Hub Matrix warp...</p>
+                <div className="h-screen flex flex-col items-center justify-center bg-slate-900">
+                    <div className="loader w-20 h-20 border-4 border-slate-800 border-t-teal-500 rounded-full mb-10 shadow-2xl"></div>
+                    <p className="font-black text-teal-500 uppercase tracking-[0.8em] animate-pulse">LSAFHR MATRIX HUB STARTUP</p>
                 </div>
             );
             
             if(!user) return <LoginView onLogin={handleLogin} loading={loading} />;
 
-            const renderContent = () => {
-                switch(view) {
-                    case 'dashboard': return <DashboardView user={user} />;
-                    case 'attendance': return <AttendanceHub user={user} attendance={attendance} fetchData={fetchMatrixData} employees={employees} />;
-                    case 'payroll': return <SalaryHub user={user} employees={employees} fetchData={fetchMatrixData} postedMonths={payrollPosted} />;
-                    case 'directory': return <DirectoryModule employees={employees} fetchData={fetchMatrixData} />;
-                    case 'loans': return <LoansHub user={user} employees={employees} allLoans={allLoans} userLoans={userLoans} fetchData={fetchMatrixData} />;
-                    case 'leaves': return <LeavesHub user={user} allLeaves={allLeaves} leaves={leaves} employees={employees} fetchData={fetchMatrixData} />;
-                    case 'discussion': return <DiscussionBoard user={user} discussions={discussions} fetchData={fetchMatrixData} />;
-                    default: return <DashboardView user={user} />;
-                }
-            };
-
             return (
-                <div className="min-h-screen bg-slate-50 flex text-slate-900 font-sans text-left font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
-                    <aside className="hidden md:flex flex-col w-72 bg-white border-r fixed h-full z-50 shadow-sm text-left font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
-                        <div className="p-10 border-b text-center font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><img src={LOGO_URL} className="h-12 mx-auto mb-3" alt="Logo" /><span className="text-[10px] font-black text-green-700 uppercase tracking-widest font-sans tracking-widest font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Identity Hub Matrix v11</span></div>
-                        <nav className="flex-1 p-6 space-y-2 overflow-y-auto custom-scrollbar font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
-                            {NAV_ITEMS.filter(n => !n.admin || user.role === 'admin').map(n => (
-                                <button key={n.id} onClick={()=>setView(n.id)} className={"w-full flex items-center gap-5 p-5 rounded-3xl font-black transition-all " + (view === n.id ? 'sidebar-btn-active' : 'text-slate-500 hover:bg-slate-50')}>
-                                    <LucideIcon name={n.icon} size={20} /><span className="text-[11px] uppercase tracking-widest text-left font-sans tracking-widest font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">{n.label}</span>
-                                </button>
-                            ))}
-                        </nav>
-                        <div className="p-8 border-t flex justify-between items-center bg-slate-50/50 backdrop-blur font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
-                            <div className="overflow-hidden font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><p className="font-black text-[12px] uppercase truncate font-sans text-slate-800 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">${user.name}</p><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 font-sans tracking-tighter font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">${user.role}</p></div>
-                            <button onClick={logout} className="text-red-500 hover:bg-red-50 p-3 rounded-2xl transition-all active:scale-90 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><LucideIcon name="log-out" size={24}/></button>
+                <div className="min-h-screen bg-slate-900 flex text-slate-200 font-sans text-left">
+                    {/* SIDEBAR */}
+                    <aside className="hidden lg:flex flex-col w-72 bg-[#111827] fixed h-full z-50 shadow-2xl border-r border-slate-800 text-left font-sans">
+                        <div className="p-10 flex items-center gap-4 border-b border-slate-800/50">
+                            <div className="bg-teal-500 w-10 h-10 rounded-xl flex items-center justify-center font-black text-white text-lg shadow-teal-500/20 shadow-xl font-sans">HR</div>
+                            <h2 className="text-xl font-black text-white tracking-widest uppercase font-sans">Portal Hub</h2>
+                        </div>
+                        
+                        <div className="flex-1 overflow-y-auto custom-scrollbar px-6 space-y-10 py-10 font-sans">
+                            <div>
+                                <p className="px-5 text-[10px] font-black text-slate-600 uppercase tracking-[0.3em] mb-4 font-sans">Main Hub</p>
+                                {NAV_ITEMS.filter(n => n.group === 'MAIN').map(i => (
+                                    <button key={i.id} onClick={()=>setView(i.id)} className={`w-full flex items-center gap-4 p-4 rounded-2xl font-black transition-all font-sans ${view===i.id?'sidebar-item-active text-teal-400 shadow-xl shadow-teal-500/5':'text-slate-500 hover:text-white hover:bg-slate-800'}`}>
+                                        <LucideIcon name={i.icon} size={20} /><span className="text-[11px] uppercase tracking-widest font-sans font-sans font-sans">${i.label}</span>
+                                    </button>
+                                ))}
+                            </div>
+
+                            <div>
+                                <p className="px-5 text-[10px] font-black text-slate-600 uppercase tracking-[0.3em] mb-4 font-sans font-sans font-sans font-sans">Administration Hub</p>
+                                {NAV_ITEMS.filter(n => n.group === 'ADMINISTRATION' && (!n.admin || user.role === 'admin')).map(i => (
+                                    <button key={i.id} onClick={()=>setView(i.id)} className={`w-full flex items-center gap-4 p-4 rounded-2xl font-black transition-all font-sans font-sans font-sans font-sans font-sans ${view===i.id?'sidebar-item-active text-teal-400 shadow-xl':'text-slate-500 hover:text-white hover:bg-slate-800'}`}>
+                                        <LucideIcon name={i.icon} size={20} /><span className="text-[11px] uppercase tracking-widest font-sans font-sans font-sans font-sans font-sans">${i.label}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="p-8 border-t border-slate-800 bg-black/20 flex items-center justify-between font-sans">
+                            <div className="flex items-center gap-3 overflow-hidden font-sans font-sans font-sans">
+                               <div className="h-12 w-12 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center font-black text-teal-500 text-lg font-sans font-sans font-sans font-sans">${getInitial(user.name)}</div>
+                               <div className="overflow-hidden font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
+                                  <p className="font-black text-white text-[12px] uppercase truncate font-sans font-sans font-sans font-sans">${user.name}</p>
+                                  <p className="text-[9px] font-bold text-teal-500 uppercase tracking-widest truncate font-sans font-sans font-sans">${user.role}</p>
+                               </div>
+                            </div>
+                            <button onClick={logout} className="text-red-900 hover:text-red-500 transition-all font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><LucideIcon name="log-out" size={24}/></button>
                         </div>
                     </aside>
-                    <main className="flex-1 md:ml-72 p-12 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><div className="max-w-[1600px] mx-auto font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">{renderContent()}</div></main>
+
+                    <main className="flex-1 lg:ml-72 p-12 lg:p-20 font-sans text-left font-sans font-sans font-sans font-sans font-sans">
+                        <div className="max-w-[1500px] mx-auto font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
+                            {(() => {
+                                switch(view) {
+                                    case 'dashboard': return <DashboardView user={user} employees={employees} attendance={attendance} userLoans={userLoans} />;
+                                    case 'attendance': return <AttendanceView user={user} attendance={attendance} fetchData={fetchMatrixHub} />;
+                                    case 'payroll': return <SalaryView user={user} employees={employees} fetchData={fetchMatrixHub} postedMonths={payrollPosted} />;
+                                    case 'loans': return <LoanHub user={user} employees={employees} allLoans={allLoans} userLoans={userLoans} fetchData={fetchMatrixHub} />;
+                                    case 'leaves': return <LeavesHub user={user} allLeaves={allLeaves} leaves={leaves} employees={employees} fetchData={fetchMatrixHub} />;
+                                    case 'directory': return <DirectoryModule employees={employees} fetchData={fetchMatrixHub} />;
+                                    case 'discussion': return <DiscussionBoard user={user} discussions={discussions} fetchData={fetchMatrixHub} />;
+                                    default: return <DashboardView user={user} employees={employees} attendance={attendance} userLoans={userLoans} />;
+                                }
+                            })()}
+                        </div>
+                    </main>
+                    <div id="status-toast" className="fixed top-12 left-1/2 -translate-x-1/2 z-[1000] bg-white text-slate-900 px-10 py-5 rounded-2xl font-black uppercase text-[11px] tracking-widest shadow-2xl opacity-0 pointer-events-none transition-all duration-300 transform translate-y-[-20px] text-center font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Identity Warp Hub Status Sync</div>
                 </div>
             );
         }
