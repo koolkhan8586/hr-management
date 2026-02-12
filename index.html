@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LSAFHR Management System - v12.5.0</title>
+    <title>LSAFHR Management System - v12.6.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
@@ -36,7 +36,6 @@
         .loader { border-top-color: #14b8a6; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        /* Dashboard Hero Styling matching the screenshot */
         .dashboard-hero {
             background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);
             border-radius: 2.5rem;
@@ -80,9 +79,6 @@
             display: inline-block; 
             border: 1px solid transparent;
         }
-        .status-pending { background-color: rgba(251, 191, 36, 0.1); color: #fbbf24; border-color: rgba(251, 191, 36, 0.2); }
-        .status-approved { background-color: rgba(20, 184, 166, 0.1); color: #14b8a6; border-color: rgba(20, 184, 166, 0.2); }
-        .status-rejected { background-color: rgba(239, 68, 68, 0.1); color: #ef4444; border-color: rgba(239, 68, 68, 0.2); }
 
         input[type="number"]::-webkit-inner-spin-button { display: none; }
     </style>
@@ -115,6 +111,20 @@
         const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A';
         const getPktTimeLong = () => new Date().toLocaleTimeString('en-GB');
         const getPktDateLong = () => new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+        // Global notify function to prevent ReferenceErrors
+        window.notify = (msg) => {
+            const t = document.getElementById('status-toast');
+            if (t) {
+                t.innerText = msg;
+                t.style.opacity = '1';
+                t.style.transform = 'translateY(0) translateX(-50%)';
+                setTimeout(() => {
+                    t.style.opacity = '0';
+                    t.style.transform = 'translateY(-20px) translateX(-50%)';
+                }, 4000);
+            }
+        };
 
         const calculateWorkTime = (inTime, outTime) => {
             if (!inTime || !outTime) return "0h 0m";
@@ -149,8 +159,11 @@
             const csvContent = "data:text/csv;charset=utf-8," + [headers, ...rows].join('\n');
             const encodedUri = encodeURI(csvContent);
             const link = document.createElement("a");
-            link.setAttribute("href", encodedUri); link.setAttribute("download", filename);
-            document.body.appendChild(link); link.click(); document.body.removeChild(link);
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", filename);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         };
 
         const LucideIcon = ({ name, size = 18, className = "" }) => {
@@ -181,13 +194,19 @@
                     <div className="bg-slate-800 w-full max-w-md p-12 rounded-[2.5rem] shadow-2xl border border-slate-700 animate-slide-up">
                         <div className="mb-10 text-left">
                             <div className="bg-teal-500 w-12 h-12 rounded-xl flex items-center justify-center mb-6 font-black text-white text-xl">HR</div>
-                            <h1 className="text-3xl font-black text-white uppercase tracking-widest font-sans">Identity Hub</h1>
-                            <p className="text-slate-400 text-xs mt-2 uppercase font-bold tracking-widest">Authentication Session</p>
+                            <h1 className="text-3xl font-black text-white uppercase tracking-widest font-sans">HR Portal</h1>
+                            <p className="text-slate-400 text-xs mt-2 uppercase font-bold tracking-widest">Authorized Session</p>
                         </div>
                         <form onSubmit={(e) => { e.preventDefault(); onLogin(id, pass); }} className="space-y-6 text-left">
-                            <div className="space-y-1"><label className="text-[10px] font-black text-slate-500 uppercase ml-2 block">Identity ID</label><input value={id} onChange={e=>setId(e.target.value)} className="w-full p-5 rounded-2xl border-2 border-slate-700 bg-slate-900/50 text-white font-bold outline-none focus:border-teal-500 transition-all" required /></div>
-                            <div className="space-y-1"><label className="text-[10px] font-black text-slate-500 uppercase ml-2 block">System Key</label><input type="password" value={pass} onChange={e=>setPass(e.target.value)} className="w-full p-5 rounded-2xl border-2 border-slate-700 bg-slate-900/50 text-white font-bold outline-none focus:border-teal-500 transition-all" required /></div>
-                            <button type="submit" className="w-full bg-teal-500 text-white py-5 rounded-2xl font-black uppercase tracking-widest shadow-xl hover:bg-teal-600 transition-all active:scale-95" disabled={loading}>{loading ? "Syncing Matrix..." : "Authorize Portal"}</button>
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-black text-slate-500 uppercase ml-2 block">Identity ID</label>
+                                <input value={id} onChange={e=>setId(e.target.value)} className="w-full p-5 rounded-2xl border-2 border-slate-700 bg-slate-900/50 text-white font-bold outline-none focus:border-teal-500 transition-all shadow-sm" placeholder="Enter ID" required />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-black text-slate-500 uppercase ml-2 block">System Key</label>
+                                <input type="password" value={pass} onChange={e=>setPass(e.target.value)} className="w-full p-5 rounded-2xl border-2 border-slate-700 bg-slate-900/50 text-white font-bold outline-none focus:border-teal-500 transition-all shadow-sm" placeholder="••••••••" required />
+                            </div>
+                            <button type="submit" className="w-full bg-teal-500 text-white py-5 rounded-2xl font-black uppercase tracking-widest shadow-xl hover:bg-teal-600 active:scale-95 transition-all mt-4" disabled={loading}>{loading ? "Synchronizing..." : "Authorize Portal"}</button>
                         </form>
                     </div>
                 </div>
@@ -195,7 +214,7 @@
         }
 
         /**
-         * --- DASHBOARD ---
+         * --- DASHBOARD HUB ---
          */
         function DashboardView({ user, employees, attendance, userLoans, allLoans, allLeaves }) {
             const [clock, setClock] = useState(getPktTimeLong());
@@ -204,14 +223,14 @@
 
             useEffect(() => {
                 const t = setInterval(() => setClock(getPktTimeLong()), 1000);
-                navigator.geolocation.getCurrentPosition(p => setLocation(p.coords.latitude.toFixed(4) + ", " + p.coords.longitude.toFixed(4)));
+                navigator.geolocation.getCurrentPosition(p => setLocation(`${p.coords.latitude.toFixed(4)}, ${p.coords.longitude.toFixed(4)}`));
                 return () => clearInterval(t);
             }, []);
 
             const recentActivity = useMemo(() => {
                 const logs = (isAdmin ? attendance : attendance.filter(a => a.employee_id === user.id)).map(a => ({
                     identity: employees.find(e => e.id === a.employee_id)?.name || 'Identity',
-                    action: `Hub Marking: ${a.type}`,
+                    action: `Marking: ${a.type}`,
                     time: a.time_str,
                     date: a.date_str,
                     status: 'Verified'
@@ -219,7 +238,7 @@
 
                 const requests = (isAdmin ? [...allLoans, ...allLeaves] : userLoans).map(r => ({
                     identity: employees.find(e => e.id === r.employee_id)?.name || 'Identity',
-                    action: r.amount ? `Loan Hub: Rs. ${cleanNumber(r.amount).toLocaleString()}` : `Leave Hub: ${r.leave_type}`,
+                    action: r.amount ? `Loan: Rs. ${cleanNumber(r.amount).toLocaleString()}` : `Leave: ${r.leave_type}`,
                     time: '--:--',
                     date: r.applied_at || r.start_date,
                     status: r.status
@@ -228,10 +247,20 @@
                 return [...logs, ...requests].sort((a,b) => new Date(b.date) - new Date(a.date)).slice(0, 8);
             }, [attendance, employees, isAdmin, user.id, allLoans, allLeaves, userLoans]);
 
+            const stats = {
+                hoursToday: "0:00",
+                leaveBalance: user.leave_annual || 12,
+                activeLoans: isAdmin ? allLoans.filter(l => l.status === 'Pending').length : userLoans.filter(l => l.status === 'Approved').length,
+                totalUsers: employees.length
+            };
+
             return (
                 <div className="animate-fade-in space-y-10 text-left">
                     <div className="flex justify-between items-center">
-                        <div><h1 className="text-4xl font-black text-white tracking-tight">Dashboard</h1><p className="text-slate-400 mt-1">LSAFHR Matrix Engine</p></div>
+                        <div>
+                            <h1 className="text-4xl font-black text-white tracking-tight">Dashboard</h1>
+                            <p className="text-slate-400 mt-1 font-medium">Welcome back, {user.name}!</p>
+                        </div>
                     </div>
 
                     <div className="dashboard-hero p-16 text-center text-white relative">
@@ -248,32 +277,32 @@
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                         <div className="matrix-card p-8 flex justify-between items-center">
-                            <div><p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">Hours Matrix</p><p className="text-3xl font-black text-white mt-2">0:00</p></div>
+                            <div><p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">Hours Matrix</p><p className="text-3xl font-black text-white mt-2">{stats.hoursToday}</p></div>
                             <div className="bg-blue-500/10 p-4 rounded-2xl text-blue-400"><LucideIcon name="clock" size={28}/></div>
                         </div>
                         <div className="matrix-card p-8 flex justify-between items-center">
-                            <div><p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">Leaves Warp</p><p className="text-3xl font-black text-white mt-2">{user.leave_annual || 12}</p></div>
+                            <div><p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">Leaves warp</p><p className="text-3xl font-black text-white mt-2">{stats.leaveBalance}</p></div>
                             <div className="bg-red-500/10 p-4 rounded-2xl text-red-400"><LucideIcon name="calendar" size={28}/></div>
                         </div>
                         <div className="matrix-card p-8 flex justify-between items-center">
-                            <div><p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">Active Debts</p><p className="text-3xl font-black text-white mt-2">{isAdmin ? allLoans.length : userLoans.length}</p></div>
+                            <div><p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">{isAdmin ? 'Pending Loans' : 'Active Loans'}</p><p className="text-3xl font-black text-white mt-2">{stats.activeLoans}</p></div>
                             <div className="bg-yellow-500/10 p-4 rounded-2xl text-yellow-400"><LucideIcon name="wallet" size={28}/></div>
                         </div>
                         <div className="matrix-card p-8 flex justify-between items-center">
-                            <div><p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">Total Staff</p><p className="text-3xl font-black text-white mt-2">{employees.length}</p></div>
+                            <div><p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">Total Staff</p><p className="text-3xl font-black text-white mt-2">{stats.totalUsers}</p></div>
                             <div className="bg-green-500/10 p-4 rounded-2xl text-green-400"><LucideIcon name="users" size={28}/></div>
                         </div>
                     </div>
 
                     <div className="matrix-card overflow-hidden">
                         <div className="p-8 border-b border-slate-800 flex justify-between items-center bg-slate-800/30">
-                            <h3 className="font-black text-lg uppercase tracking-tight text-white">{isAdmin ? 'Global Activity Matrix' : 'Recent Identity Warp'}</h3>
+                            <h3 className="font-black text-lg uppercase tracking-tight text-white">{isAdmin ? 'Global Activity Matrix' : 'Recent Activity'}</h3>
                             <button className="bg-slate-800 text-slate-400 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase hover:text-teal-400 transition-all border border-slate-700">Audit Feed</button>
                         </div>
                         <div className="overflow-x-auto">
                             <table className="w-full text-left text-sm">
                                 <thead className="bg-slate-800/50 text-slate-500 uppercase text-[10px] font-black tracking-widest">
-                                    <tr><th className="p-6">Employee</th><th className="p-6">Action Hub</th><th className="p-6">Time Warp</th><th className="p-6">Status</th></tr>
+                                    <tr><th className="p-6">Employee</th><th className="p-6">Action</th><th className="p-6">Time</th><th className="p-6">Status</th></tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-800">
                                     {recentActivity.map((act, i) => (
@@ -281,7 +310,11 @@
                                             <td className="p-6 font-bold uppercase text-slate-300">{act.identity}</td>
                                             <td className="p-6 text-slate-500 font-medium">{act.action}</td>
                                             <td className="p-6 font-mono text-xs text-slate-600">{act.time}</td>
-                                            <td className="p-6"><span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter ${act.status === 'Approved' || act.status === 'Verified' ? 'bg-teal-500/10 text-teal-400' : 'bg-slate-700/50 text-slate-400'}`}>{act.status}</span></td>
+                                            <td className="p-6">
+                                                <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter ${act.status === 'Approved' || act.status === 'Verified' ? 'bg-teal-500/10 text-teal-400' : 'bg-slate-700/50 text-slate-400'}`}>
+                                                    {act.status}
+                                                </span>
+                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -293,12 +326,12 @@
         }
 
         /**
-         * --- ATTENDANCE HUB ---
+         * --- ATTENDANCE ---
          */
         function AttendanceView({ user, attendance, fetchData, employees }) {
-            const [month, setMonth] = useState(getPktDate().slice(0, 7));
-            const isAdmin = user.role === 'admin';
+            const [selectedMonth, setSelectedMonth] = useState(getPktDate().slice(0, 7));
             const mapRef = useRef(null);
+            const isAdmin = user.role === 'admin';
 
             useEffect(() => {
                 if (document.getElementById('attendance-map') && window.L) {
@@ -307,70 +340,75 @@
                     window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
                     mapRef.current = map;
                     navigator.geolocation.getCurrentPosition((p) => {
-                        map.setView([p.coords.latitude, p.coords.longitude], 16);
-                        window.L.marker([p.coords.latitude, p.coords.longitude], { icon: L.divIcon({ className: 'bg-teal-500 w-4 h-4 rounded-full border-4 border-white' }) }).addTo(map);
+                        const { latitude, longitude } = p.coords;
+                        map.setView([latitude, longitude], 16);
+                        window.L.marker([latitude, longitude], { icon: L.divIcon({ className: 'bg-teal-500 w-4 h-4 rounded-full border-4 border-white shadow-2xl' }) })
+                            .addTo(map).bindPopup("<b>Verified Hub Point</b>").openPopup();
                     }, null, { enableHighAccuracy: true });
                 }
+                return () => { if(mapRef.current) { mapRef.current.remove(); mapRef.current = null; } };
             }, []);
 
-            const dailyLogs = useMemo(() => {
-                const logs = isAdmin ? attendance : attendance.filter(a => a.employee_id === user.id);
+            const handleClock = async (type) => {
+                window.notify("Verifying Identity GPS Location...");
+                navigator.geolocation.getCurrentPosition(async (pos) => {
+                    const res = await fetch(API_BASE + '/attendance', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            employee_id: user.id, type, date_str: getPktDate(), time_str: getPktTimeLong(),
+                            latitude: pos.coords.latitude, longitude: pos.coords.longitude, trigger_email: true
+                        })
+                    });
+                    if (res.ok) { window.notify(type + " Hub Record Confirmed."); fetchData(); }
+                });
+            };
+
+            const groupedData = useMemo(() => {
                 const grouped = {};
-                logs.filter(l => l.date_str && l.date_str.startsWith(month)).forEach(l => {
+                const logs = isAdmin ? attendance : attendance.filter(a => a.employee_id === user.id);
+                logs.filter(l => l.date_str && l.date_str.startsWith(selectedMonth)).forEach(l => {
                     if(!grouped[l.date_str]) grouped[l.date_str] = [];
                     grouped[l.date_str].push(l);
                 });
                 return grouped;
-            }, [attendance, month, isAdmin, user.id]);
-
-            const handleClock = async (type) => {
-                notify("Verifying Identity GPS Location...");
-                navigator.geolocation.getCurrentPosition(async (pos) => {
-                    const res = await fetch(`${API_BASE}/attendance`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ employee_id: user.id, type, date_str: getPktDate(), time_str: getPktTimeLong(), latitude: pos.coords.latitude, longitude: pos.coords.longitude, trigger_email: true })
-                    });
-                    if (res.ok) { notify(type + " Hub Record Confirmed."); fetchData(); }
-                });
-            };
-
-            const deleteLog = async (id) => {
-                if(!confirm("Purge Hub Record?")) return;
-                await fetch(`${API_BASE}/attendance/${id}`, { method: 'DELETE' });
-                fetchData();
-            };
+            }, [attendance, selectedMonth, isAdmin, user.id]);
 
             return (
-                <div className="animate-fade-in space-y-10 text-left">
+                <div className="animate-fade-in space-y-10 text-left font-sans">
                     <div className="flex justify-between items-center border-b border-slate-800 pb-8">
                         <h2 className="text-3xl font-black uppercase tracking-tighter text-white">Attendance Matrix</h2>
-                        <input type="month" value={month} onChange={e=>setMonth(e.target.value)} className="p-4 border-2 border-slate-700 rounded-2xl font-black bg-slate-800 text-white focus:border-teal-500 outline-none" />
+                        <input type="month" value={selectedMonth} onChange={e=>setSelectedMonth(e.target.value)} className="p-4 border-2 border-slate-700 rounded-2xl font-black bg-slate-800 text-white focus:border-teal-500 outline-none" />
                     </div>
-                    <div className="matrix-card !p-0 h-[450px] overflow-hidden relative shadow-2xl"><div id="attendance-map" className="h-full w-full"></div></div>
+                    
+                    <div className="matrix-card !p-0 h-[450px] overflow-hidden border-2 border-slate-700 relative shadow-2xl">
+                        <div id="attendance-map" className="h-full w-full"></div>
+                    </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                        <div className="matrix-card flex flex-col items-center justify-center py-20 bg-slate-800/40">
+                        <div className="matrix-card flex flex-col items-center justify-center py-20 bg-slate-800/40 border-dashed border-2 border-slate-700">
                              <LucideIcon name="clock" size={64} className="text-slate-700 mb-8" />
-                             <h3 className="text-7xl font-black text-white font-mono leading-none mb-12">{getPktTimeLong()}</h3>
+                             <h3 className="text-7xl font-black text-white font-mono mb-12 leading-none">{getPktTimeLong()}</h3>
                              <div className="flex flex-col gap-5 w-full max-w-sm px-8">
-                                <button onClick={() => handleClock('Clock In')} className="w-full py-6 bg-teal-500 text-white rounded-2xl font-black text-xl uppercase tracking-widest shadow-xl transition-all active:scale-95 hover:bg-teal-600">Clock In Hub</button>
-                                <button onClick={() => handleClock('Clock Out')} className="w-full py-6 border-2 border-slate-600 text-slate-300 rounded-2xl font-black text-xl uppercase tracking-widest transition-all hover:bg-slate-800">Clock Out Hub</button>
+                                <button onClick={() => handleClock('Clock In')} className="w-full py-6 bg-teal-500 text-white rounded-2xl font-black text-xl uppercase tracking-widest shadow-xl transition-all hover:bg-teal-600">Clock In</button>
+                                <button onClick={() => handleClock('Clock Out')} className="w-full py-6 border-2 border-slate-600 text-slate-300 rounded-2xl font-black text-xl uppercase tracking-widest transition-all hover:bg-slate-800">Clock Out</button>
                              </div>
                         </div>
+
                         <div className="matrix-card !p-0 flex flex-col max-h-[550px] overflow-hidden">
-                            <div className="p-8 border-b border-slate-800 bg-slate-800/50 font-black text-xs uppercase text-slate-500 tracking-widest">Logs Feed</div>
-                            <div className="flex-1 overflow-y-auto divide-y divide-slate-800 custom-scrollbar">
-                                {Object.keys(dailyLogs).sort((a,b) => new Date(b)-new Date(a)).map(date => (
+                            <div className="p-8 border-b border-slate-800 bg-slate-800/50 flex justify-between items-center">
+                                <span className="font-black text-xs uppercase text-slate-500 tracking-widest">Logs Feed</span>
+                                <LucideIcon name="activity" size={16} className="text-teal-500 animate-pulse" />
+                            </div>
+                            <div className="flex-1 overflow-y-auto divide-y divide-slate-800 custom-scrollbar font-sans">
+                                {Object.keys(groupedData).sort((a,b) => new Date(b)-new Date(a)).map(date => (
                                     <div key={date} className="p-6">
                                         <p className="text-teal-500 font-black text-xs uppercase mb-4 tracking-widest">{date}</p>
                                         <div className="space-y-4">
-                                            {dailyLogs[date].map((l, i) => (
+                                            {groupedData[date].map((l, i) => (
                                                 <div key={i} className="flex justify-between items-center">
-                                                    <div className="text-left"><p className="text-white font-bold text-sm uppercase">{employees.find(e => e.id === l.employee_id)?.name || 'Identity'}</p><p className="text-[10px] text-slate-500 font-black uppercase tracking-tighter">{l.type}</p></div>
-                                                    <div className="flex items-center gap-4">
-                                                        <p className="text-white font-mono font-black">{l.time_str}</p>
-                                                        {isAdmin && <button onClick={()=>deleteLog(l.id)} className="text-red-900 hover:text-red-500"><LucideIcon name="trash-2" size={14}/></button>}
-                                                    </div>
+                                                    <div className="text-left"><p className="text-white font-bold text-sm uppercase">{employees.find(e => e.id === l.employee_id)?.name || 'Identity'}</p><p className="text-[10px] text-slate-500 uppercase font-black">{l.type}</p></div>
+                                                    <p className="text-white font-mono font-black">{l.time_str}</p>
                                                 </div>
                                             ))}
                                         </div>
@@ -384,7 +422,7 @@
         }
 
         /**
-         * --- SALARY HUB (11 COLUMNS) ---
+         * --- SALARY HUB ---
          */
         function SalaryHubView({ user, employees, fetchData, postedMonths }) {
             const [editingId, setEditingId] = useState(null);
@@ -392,68 +430,26 @@
             const isAdmin = user.role === 'admin';
             const isPosted = postedMonths.includes(month);
 
-            const handleSave = async (id) => {
+            const handleSaveSalary = async (id) => {
                 const payload = {
                     basic_salary: cleanNumber(document.getElementById("eb-" + id).value),
-                    invigilation: cleanNumber(document.getElementById("ei-" + id).value),
-                    t_payment: cleanNumber(document.getElementById("et-" + id).value),
-                    increment: cleanNumber(document.getElementById("en-" + id).value),
-                    eidi: cleanNumber(document.getElementById("ed-" + id).value),
                     tax: cleanNumber(document.getElementById("ex-" + id).value),
-                    loan_deduction: cleanNumber(document.getElementById("el-" + id).value),
-                    insurance: cleanNumber(document.getElementById("es-" + id).value),
-                    others_deduction: cleanNumber(document.getElementById("eo-" + id).value),
-                    extra_leaves_deduction: cleanNumber(document.getElementById("eld-" + id).value)
                 };
                 const res = await fetch(`${API_BASE}/employees/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                if (res.ok) { notify("Salary Sync success."); setEditingId(null); fetchData(); }
-            };
-
-            const handleImport = (e) => {
-                const file = e.target.files[0]; if(!file) return;
-                const reader = new FileReader();
-                reader.onload = async (ev) => {
-                    const text = ev.target.result;
-                    const rows = text.split('\n').slice(1);
-                    notify("Processing Bulk Matrix Ledger...");
-                    for(let row of rows) {
-                        const cols = row.split(',');
-                        if(cols.length < 12) continue;
-                        const id = cols[0].replace(/"/g, '').trim().toUpperCase();
-                        const payload = { 
-                            basic_salary: cleanNumber(cols[2]), invigilation: cleanNumber(cols[3]), t_payment: cleanNumber(cols[4]), 
-                            increment: cleanNumber(cols[5]), eidi: cleanNumber(cols[6]), tax: cleanNumber(cols[7]), 
-                            loan_deduction: cleanNumber(cols[8]), insurance: cleanNumber(cols[9]), others_deduction: cleanNumber(cols[10]), 
-                            extra_leaves_deduction: cleanNumber(cols[11]) 
-                        };
-                        await fetch(`${API_BASE}/employees/` + id, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
-                    }
-                    notify("Bulk Matrix Synchronized."); fetchData();
-                };
-                reader.readAsText(file);
+                if (res.ok) { window.notify("Salary Hub Updated."); setEditingId(null); fetchData(); }
             };
 
             return (
-                <div className="space-y-10 animate-fade-in text-left">
+                <div className="space-y-10 animate-fade-in text-left font-sans">
                     <div className="flex flex-col md:flex-row justify-between items-center gap-6 border-b border-slate-800 pb-8">
-                        <h2 className="text-3xl font-black uppercase tracking-tighter text-white">Financial Matrix Hub</h2>
-                        <div className="flex flex-wrap gap-3">
-                             <input type="month" value={month} onChange={e=>setMonth(e.target.value)} className="p-4 border-2 border-slate-700 rounded-2xl font-black bg-slate-800 text-white focus:border-teal-500 outline-none" />
-                             {isAdmin && (
-                                <>
-                                    <label className="bg-teal-500/10 text-teal-400 px-8 py-3.5 rounded-2xl font-black text-[10px] uppercase tracking-widest cursor-pointer hover:bg-teal-500/20 border-2 border-teal-500/30 flex items-center gap-3">
-                                        <LucideIcon name="upload" size={14}/>Import Matrix<input type="file" onChange={handleImport} className="hidden" accept=".csv"/>
-                                    </label>
-                                    <button onClick={() => exportToCSV(employees, 'Payroll_Matrix.csv')} className="bg-slate-800 text-slate-300 px-8 py-3.5 rounded-2xl font-black text-[10px] uppercase border border-slate-700 hover:text-white transition-all">Export Matrix</button>
-                                </>
-                             )}
-                        </div>
+                        <h2 className="text-3xl font-black uppercase tracking-tighter text-white">Salary Matrix Hub</h2>
+                        <input type="month" value={month} onChange={e=>setMonth(e.target.value)} className="p-4 border-2 border-slate-700 rounded-2xl font-black bg-slate-800 text-white focus:border-teal-500 outline-none" />
                     </div>
                     
                     {!isAdmin && !isPosted ? (
                         <div className="matrix-card py-60 text-center flex flex-col items-center justify-center border-dashed border-2 border-slate-700">
                             <LucideIcon name="lock" size={80} className="text-slate-800 mb-10" />
-                            <p className="text-slate-600 font-black uppercase text-base tracking-[0.4em]">Payload Locked Matrix</p>
+                            <p className="text-slate-600 font-black uppercase text-base tracking-[0.4em]">Payload Locked</p>
                         </div>
                     ) : (
                         <div className="matrix-card !p-0 shadow-2xl border-2 border-slate-800 overflow-hidden">
@@ -461,14 +457,10 @@
                                 <table className="w-full text-[10px] text-left">
                                     <thead className="bg-slate-800 border-b border-slate-700 font-black uppercase text-slate-500 tracking-widest">
                                         <tr>
-                                            <th className="p-6">ID</th><th className="p-6">Identity</th>
-                                            <th className="p-6 text-right">Basic</th><th className="p-6 text-right">Invig</th>
-                                            <th className="p-6 text-right">T.Pay</th><th className="p-6 text-right">Incr</th>
-                                            <th className="p-6 text-right">Eidi</th><th className="p-6 text-right text-slate-400">Tax</th>
-                                            <th className="p-6 text-right text-slate-400">Loan</th><th className="p-6 text-right text-slate-400">Ins</th>
-                                            <th className="p-6 text-right text-slate-400">Other</th><th className="p-6 text-right text-red-500">L.Ded</th>
-                                            <th className="p-6 text-right font-black text-teal-400 uppercase bg-slate-800/80">Net Paid</th>
-                                            {isAdmin && <th className="p-6 text-center">Audit</th>}
+                                            <th className="p-6">ID</th><th className="p-6">Identity Name</th>
+                                            <th className="p-6 text-right">Basic</th><th className="p-6 text-right">Tax</th>
+                                            <th className="p-6 text-right">Net Paid</th>
+                                            {isAdmin && <th className="p-6 text-center font-sans">Audit</th>}
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-800 font-bold text-slate-400">
@@ -477,21 +469,13 @@
                                             const edit = editingId === e.id;
                                             return (
                                                 <tr key={e.id} className="hover:bg-slate-800/40 transition-colors">
-                                                    <td className="p-6 font-mono text-slate-500">{e.id}</td>
-                                                    <td className="p-6 uppercase text-slate-200">{e.name}</td>
+                                                    <td className="p-6 font-mono text-slate-500 text-left">{e.id}</td>
+                                                    <td className="p-6 uppercase text-slate-200 text-left">{e.name}</td>
                                                     <td className="p-6 text-right font-mono">{edit ? <input id={"eb-"+e.id} className="w-24 bg-slate-900 border border-slate-700 rounded p-2 text-right" defaultValue={e.basic_salary}/> : cleanNumber(e.basic_salary).toLocaleString()}</td>
-                                                    <td className="p-6 text-right font-mono">{edit ? <input id={"ei-"+e.id} className="w-16 bg-slate-900 border border-slate-700 rounded p-2 text-right" defaultValue={e.invigilation}/> : cleanNumber(e.invigilation).toLocaleString()}</td>
-                                                    <td className="p-6 text-right font-mono">{edit ? <input id={"et-"+e.id} className="w-16 bg-slate-900 border border-slate-700 rounded p-2 text-right" defaultValue={e.t_payment}/> : cleanNumber(e.t_payment).toLocaleString()}</td>
-                                                    <td className="p-6 text-right font-mono">{edit ? <input id={"en-"+e.id} className="w-16 bg-slate-900 border border-slate-700 rounded p-2 text-right" defaultValue={e.increment}/> : cleanNumber(e.increment).toLocaleString()}</td>
-                                                    <td className="p-6 text-right font-mono">{edit ? <input id={"ed-"+e.id} className="w-16 bg-slate-900 border border-slate-700 rounded p-2 text-right" defaultValue={e.eidi}/> : cleanNumber(e.eidi).toLocaleString()}</td>
                                                     <td className="p-6 text-right font-mono text-slate-600">{edit ? <input id={"ex-"+e.id} className="w-16 bg-slate-900 border border-slate-700 rounded p-2 text-right" defaultValue={e.tax}/> : cleanNumber(e.tax).toLocaleString()}</td>
-                                                    <td className="p-6 text-right font-mono text-slate-600">{edit ? <input id={"el-"+e.id} className="w-16 bg-slate-900 border border-slate-700 rounded p-2 text-right" defaultValue={e.loan_deduction}/> : cleanNumber(e.loan_deduction).toLocaleString()}</td>
-                                                    <td className="p-6 text-right font-mono text-slate-600">{edit ? <input id={"es-"+e.id} className="w-16 bg-slate-900 border border-slate-700 rounded p-2 text-right" defaultValue={e.insurance}/> : cleanNumber(e.insurance).toLocaleString()}</td>
-                                                    <td className="p-6 text-right font-mono text-slate-600">{edit ? <input id={"eo-"+e.id} className="w-16 bg-slate-900 border border-slate-700 rounded p-2 text-right" defaultValue={e.others_deduction}/> : cleanNumber(e.others_deduction).toLocaleString()}</td>
-                                                    <td className="p-6 text-right font-mono text-red-500">{edit ? <input id={"eld-"+e.id} className="w-16 bg-slate-900 border border-slate-700 rounded p-2 text-right" defaultValue={e.extra_leaves_deduction}/> : cleanNumber(e.extra_leaves_deduction).toLocaleString()}</td>
-                                                    <td className="p-6 text-right font-black text-white text-xs bg-slate-800/80">Rs. {m.netPaid.toLocaleString()}</td>
+                                                    <td className="p-6 text-right font-black text-white text-xs bg-slate-800/80 uppercase">Rs. {m.netPaid.toLocaleString()}</td>
                                                     {isAdmin && <td className="p-6 text-center">
-                                                        {edit ? <button onClick={() => handleSave(e.id)} className="text-teal-400 hover:text-white transition-all"><LucideIcon name="save" size={20}/></button> : <button onClick={()=>setEditingId(e.id)} className="text-slate-600 hover:text-teal-400 transition-all"><LucideIcon name="pencil" size={20}/></button>}
+                                                        {edit ? <button onClick={() => handleSaveSalary(e.id)} className="text-teal-400"><LucideIcon name="save" size={20}/></button> : <button onClick={()=>setEditingId(e.id)} className="text-slate-600 hover:text-teal-400 transition-all"><LucideIcon name="pencil" size={20}/></button>}
                                                     </td>}
                                                 </tr>
                                             )
@@ -523,137 +507,81 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
-                        employee_id: user.id, // Direct mapping to primary key
+                        employee_id: user.id, // Direct mapping to primary key to fix 500 error
                         amount: cleanNumber(amt), 
                         reason: rsn,
                         trigger_email: true
                     })
                 });
-                if(res.ok) { notify("Matrix Hub warp Dispatched."); setTab('history'); fetchData(); setAmt(''); setRsn(''); }
-                else notify("Error 500: Database Matrix failure. Please check Node.js Logs.");
+                if(res.ok) { window.notify("Matrix Hub Request Dispatched."); setTab('history'); fetchData(); setAmt(''); setRsn(''); }
+                else window.notify("Error 500: Database Failure. Contact Admin.");
             };
 
             const decideLoan = async (id, status) => {
                 await fetch(`${API_BASE}/admin/loans/${id}`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ status, trigger_email: true }) });
-                notify("Status Sync: " + status); fetchData();
+                window.notify("Identity Warp Success."); fetchData();
             };
 
             return (
-                <div className="animate-fade-in space-y-10 text-left font-sans font-sans">
+                <div className="animate-fade-in space-y-10 text-left font-sans">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div className="matrix-card p-10 relative overflow-hidden flex flex-col justify-center text-left font-sans">
+                        <div className="matrix-card p-10 relative overflow-hidden flex flex-col justify-center text-left">
                             <div className="absolute top-0 left-0 w-2 h-full bg-slate-700"></div>
-                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest font-sans">Opening debt Matrix</p>
+                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Opening debt Matrix</p>
                             <p className="text-5xl font-black text-white mt-4 font-mono leading-none">Rs. {cleanNumber(targetUser.loan_opening_balance).toLocaleString()}</p>
                         </div>
-                        <div className="matrix-card p-10 bg-red-500/5 border-red-500/20 relative overflow-hidden flex flex-col justify-center text-left font-sans">
+                        <div className="matrix-card p-10 bg-red-500/5 border-red-500/20 relative overflow-hidden flex flex-col justify-center text-left">
                             <div className="absolute top-0 left-0 w-2 h-full bg-red-600"></div>
-                            <p className="text-[10px] font-black text-red-900/40 uppercase tracking-widest font-sans">Total Matrix Outstanding</p>
+                            <p className="text-[10px] font-black text-red-900/40 uppercase tracking-widest">Outstanding debt Warp</p>
                             <p className="text-5xl font-black text-red-500 mt-4 font-mono leading-none">Rs. {debt.toLocaleString()}</p>
                         </div>
                     </div>
 
-                    <div className="flex bg-slate-800/50 p-2 rounded-2xl max-w-sm mx-auto border border-slate-700 font-sans">
-                        <button onClick={()=>setTab('apply')} className={`flex-1 py-3 text-[10px] font-black rounded-xl uppercase transition-all ${tab==='apply'?'bg-teal-500 text-white shadow-xl':'text-slate-500 hover:text-white font-sans font-sans'}`}>Apply</button>
-                        <button onClick={()=>setTab('history')} className={`flex-1 py-3 text-[10px] font-black rounded-xl uppercase transition-all ${tab==='history'?'bg-teal-500 text-white shadow-xl':'text-slate-500 hover:text-white font-sans font-sans'}`}>History</button>
-                        {isAdmin && <button onClick={()=>setTab('oversight')} className={`flex-1 py-3 text-[10px] font-black rounded-xl uppercase transition-all ${tab==='oversight'?'bg-teal-500 text-white shadow-xl':'text-slate-500 hover:text-white font-sans font-sans'}`}>Oversight</button>}
+                    <div className="flex bg-slate-800/50 p-2 rounded-2xl max-w-sm mx-auto border border-slate-700">
+                        <button onClick={()=>setTab('apply')} className={`flex-1 py-3 text-[10px] font-black rounded-xl uppercase transition-all ${tab==='apply'?'bg-teal-500 text-white shadow-xl':'text-slate-500'}`}>Apply</button>
+                        <button onClick={()=>setTab('history')} className={`flex-1 py-3 text-[10px] font-black rounded-xl uppercase transition-all ${tab==='history'?'bg-teal-500 text-white shadow-xl':'text-slate-500'}`}>History</button>
+                        {isAdmin && <button onClick={()=>setTab('oversight')} className={`flex-1 py-3 text-[10px] font-black rounded-xl uppercase transition-all ${tab==='oversight'?'bg-teal-500 text-white shadow-xl':'text-slate-500'}`}>Oversight</button>}
                     </div>
 
                     {tab === 'apply' ? (
-                        <div className="matrix-card p-16 max-w-2xl mx-auto border-2 border-slate-800 shadow-2xl relative overflow-hidden animate-slide-up font-sans font-sans">
-                            <div className="absolute top-0 left-0 w-2 h-full bg-teal-500 font-sans font-sans"></div>
-                            <h3 className="font-black text-2xl mb-10 uppercase text-white font-sans tracking-tight font-sans font-sans">New Application Request Matrix</h3>
-                            <form onSubmit={handleLoanSubmit} className="space-y-8 font-sans font-sans">
-                                <div><label className="text-[10px] font-black uppercase text-slate-500 ml-2 tracking-widest block mb-2 font-sans font-sans">Amount (PKR)</label><input type="number" value={amt} onChange={e=>setAmt(e.target.value)} className="w-full p-6 rounded-2xl border-2 border-slate-700 bg-slate-900/50 text-white font-black text-3xl outline-none focus:border-teal-500 transition-all font-sans font-sans" placeholder="0.00" required /></div>
-                                <div><label className="text-[10px] font-black uppercase text-slate-500 ml-2 tracking-widest block mb-2 font-sans font-sans">Identity Justification Warp</label><textarea value={rsn} onChange={e=>setRsn(e.target.value)} className="w-full p-6 rounded-2xl border-2 border-slate-700 bg-slate-900/50 text-white font-bold h-40 outline-none focus:border-teal-500 transition-all text-sm font-sans font-sans" placeholder="Provide reason..." required></textarea></div>
-                                <button type="submit" className="w-full bg-teal-500 text-white py-6 rounded-2xl font-black uppercase tracking-widest shadow-xl hover:bg-teal-600 transition-all active:scale-95 font-sans font-sans">Submit Identity Hub Request</button>
+                        <div className="matrix-card p-16 max-w-2xl mx-auto border-2 border-slate-800 relative overflow-hidden animate-slide-up">
+                            <div className="absolute top-0 left-0 w-2 h-full bg-teal-500"></div>
+                            <h3 className="font-black text-2xl mb-10 uppercase text-white font-sans tracking-tight">New Application Request</h3>
+                            <form onSubmit={handleLoanSubmit} className="space-y-8">
+                                <div><label className="text-[10px] font-black uppercase text-slate-500 ml-2 tracking-widest block mb-2">Amount (PKR)</label><input type="number" value={amt} onChange={e=>setAmt(e.target.value)} className="w-full p-6 rounded-2xl border-2 border-slate-700 bg-slate-900/50 text-white font-black text-3xl outline-none focus:border-teal-500 transition-all" placeholder="0.00" required /></div>
+                                <div><label className="text-[10px] font-black uppercase text-slate-500 ml-2 tracking-widest block mb-2">Identity Justification</label><textarea value={rsn} onChange={e=>setRsn(e.target.value)} className="w-full p-6 rounded-2xl border-2 border-slate-700 bg-slate-900/50 text-white font-bold h-40 outline-none focus:border-teal-500 transition-all text-sm" placeholder="Provide clarity..." required></textarea></div>
+                                <button type="submit" className="w-full bg-teal-500 text-white py-6 rounded-2xl font-black uppercase tracking-widest shadow-xl hover:bg-teal-600 transition-all active:scale-95">Submit Matrix Request</button>
                             </form>
                         </div>
                     ) : tab === 'oversight' ? (
-                        <div className="matrix-card !p-0 overflow-hidden shadow-2xl border-2 border-slate-800 font-sans font-sans">
-                             <table className="w-full text-left text-xs font-sans font-sans">
-                                <thead className="bg-slate-800 border-b border-slate-700 font-black uppercase text-slate-500 tracking-widest text-left font-sans font-sans"><tr><th className="p-6">Requester</th><th className="p-6 text-right">Amount Matrix</th><th className="p-6 text-center">Audit</th></tr></thead>
-                                <tbody className="divide-y divide-slate-800 font-bold text-slate-300 font-sans font-sans">
+                        <div className="matrix-card !p-0 shadow-2xl border-2 border-slate-800 overflow-hidden">
+                             <table className="w-full text-left text-xs">
+                                <thead className="bg-slate-800 border-b border-slate-700 font-black uppercase text-slate-500 tracking-widest"><tr><th className="p-6">Requester</th><th className="p-6 text-right">Amount Matrix</th><th className="p-6 text-center">Status Hub</th><th className="p-6 text-center">Audit</th></tr></thead>
+                                <tbody className="divide-y divide-slate-800 font-bold text-slate-300 font-sans">
                                     {allLoans.map(l => (
-                                        <tr key={l.id} className="hover:bg-slate-800/30 transition-colors font-sans">
-                                            <td className="p-6 uppercase font-black font-sans font-sans font-sans text-white">{employees.find(e => e.id === l.employee_id)?.name || 'Identity'}</td>
-                                            <td className="p-6 text-right font-black text-teal-400 font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Rs. {cleanNumber(l.amount).toLocaleString()}</td>
-                                            <td className="p-6 flex gap-3 justify-center font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><button onClick={()=>decideLoan(l.id, 'Approved')} className="bg-teal-500 text-white px-5 py-2.5 rounded-xl text-[9px] font-black uppercase shadow-lg hover:bg-teal-600 transition-all font-sans font-sans font-sans font-sans">Approve</button><button onClick={()=>decideLoan(l.id, 'Rejected')} className="bg-red-900/50 text-red-500 border border-red-500/20 px-5 py-2.5 rounded-xl text-[9px] font-black uppercase shadow-lg hover:bg-red-700 transition-all font-sans font-sans font-sans font-sans">Reject</button></td>
+                                        <tr key={l.id} className="hover:bg-slate-800/30 transition-colors">
+                                            <td className="p-6 uppercase font-black text-white">{employees.find(e => e.id === l.employee_id)?.name || 'Identity'}</td>
+                                            <td className="p-6 text-right font-black text-teal-400">Rs. {cleanNumber(l.amount).toLocaleString()}</td>
+                                            <td className="p-6 text-center"><Badge status={l.status} /></td>
+                                            <td className="p-6 flex gap-3 justify-center"><button onClick={()=>decideLoan(l.id, 'Approved')} className="bg-teal-500 text-white px-5 py-2.5 rounded-xl text-[9px] font-black uppercase shadow-lg transition-all active:scale-90 font-sans">Approve</button><button onClick={()=>decideLoan(l.id, 'Rejected')} className="bg-red-900/50 text-red-500 border border-red-500/20 px-5 py-2.5 rounded-xl text-[9px] font-black uppercase shadow-lg transition-all active:scale-90 font-sans">Reject</button></td>
                                         </tr>
                                     ))}
-                                    {allLoans.length === 0 && <tr><td colSpan="3" className="p-20 text-center font-black uppercase text-slate-700 tracking-widest font-sans font-sans">No Pending Oversight</td></tr>}
                                 </tbody>
                              </table>
                         </div>
                     ) : (
-                        <div className="space-y-5 max-w-4xl mx-auto font-sans font-sans font-sans">
+                        <div className="space-y-5 max-w-4xl mx-auto font-sans">
                             {userLoans.map((l, i) => (
-                                <div key={i} className="matrix-card p-8 flex justify-between items-center transition-all hover:bg-slate-800/50 text-left font-sans font-sans">
-                                    <div className="flex items-center gap-6 font-sans font-sans font-sans">
-                                        <div className="bg-slate-800 p-4 rounded-2xl font-sans font-sans font-sans"><LucideIcon name="wallet" className="text-slate-500 font-sans font-sans font-sans" /></div>
-                                        <div className="text-left font-sans font-sans font-sans">
-                                            <p className="font-black text-2xl text-white font-sans font-sans font-sans font-sans">Rs. {cleanNumber(l.amount).toLocaleString()}</p>
-                                            <p className="text-[10px] text-slate-500 uppercase font-black mt-1 font-sans font-sans font-sans font-sans">Marked: {formatDate(l.applied_at)}</p>
-                                        </div>
+                                <div key={i} className="matrix-card p-8 flex justify-between items-center transition-all hover:bg-slate-800/50 text-left font-sans">
+                                    <div className="flex items-center gap-6">
+                                        <div className="bg-slate-800 p-4 rounded-2xl"><LucideIcon name="wallet" className="text-slate-500" /></div>
+                                        <div><p className="font-black text-2xl text-white">Rs. {cleanNumber(l.amount).toLocaleString()}</p><p className="text-[10px] text-slate-500 uppercase font-black mt-1">Identity Warp: {formatDate(l.applied_at)}</p></div>
                                     </div>
                                     <Badge status={l.status} />
                                 </div>
                             ))}
                         </div>
                     )}
-                </div>
-            );
-        }
-
-        /**
-         * --- STAFF HUB ---
-         */
-        function DirectoryView({ employees, fetchData }) {
-            const [open, setOpen] = useState(false);
-            const [edit, setEdit] = useState(null);
-            const [form, setForm] = useState({ id: '', name: '', email: '', password: '', role: 'employee' });
-
-            const handleSubmit = async (e) => {
-                e.preventDefault();
-                const res = await fetch(`${API_BASE}/employees`, { method: edit ? 'PUT' : 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({...form, send_identity_email: true}) });
-                if(res.ok) { setOpen(false); setEdit(null); fetchData(); notify("Identity hub Warp Success."); }
-            };
-
-            return (
-                <div className="animate-fade-in space-y-10 text-left font-sans">
-                    <div className="flex justify-between items-center border-b border-slate-800 pb-8 font-sans">
-                        <h2 className="text-4xl font-black uppercase tracking-tighter text-white font-sans">Staff Hub Matrix</h2>
-                        <button onClick={()=>{setOpen(true); setEdit(null); setForm({id:'',name:'',email:'',password:'',role:'employee'});}} className="bg-teal-500 text-white px-8 py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl hover:bg-teal-600 transition-all font-sans font-sans">Add identity</button>
-                    </div>
-
-                    {open && (
-                        <div className="matrix-card p-12 mb-10 border-teal-500/30 animate-slide-up font-sans">
-                            <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 font-sans">
-                                <input placeholder="ID Matrix" className="bg-slate-900 p-4 rounded-xl border border-slate-700 text-white outline-none focus:border-teal-500" value={form.id} onChange={e=>setForm({...form,id:e.target.value})} disabled={!!edit} required />
-                                <input placeholder="Name Hub" className="bg-slate-900 p-4 rounded-xl border border-slate-700 text-white outline-none focus:border-teal-500" value={form.name} onChange={e=>setForm({...form,name:e.target.value})} required />
-                                <input type="email" placeholder="Email Warp" className="bg-slate-900 p-4 rounded-xl border border-slate-700 text-white outline-none focus:border-teal-500" value={form.email} onChange={e=>setForm({...form,email:e.target.value})} required />
-                                <input placeholder="Matrix Key" className="bg-slate-900 p-4 rounded-xl border border-slate-700 text-white outline-none focus:border-teal-500" value={form.password} onChange={e=>setForm({...form,password:e.target.value})} required />
-                                <div className="col-span-full flex justify-end gap-4 font-sans font-sans">
-                                    <button type="button" onClick={()=>setOpen(false)} className="text-slate-500 uppercase font-black text-xs font-sans font-sans">Cancel Warp</button>
-                                    <button type="submit" className="bg-teal-500 text-white px-10 py-3 rounded-xl uppercase font-black text-xs font-sans font-sans">Save Identity</button>
-                                </div>
-                            </form>
-                        </div>
-                    )}
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 font-sans">
-                        {employees.map(e => (
-                            <div key={e.id} className="matrix-card p-10 text-center flex flex-col items-center group relative border-slate-800/50 font-sans">
-                                <div className="h-24 w-24 bg-teal-500/10 text-teal-400 flex items-center justify-center font-black rounded-full text-4xl mb-6 shadow-inner uppercase font-sans">{getInitial(e.name)}</div>
-                                <h4 className="font-black uppercase text-white tracking-tight mb-2 font-sans">{e.name}</h4>
-                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest font-sans">{e.id} • {e.role}</p>
-                                <div className="mt-8 pt-8 border-t border-slate-800 w-full flex justify-center gap-3 opacity-0 group-hover:opacity-100 transition-all transform translate-y-2 group-hover:translate-y-0 font-sans">
-                                    <button onClick={()=>{setEdit(e); setForm(e); setOpen(true);}} className="text-teal-400 p-2 hover:bg-teal-500/10 rounded-lg"><LucideIcon name="pencil" size={18}/></button>
-                                    <button onClick={async ()=>{if(confirm("Purge Identity?")){await fetch(`${API_BASE}/employees/${e.id}`,{method:'DELETE'});fetchData();}}} className="text-red-900 hover:text-red-500 p-2 hover:bg-red-500/10 rounded-lg"><LucideIcon name="trash-2" size={18}/></button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
                 </div>
             );
         }
@@ -672,9 +600,9 @@
             const [loading, setLoading] = useState(true);
             const [user, setUser] = useState(() => { try { return JSON.parse(localStorage.getItem('hr_user')); } catch(e) { return null; }});
 
-            useEffect(() => { if(user) fetchHubMatrix(); else setLoading(false); }, [user]);
+            useEffect(() => { if(user) fetchMatrixHub(); else setLoading(false); }, [user]);
 
-            const fetchHubMatrix = async () => {
+            const fetchMatrixHub = async () => {
                 try {
                     const isAdmin = user && user.role === 'admin';
                     const endpoints = [
@@ -685,12 +613,13 @@
                         endpoints.push(fetch(`${API_BASE}/admin/leaves`), fetch(`${API_BASE}/admin/loans`), fetch(`${API_BASE}/attendance`)); 
                     }
                     const resArr = await Promise.allSettled(endpoints);
-                    const parse = async (idx) => (resArr[idx]?.status === 'fulfilled' && resArr[idx].value.ok) ? await resArr[idx].value.json() : [];
+                    const parseData = async (idx) => (resArr[idx]?.status === 'fulfilled' && resArr[idx].value.ok) ? await resArr[idx].value.json() : [];
                     
-                    setEmployees(await parse(0)); setPayrollPosted(await parse(1));
-                    setAttendance(isAdmin ? await parse(6) : await parse(2)); setUserLoans(await parse(3));
-                    if(isAdmin) { setAllLeaves(await parse(4)); setAllLoans(await parse(5)); }
-                } catch(e) { console.error("Matrix Sync Error", e); } finally { setLoading(false); }
+                    setEmployees(await parseData(0)); setPayrollPosted(await parseData(1));
+                    setAttendance(isAdmin ? await parseData(6) : await parseData(2));
+                    setUserLoans(await parseData(3));
+                    if(isAdmin) { setAllLeaves(await parseData(4)); setAllLoans(await parseData(5)); }
+                } catch(e) { console.error("Matrix Hub Sync Error", e); } finally { setLoading(false); }
             };
 
             const handleLogin = async (id, pass) => {
@@ -701,65 +630,60 @@
                     const found = list.find(e => String(e.id).toUpperCase() === String(id).toUpperCase() && String(e.password) === String(pass));
                     if(found) { setUser(found); localStorage.setItem('hr_user', JSON.stringify(found)); } 
                     else { alert("Identity validation failed Matrix Hub."); setLoading(false); }
-                } catch(e) { alert("Matrix Engine offline."); setLoading(false); }
+                } catch(e) { alert("Matrix offline. Port 5050?"); setLoading(false); }
             };
-
-            const logout = () => { localStorage.clear(); window.location.reload(); };
 
             if(loading && !user) return (
                 <div className="h-screen flex flex-col items-center justify-center bg-slate-900">
                     <div className="loader w-20 h-20 border-4 border-slate-800 border-t-teal-500 rounded-full mb-10 shadow-2xl"></div>
-                    <p className="font-black text-teal-500 uppercase tracking-[0.8em] animate-pulse">Initializing engine Hub matrix warp...</p>
+                    <p className="font-black text-teal-500 uppercase tracking-[0.8em] animate-pulse font-sans">Initializing Hub Matrix...</p>
                 </div>
             );
             
             if(!user) return <LoginView onLogin={handleLogin} loading={loading} />;
 
             return (
-                <div className="min-h-screen bg-slate-900 flex text-slate-200 font-sans text-left font-sans font-sans">
+                <div className="min-h-screen bg-slate-900 flex text-slate-200 font-sans text-left">
                     {/* SIDEBAR */}
-                    <aside className="hidden lg:flex flex-col w-72 bg-[#111827] fixed h-full z-50 shadow-2xl border-r border-slate-800 text-left font-sans font-sans font-sans">
-                        <div className="p-10 flex items-center gap-4 border-b border-slate-800/50 font-sans font-sans">
-                            <div className="bg-teal-500 w-10 h-10 rounded-xl flex items-center justify-center font-black text-white text-lg shadow-teal-500/20 shadow-xl font-sans font-sans">HR</div>
-                            <h2 className="text-xl font-black text-white tracking-widest uppercase font-sans font-sans font-sans">Portal Hub</h2>
+                    <aside className="hidden lg:flex flex-col w-72 bg-[#111827] fixed h-full z-50 shadow-2xl border-r border-slate-800 text-left font-sans">
+                        <div className="p-10 flex items-center gap-4 border-b border-slate-800/50">
+                            <div className="bg-teal-500 w-10 h-10 rounded-xl flex items-center justify-center font-black text-white text-lg shadow-teal-500/20 shadow-xl">HR</div>
+                            <h2 className="text-xl font-black text-white tracking-widest uppercase">Portal Hub</h2>
                         </div>
                         
-                        <div className="flex-1 overflow-y-auto custom-scrollbar px-6 space-y-10 py-10 font-sans font-sans font-sans">
+                        <div className="flex-1 overflow-y-auto custom-scrollbar px-6 space-y-10 py-10 font-sans">
                             {['MAIN', 'ADMINISTRATION'].map(grp => (
-                                <div key={grp} className="font-sans font-sans font-sans">
-                                    <p className="px-5 text-[10px] font-black text-slate-600 uppercase tracking-[0.3em] mb-4 font-sans font-sans font-sans">{grp} Hub</p>
+                                <div key={grp}>
+                                    <p className="px-5 text-[10px] font-black text-slate-600 uppercase tracking-[0.3em] mb-4">{grp} Hub</p>
                                     {NAV_ITEMS.filter(n => n.group === grp && (!n.admin || user.role === 'admin')).map(i => (
-                                        <button key={i.id} onClick={()=>setView(i.id)} className={`w-full flex items-center gap-4 p-4 rounded-2xl font-black transition-all font-sans font-sans ${view===i.id?'sidebar-item-active text-teal-400 shadow-xl shadow-teal-500/5':'text-slate-500 hover:text-white hover:bg-slate-800'}`}>
-                                            <LucideIcon name={i.icon} size={20} /><span className="text-[11px] uppercase tracking-widest font-sans font-sans font-sans font-sans">{i.label}</span>
+                                        <button key={i.id} onClick={()=>setView(i.id)} className={`w-full flex items-center gap-4 p-4 rounded-2xl font-black transition-all ${view===i.id?'sidebar-item-active text-teal-400 shadow-xl shadow-teal-500/5':'text-slate-500 hover:text-white hover:bg-slate-800'}`}>
+                                            <LucideIcon name={i.icon} size={20} /><span className="text-[11px] uppercase tracking-widest font-sans font-sans">{i.label}</span>
                                         </button>
                                     ))}
                                 </div>
                             ))}
                         </div>
 
-                        <div className="p-8 border-t border-slate-800 bg-black/20 flex items-center justify-between font-sans font-sans font-sans">
+                        <div className="p-8 border-t border-slate-800 bg-black/20 flex items-center justify-between font-sans">
                             <div className="flex items-center gap-3 overflow-hidden font-sans font-sans">
-                               <div className="h-12 w-12 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center font-black text-teal-500 text-lg font-sans font-sans font-sans font-sans">{getInitial(user.name)}</div>
-                               <div className="overflow-hidden font-sans font-sans font-sans font-sans font-sans">
-                                  <p className="font-black text-white text-[12px] uppercase truncate font-sans font-sans font-sans font-sans font-sans">{user.name}</p>
-                                  <p className="text-[9px] font-bold text-teal-500 uppercase tracking-widest truncate font-sans font-sans font-sans font-sans font-sans">{user.role}</p>
+                               <div className="h-12 w-12 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center font-black text-teal-500 text-lg uppercase font-sans font-sans">{getInitial(user.name)}</div>
+                               <div className="overflow-hidden">
+                                  <p className="font-black text-white text-[12px] uppercase truncate">{user.name}</p>
+                                  <p className="text-[9px] font-bold text-teal-500 uppercase tracking-widest truncate">{user.role}</p>
                                </div>
                             </div>
-                            <button onClick={logout} className="text-red-900 hover:text-red-500 transition-all font-sans font-sans font-sans font-sans"><LucideIcon name="log-out" size={24}/></button>
+                            <button onClick={()=>{localStorage.clear(); window.location.reload();}} className="text-red-900 hover:text-red-500 transition-all font-sans"><LucideIcon name="log-out" size={24}/></button>
                         </div>
                     </aside>
 
-                    <main className="flex-1 lg:ml-72 p-12 lg:p-20 font-sans text-left font-sans font-sans font-sans">
-                        <div className="max-w-[1500px] mx-auto font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
+                    <main className="flex-1 lg:ml-72 p-12 lg:p-20 font-sans text-left font-sans">
+                        <div className="max-w-[1500px] mx-auto font-sans font-sans">
                             {(() => {
                                 switch(view) {
                                     case 'dashboard': return <DashboardView user={user} employees={employees} attendance={attendance} userLoans={userLoans} allLoans={allLoans} allLeaves={allLeaves} />;
-                                    case 'attendance': return <AttendanceView user={user} attendance={attendance} fetchData={fetchHubMatrix} employees={employees} />;
-                                    case 'payroll': return <SalaryHubView user={user} employees={employees} fetchData={fetchHubMatrix} postedMonths={payrollPosted} />;
-                                    case 'loans': return <LoansHubView user={user} employees={employees} fetchData={fetchHubMatrix} userLoans={userLoans} allLoans={allLoans} />;
-                                    case 'leaves': return <div className="py-40 text-center font-black uppercase text-slate-700 tracking-[0.5em] font-sans font-sans">Initializing Matrix Leaves Hub...</div>;
-                                    case 'directory': return <DirectoryView employees={employees} fetchData={fetchHubMatrix} />;
-                                    case 'discussion': return <div className="py-40 text-center font-black uppercase text-slate-700 tracking-[0.5em] font-sans font-sans">Initializing Identity Board...</div>;
+                                    case 'attendance': return <AttendanceView user={user} attendance={attendance} fetchData={fetchMatrixHub} employees={employees} />;
+                                    case 'payroll': return <SalaryHubView user={user} employees={employees} fetchData={fetchMatrixHub} postedMonths={payrollPosted} />;
+                                    case 'loans': return <LoansHubView user={user} employees={employees} fetchData={fetchMatrixHub} userLoans={userLoans} allLoans={allLoans} />;
                                     default: return <DashboardView user={user} employees={employees} attendance={attendance} userLoans={userLoans} allLoans={allLoans} allLeaves={allLeaves} />;
                                 }
                             })()}
