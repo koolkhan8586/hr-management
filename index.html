@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LSAFHR Management System - v10.9.0</title>
+    <title>LSAFHR Management System - v11.1.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
@@ -41,24 +41,24 @@
             border-radius: 2.5rem; 
             z-index: 10; 
             border: 2px solid #e2e8f0; 
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05);
         }
 
         .btn-clock-in {
             background-color: #15803d;
             color: white;
-            border-radius: 1.25rem;
+            border-radius: 1.5rem;
             box-shadow: 0 10px 15px -3px rgba(21, 128, 61, 0.3);
             transition: all 0.2s;
             font-weight: 800;
         }
-        .btn-clock-in:hover { background-color: #166534; transform: translateY(-1px); }
+        .btn-clock-in:hover { background-color: #166534; transform: translateY(-2px); }
         
         .btn-clock-out {
             background-color: white;
             color: #1e293b;
             border: 2px solid #e2e8f0;
-            border-radius: 1.25rem;
+            border-radius: 1.5rem;
             transition: all 0.2s;
             font-weight: 800;
         }
@@ -67,22 +67,35 @@
         .sidebar-btn-active {
             background-color: #15803d;
             color: white !important;
-            box-shadow: 0 10px 15px -3px rgba(21, 128, 61, 0.25);
+            box-shadow: 0 10px 20px -3px rgba(21, 128, 61, 0.3);
             transform: scale(1.05);
         }
 
         input[type="number"]::-webkit-inner-spin-button { display: none; }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-900 text-left">
-
+<body>
     <div id="root"></div>
 
     <script type="text/babel">
         const { useState, useEffect, useRef, useMemo } = React;
 
+        /**
+         * --- GLOBAL CONFIGURATION ---
+         */
         const API_BASE = '/api'; 
         const LOGO_URL = "/UOL-Green-V1.png";
+
+        // Navigation Items defined at top level to avoid ReferenceErrors
+        const NAV_ITEMS = [
+            { id: 'dashboard', label: 'Dashboard', icon: 'home', admin: false },
+            { id: 'attendance', label: 'Attendance', icon: 'clock', admin: false },
+            { id: 'payroll', label: 'Salary Hub', icon: 'dollar-sign', admin: false },
+            { id: 'loans', label: 'Loans Hub', icon: 'wallet', admin: false },
+            { id: 'leaves', label: 'Leaves Hub', icon: 'calendar', admin: false },
+            { id: 'discussion', label: 'Matrix Board', icon: 'message-square', admin: false },
+            { id: 'directory', label: 'Staff Hub', icon: 'users', admin: true }
+        ];
 
         /**
          * --- UI HELPERS ---
@@ -132,16 +145,6 @@
             return <span className={"px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-tighter border " + (styles[status] || 'bg-slate-100 text-slate-600 border-slate-200')}>{status}</span>;
         };
 
-        const NAV_ITEMS = [
-            { id: 'dashboard', label: 'Dashboard', icon: 'home', admin: false },
-            { id: 'attendance', label: 'Attendance', icon: 'clock', admin: false },
-            { id: 'payroll', label: 'Salary Hub', icon: 'dollar-sign', admin: false },
-            { id: 'loans', label: 'Loans Hub', icon: 'wallet', admin: false },
-            { id: 'leaves', label: 'Leaves Hub', icon: 'calendar', admin: false },
-            { id: 'discussion', label: 'Matrix Board', icon: 'message-square', admin: false },
-            { id: 'directory', label: 'Staff Hub', icon: 'users', admin: true }
-        ];
-
         /**
          * --- CORE UTILITIES ---
          */
@@ -154,31 +157,6 @@
         const getPktTime = () => new Date().toLocaleTimeString('en-US', { timeZone: 'Asia/Karachi', hour: '2-digit', minute: '2-digit', hour12: true });
         const getPktDate = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Karachi' });
 
-        const calculateWorkTime = (inTime, outTime) => {
-            if (!inTime || !outTime) return "0h 0m";
-            try {
-                const parse = (t) => {
-                    const [time, mod] = t.split(' ');
-                    let [h, m] = time.split(':');
-                    if (h === '12') h = '00';
-                    let hh = parseInt(h);
-                    if (mod === 'PM') hh += 12;
-                    return new Date(2000, 0, 1, hh, parseInt(m));
-                };
-                const diff = parse(outTime) - parse(inTime);
-                if (diff < 0) return "0h 0m";
-                const hh = Math.floor(diff / 3600000);
-                const mm = Math.floor((diff % 3600000) / 60000);
-                return hh + "h " + mm + "m";
-            } catch(e) { return "0h 0m"; }
-        };
-
-        const calculateSalaryMetrics = (emp) => {
-            const add = cleanNumber(emp.basic_salary) + cleanNumber(emp.invigilation) + cleanNumber(emp.t_payment) + cleanNumber(emp.increment) + cleanNumber(emp.eidi);
-            const sub = cleanNumber(emp.tax) + cleanNumber(emp.loan_deduction) + cleanNumber(emp.insurance) + cleanNumber(emp.others_deduction) + cleanNumber(emp.extra_leaves_deduction);
-            return { netPaid: add - sub };
-        };
-
         const notify = (msg) => {
             const t = document.getElementById('status-toast');
             if (t) {
@@ -188,9 +166,39 @@
         };
 
         /**
-         * --- VIEWS ---
+         * --- MODULE: LOGIN ---
          */
+        function LoginView({ onLogin, loading }) {
+            const [id, setId] = useState('');
+            const [pass, setPass] = useState('');
+            const handleSubmit = (e) => { e.preventDefault(); onLogin(id, pass); };
+            return (
+                <div className="min-h-screen flex items-center justify-center bg-slate-100 w-full px-4">
+                    <Card className="w-full max-w-md p-12 shadow-2xl animate-slide-up text-center">
+                        <div className="mb-10">
+                            <img src={LOGO_URL} className="h-24 mx-auto mb-6 object-contain" alt="LSAFHR" />
+                            <h1 className="text-3xl font-black text-slate-800 uppercase tracking-widest font-sans">Identity Hub</h1>
+                            <p className="text-slate-400 text-[10px] font-black uppercase mt-2 tracking-[0.2em]">Authorized Access Matrix</p>
+                        </div>
+                        <form onSubmit={handleSubmit} className="space-y-6 text-left">
+                            <div className="space-y-1">
+                                <label className="block text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">Employee ID</label>
+                                <input value={id} onChange={e=>setId(e.target.value)} className="w-full p-5 rounded-3xl border-2 border-slate-50 font-black uppercase bg-slate-50 focus:bg-white focus:border-green-600 outline-none transition-all shadow-sm" placeholder="ID-001" required />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="block text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">Access Key</label>
+                                <input type="password" value={pass} onChange={e=>setPass(e.target.value)} className="w-full p-5 rounded-3xl border-2 font-black bg-slate-50 focus:bg-white focus:border-green-600 outline-none transition-all shadow-sm" placeholder="••••••••" required />
+                            </div>
+                            <Button type="submit" className="w-full py-6 text-base" disabled={loading}>{loading ? "Synchronizing..." : "Initialize Session"}</Button>
+                        </form>
+                    </Card>
+                </div>
+            );
+        }
 
+        /**
+         * --- MODULE: DASHBOARD ---
+         */
         function DashboardView({ user }) {
             const loanBal = cleanNumber(user.loan_opening_balance - user.loan_deduction);
             return (
@@ -198,34 +206,38 @@
                     <div className="flex flex-col md:flex-row justify-between items-center gap-6 border-b pb-8 border-slate-100">
                         <div className="text-left">
                             <h2 className="text-6xl font-black text-slate-800 tracking-tighter uppercase font-sans">Identity Base</h2>
-                            <p className="text-slate-400 text-[11px] font-black uppercase tracking-widest mt-3">Identity verified: {user.name}</p>
+                            <p className="text-slate-400 text-[11px] font-black uppercase tracking-widest mt-3 tracking-[0.3em]">Identity: {user.name}</p>
                         </div>
                         <Card className="bg-white p-6 !rounded-[2rem] border shadow-sm text-right">
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Global Server Time</p>
-                            <p className="text-green-700 font-black font-mono text-3xl mt-1">{getPktTime()}</p>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Digital Matrix Time</p>
+                            <p className="text-green-700 font-black font-mono text-4xl mt-1">{getPktTime()}</p>
                         </Card>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-                        <Card className="bg-green-700 !text-white flex flex-col justify-center py-12 text-left relative overflow-hidden font-sans">
+                        <Card className="bg-green-700 !text-white flex flex-col justify-center py-12 text-left relative overflow-hidden">
                             <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
                             <p className="text-[11px] font-black uppercase opacity-60 tracking-widest">System Status</p>
                             <p className="text-4xl font-black mt-3 uppercase tracking-tighter">Active Matrix</p>
                         </Card>
-                        <Card className="flex flex-col justify-center py-12 text-left border-2 border-slate-100 shadow-xl font-sans">
-                            <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest font-sans">Total Debt Balance</p>
-                            <p className="text-5xl font-black text-red-500 mt-2 font-mono">Rs. {loanBal.toLocaleString()}</p>
+                        <Card className="flex flex-col justify-center py-12 text-left border-2 border-slate-100 shadow-xl">
+                            <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Loan Remaining</p>
+                            <p className="text-5xl font-black text-red-500 mt-2 font-mono text-left">Rs. {loanBal.toLocaleString()}</p>
                         </Card>
-                        <Card className="flex flex-col justify-center py-12 text-left border-2 border-slate-100 shadow-xl font-sans">
-                            <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Security Level</p>
-                            <p className="text-3xl font-black text-slate-800 mt-2 capitalize font-sans">{user.role}</p>
+                        <Card className="flex flex-col justify-center py-12 text-left border-2 border-slate-100 shadow-xl">
+                            <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest font-sans">Clearance Level</p>
+                            <p className="text-4xl font-black text-slate-800 mt-2 capitalize font-sans tracking-tight">{user.role}</p>
                         </Card>
                     </div>
                 </div>
             );
         }
 
+        /**
+         * --- MODULE: ATTENDANCE (GPS + ADMIN RIGHTS) ---
+         */
         function AttendanceHub({ user, attendance, fetchData, employees }) {
             const [selectedMonth, setSelectedMonth] = useState(getPktDate().slice(0, 7));
+            const [manualForm, setManualForm] = useState(null);
             const mapRef = useRef(null);
             const isAdmin = user.role === 'admin';
 
@@ -239,8 +251,9 @@
                     navigator.geolocation.getCurrentPosition((p) => {
                         const { latitude, longitude } = p.coords;
                         map.setView([latitude, longitude], 16);
-                        window.L.marker([latitude, longitude]).addTo(map).bindPopup("<b>Verified Entry Location</b>").openPopup();
-                    }, (err) => console.warn("GPS Verification Failed."), { enableHighAccuracy: true });
+                        window.L.marker([latitude, longitude], { icon: L.divIcon({ className: 'bg-blue-500 w-4 h-4 rounded-full border-4 border-white shadow-lg' }) })
+                            .addTo(map).bindPopup("<b>Verified Entry Location</b>").openPopup();
+                    }, null, { enableHighAccuracy: true });
                 }
                 return () => { if(mapRef.current) { mapRef.current.remove(); mapRef.current = null; } };
             }, []);
@@ -269,9 +282,9 @@
             };
 
             const deleteLog = async (id) => {
-                if(!confirm("Purge Attendance Identity?")) return;
+                if(!confirm("Purge Attendance Identity Record?")) return;
                 const res = await fetch(API_BASE + "/attendance/" + id, { method: 'DELETE' });
-                if(res.ok) { notify("Matrix Hub Updated."); fetchData(); }
+                if(res.ok) { notify("Log Purged."); fetchData(); }
             };
 
             const groupedData = useMemo(() => {
@@ -285,11 +298,11 @@
 
             return (
                 <div className="space-y-8 animate-fade-in font-sans">
-                    <div className="flex justify-between items-center border-b pb-6 font-sans">
+                    <div className="flex justify-between items-center border-b pb-6">
                         <h2 className="text-3xl font-black uppercase tracking-tighter text-slate-800 text-left">Attendance Center</h2>
                         <div className="flex gap-4">
-                            <input type="month" value={selectedMonth} onChange={e=>setSelectedMonth(e.target.value)} className="p-3 border-2 rounded-2xl font-black bg-white focus:border-green-600 outline-none shadow-sm" />
-                            {isAdmin && <Button variant="secondary" onClick={() => exportToCSV(attendance, "Matrix_Attendance_Report.csv")} icon="download">Export Ledger</Button>}
+                            <input type="month" value={selectedMonth} onChange={e=>setSelectedMonth(e.target.value)} className="p-3 border-2 rounded-2xl font-black bg-white focus:border-green-600 outline-none shadow-sm font-sans" />
+                            {isAdmin && <Button variant="secondary" onClick={() => exportToCSV(attendance, "Attendance_Ledger.csv")} icon="download">Export Ledger</Button>}
                         </div>
                     </div>
                     
@@ -297,8 +310,8 @@
                         <div id="attendance-map" className="h-full w-full"></div>
                     </Card>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 font-sans">
-                        <Card className="flex flex-col items-center justify-center py-16 bg-slate-50 border-2 border-dashed border-slate-200">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <Card className="flex flex-col items-center justify-center py-16 bg-slate-50 border-2 border-dashed border-slate-200 shadow-inner">
                              <LucideIcon name="clock" size={64} className="text-slate-200 mb-6" />
                              <h3 className="text-7xl font-black text-slate-800 font-mono mb-10 leading-none">{getPktTime()}</h3>
                              <div className="flex flex-col gap-4 w-full max-w-xs px-6">
@@ -309,24 +322,26 @@
 
                         <Card className="!p-0 flex flex-col max-h-[520px] border-2 shadow-sm text-left font-sans">
                             <div className="p-6 border-b bg-slate-50 font-black text-xs uppercase text-slate-400 tracking-widest">Monthly Shift Matrix</div>
-                            <div className="flex-1 overflow-y-auto divide-y custom-scrollbar font-sans">
+                            <div className="flex-1 overflow-y-auto divide-y custom-scrollbar">
                                 {Object.keys(groupedData).sort((a,b) => new Date(b)-new Date(a)).map(date => {
                                     const cin = groupedData[date].find(x => x.type === 'Clock In');
                                     const cout = [...groupedData[date]].reverse().find(x => x.type === 'Clock Out');
+                                    const work = calculateWorkTime(cin?.time_str, cout?.time_str);
                                     return (
-                                        <div key={date} className="p-6 flex justify-between items-center hover:bg-slate-50 transition-all group font-sans">
-                                            <div className="text-left">
-                                                <p className="font-black text-slate-800 text-sm group-hover:text-green-700">{date}</p>
-                                                <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">Verified Time: {calculateWorkTime(cin?.time_str, cout?.time_str)}</p>
+                                        <div key={date} className="p-6 flex justify-between items-center hover:bg-slate-50 transition-all group">
+                                            <div className="text-left font-sans">
+                                                <p className="font-black text-slate-800 text-sm group-hover:text-green-700 transition-all">{date}</p>
+                                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter mt-1 font-sans">Verified Time: {work}</p>
                                             </div>
-                                            <div className="flex gap-4 items-center">
-                                                {cin && <button onClick={() => focusOnMap(cin.latitude, cin.longitude, 'In', cin.time_str)} className="text-green-600 font-black text-[10px] border-b border-green-200 uppercase">IN Mark</button>}
-                                                {cout && <button onClick={() => focusOnMap(cout.latitude, cout.longitude, 'Out', cout.time_str)} className="text-red-600 font-black text-[10px] border-b border-red-100 uppercase">OUT Mark</button>}
+                                            <div className="flex gap-4 items-center font-sans">
+                                                {cin && <button onClick={() => focusOnMap(cin.latitude, cin.longitude, 'In', cin.time_str)} className="text-green-600 font-black text-[10px] border-b border-green-200 uppercase transition-all hover:text-green-800 font-sans">{cin.time_str} IN</button>}
+                                                {cout && <button onClick={() => focusOnMap(cout.latitude, cout.longitude, 'Out', cout.time_str)} className="text-red-600 font-black text-[10px] border-b border-red-100 uppercase transition-all hover:text-red-800 font-sans">{cout.time_str} OUT</button>}
                                                 {isAdmin && <button onClick={()=>deleteLog(cin?.id || cout?.id)} className="text-red-200 hover:text-red-600 transition-colors ml-4"><LucideIcon name="trash-2" size={14}/></button>}
                                             </div>
                                         </div>
                                     )
                                 })}
+                                {Object.keys(groupedData).length === 0 && <div className="p-24 text-center font-black uppercase text-slate-200 tracking-widest opacity-30">Zero Logs Recorded</div>}
                             </div>
                         </Card>
                     </div>
@@ -334,6 +349,9 @@
             );
         }
 
+        /**
+         * --- MODULE: SALARY HUB (IMPORT + 11 COLUMNS) ---
+         */
         function SalaryHub({ user, employees, fetchData, postedMonths }) {
             const [editingId, setEditingId] = useState(null);
             const [month, setMonth] = useState(getPktDate().slice(0, 7));
@@ -354,7 +372,7 @@
                     extra_leaves_deduction: cleanNumber(document.getElementById("eld-" + id).value)
                 };
                 const res = await fetch(API_BASE + "/employees/" + id, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                if (res.ok) { notify("Identity Hub Updated."); setEditingId(null); fetchData(); }
+                if (res.ok) { notify("Salary Synchronized."); setEditingId(null); fetchData(); }
             };
 
             const handleImport = (e) => {
@@ -363,7 +381,7 @@
                 reader.onload = async (ev) => {
                     const text = ev.target.result;
                     const rows = text.split('\n').slice(1);
-                    notify("Processing Bulk Matrix LEDGER...");
+                    notify("Bulk Sync in Progress...");
                     for(let row of rows) {
                         const cols = row.split(',');
                         if(cols.length < 12) continue;
@@ -386,37 +404,37 @@
                     <div className="flex flex-col md:flex-row justify-between items-center gap-4">
                         <h2 className="text-3xl font-black uppercase tracking-tighter text-slate-800">Financial Matrix</h2>
                         <div className="flex flex-wrap gap-2 justify-center">
-                             <input type="month" value={month} onChange={e=>setMonth(e.target.value)} className="p-3 border-2 rounded-2xl font-black bg-white focus:border-green-600 outline-none shadow-sm" />
+                             <input type="month" value={month} onChange={e=>setMonth(e.target.value)} className="p-3 border-2 rounded-2xl font-black bg-white focus:border-green-600 outline-none shadow-sm font-sans" />
                              {isAdmin && (
                                 <>
                                     <Button variant="secondary" onClick={() => exportToCSV(employees, 'LSAF_Payroll_Report.csv')} icon="download">Export Ledger</Button>
                                     <label className="bg-green-50 text-green-700 px-8 py-3.5 rounded-2xl font-black text-[10px] uppercase tracking-widest cursor-pointer hover:bg-green-100 flex items-center gap-2 border-2 border-green-100 transition-all font-sans">
                                         <LucideIcon name="upload" size={14}/>Import Matrix<input type="file" onChange={handleImport} className="hidden" accept=".csv"/>
                                     </label>
-                                    <Button variant="secondary" onClick={() => exportToCSV([{ID:"EMP001", Name:"Sample", Basic:60000}], "Matrix_Sample.csv")} icon="file-text">Sample</Button>
+                                    <Button variant="secondary" onClick={() => exportToCSV([{ID:"EMP001", Name:"Sample", Basic:60000}], "LSAFHR_Sample.csv")} icon="file-text">Sample</Button>
                                 </>
                              )}
                         </div>
                     </div>
                     {!isAdmin && !isPosted ? (
-                        <Card className="py-40 text-center flex flex-col items-center border-dashed border-2 border-slate-200 font-sans">
+                        <Card className="py-40 text-center flex flex-col items-center border-dashed border-2 border-slate-200">
                             <LucideIcon name="lock" size={64} className="text-slate-200 mb-6" />
-                            <p className="text-slate-400 font-black uppercase text-xs tracking-widest">Access Restricted - Pending Admin Release</p>
+                            <p className="text-slate-400 font-black uppercase text-xs tracking-widest font-sans">Access Restricted - Pending Admin Release</p>
                         </Card>
                     ) : (
                         <Card className="!p-0 overflow-hidden border-2 shadow-2xl font-sans text-left">
-                            <div className="overflow-x-auto custom-scrollbar font-sans">
+                            <div className="overflow-x-auto custom-scrollbar">
                                 <table className="w-full text-[10px] text-left">
                                     <thead className="bg-slate-50 border-b font-black uppercase text-slate-400 tracking-widest font-sans">
                                         <tr>
-                                            <th className="p-5 font-sans">ID</th><th className="p-5 font-sans">Identity Name</th>
+                                            <th className="p-5 font-sans">ID</th><th className="p-5 font-sans">Staff Identity</th>
                                             <th className="p-5 text-right font-sans">Basic</th><th className="p-5 text-right font-sans">Invig</th>
                                             <th className="p-5 text-right font-sans">T.Pay</th><th className="p-4 text-right font-sans">Incr</th>
-                                            <th className="p-4 text-right font-sans">Eidi</th><th className="p-4 text-right font-sans text-slate-400 font-sans">Tax</th>
-                                            <th className="p-4 text-right font-sans text-slate-400 font-sans">Loan</th><th className="p-4 text-right font-sans text-slate-400 font-sans">Ins</th>
-                                            <th className="p-4 text-right font-sans text-slate-400 font-sans">Other</th><th className="p-4 text-right font-sans text-red-500 font-sans">L.Ded</th>
+                                            <th className="p-4 text-right font-sans">Eidi</th><th className="p-4 text-right font-sans text-slate-400">Tax</th>
+                                            <th className="p-4 text-right font-sans text-slate-400">Loan</th><th className="p-4 text-right font-sans text-slate-400">Ins</th>
+                                            <th className="p-4 text-right font-sans text-slate-400">Other</th><th className="p-4 text-right font-sans text-red-500">L.Ded</th>
                                             <th className="p-5 text-right font-black font-sans text-slate-900 bg-slate-50/50 uppercase">Net Paid</th>
-                                            {isAdmin && <th className="p-5 text-center font-sans font-sans font-sans">Audit</th>}
+                                            {isAdmin && <th className="p-5 text-center font-sans">Audit</th>}
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y font-bold text-slate-700 font-sans">
@@ -437,10 +455,10 @@
                                                     <td className="p-4 text-right font-mono text-slate-400">{edit ? <input id={"es-"+e.id} className="w-16 border rounded p-1 text-right" defaultValue={e.insurance}/> : cleanNumber(e.insurance).toLocaleString()}</td>
                                                     <td className="p-4 text-right font-mono text-slate-400">{edit ? <input id={"eo-"+e.id} className="w-16 border rounded p-1 text-right" defaultValue={e.others_deduction}/> : cleanNumber(e.others_deduction).toLocaleString()}</td>
                                                     <td className="p-4 text-right font-mono text-red-500">{edit ? <input id={"eld-"+e.id} className="w-16 border rounded p-1 text-right" defaultValue={e.extra_leaves_deduction}/> : cleanNumber(e.extra_leaves_deduction).toLocaleString()}</td>
-                                                    <td className="p-5 text-right font-black bg-slate-50/50 text-slate-900 text-xs font-mono font-sans font-sans">Rs. {m.netPaid.toLocaleString()}</td>
-                                                    {isAdmin && <td className="p-5 text-center flex gap-2 justify-center font-sans font-sans font-sans">
-                                                        {edit ? <button onClick={() => handleSaveSalary(e.id)} className="text-green-600 hover:text-green-800 transition-all font-sans font-sans"><LucideIcon name="save" size={18}/></button> : <button onClick={()=>setEditingId(e.id)} className="text-blue-500 hover:text-blue-700 transition-all font-sans font-sans font-sans"><LucideIcon name="pencil" size={18}/></button>}
-                                                        <button onClick={async ()=>{if(confirm("Wipe Payroll Identity?")){await fetch(API_BASE+"/employees/"+e.id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({basic_salary:0,tax:0,loan_deduction:0})});fetchData();}}} className="text-red-300 hover:text-red-600 transition-colors font-sans"><LucideIcon name="trash-2" size={18}/></button>
+                                                    <td className="p-5 text-right font-black bg-slate-50/50 text-slate-900 text-xs font-mono font-sans">Rs. {m.netPaid.toLocaleString()}</td>
+                                                    {isAdmin && <td className="p-5 text-center flex gap-2 justify-center font-sans">
+                                                        {edit ? <button onClick={() => handleSaveSalary(e.id)} className="text-green-600 hover:text-green-800 transition-all font-sans"><LucideIcon name="save" size={18}/></button> : <button onClick={()=>setEditingId(e.id)} className="text-blue-500 hover:text-blue-700 transition-all font-sans"><LucideIcon name="pencil" size={18}/></button>}
+                                                        <button onClick={async ()=>{if(confirm("Wipe Identity Payroll Data?")){await fetch(API_BASE+"/employees/"+e.id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({basic_salary:0,tax:0,loan_deduction:0})});fetchData();}}} className="text-red-300 hover:text-red-600 transition-colors font-sans"><LucideIcon name="trash-2" size={18}/></button>
                                                     </td>}
                                                 </tr>
                                             )
@@ -454,18 +472,21 @@
             );
         }
 
+        /**
+         * --- MODULE: LOANS HUB (FIXED PAYLOAD) ---
+         */
         function LoansHub({ user, userLoans, allLoans, employees, fetchData }) {
             const [tab, setTab] = useState('apply');
             const [amt, setAmt] = useState('');
             const [rsn, setRsn] = useState('');
             const isAdmin = user.role === 'admin';
             const targetUser = employees.find(e => e.id === user.id) || user;
-            const totalApproved = userLoans.filter(l => l.status === 'Approved').reduce((s,l) => s + cleanNumber(l.amount), 0);
-            const netOutstanding = cleanNumber(targetUser.loan_opening_balance) + totalApproved - cleanNumber(targetUser.loan_deduction);
+            const currentBal = cleanNumber(targetUser.loan_opening_balance - targetUser.loan_deduction);
 
             const handleApply = async (e) => {
                 e.preventDefault();
                 if(!amt || !rsn) return;
+                // Sending employeeId to match server expectations and employee_id for DB naming
                 const res = await fetch(API_BASE + "/loans", {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -478,76 +499,76 @@
                     })
                 });
                 if(res.ok) { notify("Matrix request dispatched."); setTab('history'); fetchData(); setAmt(''); setRsn(''); }
-                else notify("Sync Failure (500).");
+                else notify("Sync Error (500). Contact Administrator.");
             };
 
             const decide = async (id, status) => {
                 await fetch(API_BASE + "/admin/loans/" + id, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ status, trigger_email: true }) });
-                notify("Identity warp decision recorded: " + status); fetchData();
+                notify("Decision warp recorded: " + status); fetchData();
             };
 
             return (
-                <div className="space-y-8 animate-fade-in text-left font-sans font-sans">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 font-sans">
-                        <Card className="border-2 border-slate-100 shadow-sm relative overflow-hidden flex flex-col justify-center font-sans">
-                            <div className="absolute top-0 left-0 w-1.5 h-full bg-slate-300 font-sans"></div>
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest font-sans font-sans">Opening Debt Hub</p>
-                            <p className="text-5xl font-black mt-4 font-mono text-slate-800 font-sans">Rs. {cleanNumber(targetUser.loan_opening_balance).toLocaleString()}</p>
+                <div className="space-y-8 animate-fade-in text-left font-sans text-left">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <Card className="border-2 border-slate-100 shadow-sm relative overflow-hidden flex flex-col justify-center">
+                            <div className="absolute top-0 left-0 w-1.5 h-full bg-slate-300"></div>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest font-sans">Opening Debt Balance</p>
+                            <p className="text-5xl font-black mt-4 font-mono text-slate-800">Rs. {cleanNumber(targetUser.loan_opening_balance).toLocaleString()}</p>
                         </Card>
-                        <Card className="bg-red-50 border-red-100 border-2 shadow-sm relative overflow-hidden flex flex-col justify-center font-sans font-sans font-sans">
-                            <div className="absolute top-0 left-0 w-1.5 h-full bg-red-600 font-sans"></div>
-                            <p className="text-[10px] font-black text-red-400 uppercase tracking-widest font-sans font-sans">Current Matrix Outstanding</p>
-                            <p className="text-5xl font-black mt-4 font-mono text-red-600 font-sans font-sans">Rs. {netOutstanding.toLocaleString()}</p>
+                        <Card className="bg-red-50 border-red-100 border-2 shadow-sm relative overflow-hidden flex flex-col justify-center font-sans">
+                            <div className="absolute top-0 left-0 w-1.5 h-full bg-red-600"></div>
+                            <p className="text-[10px] font-black text-red-400 uppercase tracking-widest font-sans">Remaining Debt Matrix</p>
+                            <p className="text-5xl font-black mt-4 font-mono text-red-600">Rs. {currentBal.toLocaleString()}</p>
                         </Card>
                     </div>
 
-                    <div className="flex bg-slate-200 p-2 rounded-3xl max-w-sm mx-auto shadow-inner font-sans font-sans font-sans">
-                        <button onClick={()=>setTab('apply')} className={"flex-1 py-3 text-[10px] font-black rounded-2xl uppercase transition-all " + (tab==='apply'?'bg-white text-green-700 shadow-lg':'text-slate-500 hover:text-slate-700 font-sans font-sans font-sans')}>Apply</button>
-                        <button onClick={()=>setTab('history')} className={"flex-1 py-3 text-[10px] font-black rounded-2xl uppercase transition-all " + (tab==='history'?'bg-white text-green-700 shadow-lg':'text-slate-500 hover:text-slate-700 font-sans font-sans font-sans')}>History</button>
-                        {isAdmin && <button onClick={()=>setTab('oversight')} className={"flex-1 py-3 text-[10px] font-black rounded-2xl uppercase transition-all " + (tab==='oversight'?'bg-white text-green-700 shadow-lg':'text-slate-500 hover:text-slate-700 font-sans font-sans font-sans font-sans')}>Oversight</button>}
+                    <div className="flex bg-slate-200 p-2 rounded-3xl max-w-sm mx-auto shadow-inner font-sans">
+                        <button onClick={()=>setTab('apply')} className={"flex-1 py-3 text-[10px] font-black rounded-2xl uppercase transition-all " + (tab==='apply'?'bg-white text-green-700 shadow-lg':'text-slate-500 hover:text-slate-700')}>Apply</button>
+                        <button onClick={()=>setTab('history')} className={"flex-1 py-3 text-[10px] font-black rounded-2xl uppercase transition-all " + (tab==='history'?'bg-white text-green-700 shadow-lg':'text-slate-500 hover:text-slate-700')}>History</button>
+                        {isAdmin && <button onClick={()=>setTab('oversight')} className={"flex-1 py-3 text-[10px] font-black rounded-2xl uppercase transition-all " + (tab==='oversight'?'bg-white text-green-700 shadow-lg':'text-slate-500 hover:text-slate-700 font-sans')}>Oversight</button>}
                     </div>
 
                     {tab === 'apply' ? (
                         <Card className="max-w-2xl mx-auto shadow-2xl !p-12 relative overflow-hidden border-2 border-slate-50 text-left font-sans font-sans">
-                            <div className="absolute top-0 left-0 w-2 h-full bg-green-700 font-sans font-sans"></div>
-                            <h3 className="font-black text-2xl mb-8 uppercase tracking-tighter text-slate-800 font-sans font-sans">New Identity Matrix Request</h3>
-                            <form onSubmit={handleApply} className="space-y-8 font-sans font-sans">
-                                <div><label className="text-[10px] font-black uppercase text-slate-400 ml-2 tracking-widest font-sans">Amount (PKR)</label><input type="number" value={amt} onChange={e=>setAmt(e.target.value)} className="w-full p-6 rounded-2xl border-2 font-black text-xl bg-slate-50 focus:bg-white outline-none font-sans" placeholder="0.00" required /></div>
-                                <div><label className="text-[10px] font-black uppercase text-slate-400 ml-2 tracking-widest font-sans">Identity Reason</label><textarea value={rsn} onChange={e=>setRsn(e.target.value)} className="w-full p-6 rounded-2xl border-2 font-bold h-32 bg-slate-50 focus:bg-white outline-none text-sm font-sans" placeholder="Describe the identity for this warp request..." required></textarea></div>
+                            <div className="absolute top-0 left-0 w-2 h-full bg-green-700"></div>
+                            <h3 className="font-black text-2xl mb-8 uppercase tracking-tighter text-slate-800">New Identity Matrix Request</h3>
+                            <form onSubmit={handleApply} className="space-y-8 font-sans">
+                                <div><label className="text-[10px] font-black uppercase text-slate-400 ml-2 tracking-widest font-sans font-sans">Principal Amount (PKR)</label><input type="number" value={amt} onChange={e=>setAmt(e.target.value)} className="w-full p-6 rounded-2xl border-2 font-black text-xl bg-slate-50 focus:bg-white outline-none shadow-inner transition-all font-sans" placeholder="0.00" required /></div>
+                                <div><label className="text-[10px] font-black uppercase text-slate-400 ml-2 tracking-widest font-sans font-sans">Reason Warp Justification</label><textarea value={rsn} onChange={e=>setRsn(e.target.value)} className="w-full p-6 rounded-2xl border-2 font-bold h-32 bg-slate-50 focus:bg-white outline-none transition-all text-sm shadow-inner font-sans" placeholder="Explain the identity for this warp request..." required></textarea></div>
                                 <button type="submit" className="w-full py-6 bg-green-700 text-white rounded-2xl font-black uppercase tracking-widest shadow-green-200 shadow-2xl active:scale-95 transition-all font-sans font-sans font-sans">Submit Identity request</button>
                             </form>
                         </Card>
                     ) : tab === 'oversight' ? (
-                        <Card className="!p-0 border-2 overflow-hidden shadow-2xl font-sans font-sans">
+                        <Card className="!p-0 border-2 overflow-hidden shadow-2xl font-sans">
                              <table className="w-full text-left text-xs font-sans font-sans">
-                                <thead className="bg-slate-50 border-b font-black uppercase text-slate-400 tracking-widest text-left font-sans"><tr><th className="p-6">Requester</th><th className="p-6">Date Matrix</th><th className="p-6 text-right">Amount</th><th className="p-6 text-center">Action Hub</th></tr></thead>
+                                <thead className="bg-slate-50 border-b font-black uppercase text-slate-400 tracking-widest text-left font-sans"><tr><th className="p-6">Requester Hub</th><th className="p-6">Submission Date</th><th className="p-6 text-right">Amount</th><th className="p-6 text-center">Action hub</th></tr></thead>
                                 <tbody className="divide-y font-bold text-slate-700 font-sans">
                                     {allLoans.map(l => (
                                         <tr key={l.id} className="hover:bg-slate-50 transition-colors font-sans">
-                                            <td className="p-6 uppercase font-black font-sans">{l.name} <span className="text-slate-300 ml-1 font-mono text-[9px] font-sans font-sans">(${l.employee_id})</span></td>
+                                            <td className="p-6 uppercase font-black font-sans font-sans font-sans">{l.name} <span className="text-slate-300 ml-1 font-mono text-[9px] font-sans font-sans">(${l.employee_id})</span></td>
                                             <td className="p-6 font-mono text-slate-500 uppercase font-sans font-sans">{formatDate(l.applied_at)}</td>
                                             <td className="p-6 text-right font-black text-sm text-slate-900 font-sans font-sans font-sans">Rs. {cleanNumber(l.amount).toLocaleString()}</td>
-                                            <td className="p-6 flex gap-3 justify-center font-sans font-sans"><button onClick={()=>decide(l.id, 'Approved')} className="bg-green-700 text-white px-5 py-2.5 rounded-xl text-[9px] font-black uppercase shadow-lg hover:bg-green-800 transition-all font-sans font-sans">Approve</button><button onClick={()=>decide(l.id, 'Rejected')} className="bg-red-600 text-white px-5 py-2.5 rounded-xl text-[9px] font-black uppercase shadow-lg hover:bg-red-700 transition-all font-sans font-sans font-sans font-sans">Reject</button></td>
+                                            <td className="p-6 flex gap-3 justify-center font-sans font-sans"><button onClick={()=>decide(l.id, 'Approved')} className="bg-green-700 text-white px-5 py-2.5 rounded-xl text-[9px] font-black uppercase shadow-lg hover:bg-green-800 transition-all font-sans font-sans font-sans">Approve</button><button onClick={()=>decide(l.id, 'Rejected')} className="bg-red-600 text-white px-5 py-2.5 rounded-xl text-[9px] font-black uppercase shadow-lg hover:bg-red-700 transition-all font-sans font-sans font-sans">Reject</button></td>
                                         </tr>
                                     ))}
-                                    {allLoans.length === 0 && <tr><td colSpan="4" className="p-32 text-center font-black uppercase text-slate-200 tracking-[0.4em] font-sans font-sans">Zero Pending Oversight</td></tr>}
+                                    {allLoans.length === 0 && <tr><td colSpan="4" className="p-32 text-center font-black uppercase text-slate-200 tracking-[0.4em] font-sans">No Pending Oversight</td></tr>}
                                 </tbody>
                              </table>
                         </Card>
                     ) : (
-                        <div className="space-y-4 max-w-4xl mx-auto font-sans font-sans">
+                        <div className="space-y-4 max-w-4xl mx-auto font-sans font-sans font-sans">
                             {userLoans.map((l, i) => (
-                                <Card key={i} className="flex justify-between items-center border-2 border-slate-100 transition-all hover:bg-slate-50 shadow-sm text-left font-sans font-sans">
-                                    <div className="flex items-center gap-6 font-sans">
+                                <Card key={i} className="flex justify-between items-center border-2 border-slate-100 transition-all hover:bg-slate-50 shadow-sm text-left font-sans">
+                                    <div className="flex items-center gap-6 font-sans font-sans">
                                         <div className="bg-slate-50 p-4 rounded-2xl font-sans"><LucideIcon name="wallet" className="text-slate-400" /></div>
-                                        <div className="text-left font-sans">
+                                        <div className="text-left font-sans font-sans font-sans">
                                             <p className="font-black text-2xl text-slate-800 leading-tight font-sans">Rs. {cleanNumber(l.amount).toLocaleString()}</p>
-                                            <p className="text-[10px] text-slate-400 uppercase font-black mt-1 tracking-widest font-sans font-sans">{formatDate(l.applied_at)}</p>
+                                            <p className="text-[10px] text-slate-400 uppercase font-black mt-1 tracking-widest font-sans font-sans font-sans font-sans">{formatDate(l.applied_at)}</p>
                                         </div>
                                     </div>
-                                    <div className="text-right flex flex-col items-end gap-2 font-sans font-sans">
+                                    <div className="text-right flex flex-col items-end gap-2 font-sans">
                                         <Badge status={l.status} />
-                                        <p className="text-[9px] text-slate-300 font-bold mt-2 uppercase tracking-tighter font-sans font-sans font-sans font-sans">Closing Matrix Context: Rs. {netOutstanding.toLocaleString()}</p>
+                                        <p className="text-[9px] text-slate-300 font-bold mt-2 uppercase tracking-tighter font-sans font-sans">Outstanding: Rs. {netOutstanding.toLocaleString()}</p>
                                     </div>
                                 </Card>
                             ))}
@@ -557,9 +578,12 @@
             );
         }
 
+        /**
+         * --- MODULE: LEAVES HUB ---
+         */
         function LeavesHub({ user, allLeaves, employees, fetchData, leaves }) {
             const [tab, setTab] = useState('apply');
-            const [form, setForm] = useState({ type: 'Annual Leave', startDate: '', days: 1, reason: 'Identity Matrix Hub request' });
+            const [form, setForm] = useState({ type: 'Annual Leave', startDate: '', days: 1, reason: 'Identity Hub Request' });
             const isAdmin = user.role === 'admin';
             const targetUser = employees.find(e => e.id === user.id) || user;
 
@@ -568,54 +592,56 @@
                 const res = await fetch(API_BASE + "/leaves", {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ employeeId: user.id, ...form, trigger_email: true })
+                    body: JSON.stringify({ employeeId: user.id, employee_id: user.id, ...form, trigger_email: true })
                 });
-                if(res.ok) { notify("Matrix request sent."); setTab('history'); fetchData(); }
+                if(res.ok) { notify("Leave matrix dispatched."); setTab('history'); fetchData(); }
             };
 
             const decide = async (id, status) => {
-                await fetch(API_BASE + "/admin/leaves/" + id, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ status, trigger_email: true, deduct_balance: true }) });
-                notify("Identity Hub Warp: " + status); fetchData();
+                await fetch(API_BASE + "/admin/leaves/" + id, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ status, deduct_balance: true, trigger_email: true }) });
+                notify("Status Warp Complete."); fetchData();
             };
 
             return (
-                <div className="space-y-8 animate-fade-in text-left font-sans">
+                <div className="space-y-8 animate-fade-in text-left font-sans font-sans font-sans">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 font-sans">
-                        <Card className="bg-green-700 p-10 rounded-[3rem] text-white shadow-2xl relative overflow-hidden flex flex-col justify-center text-left font-sans font-sans">
+                        <Card className="bg-green-700 p-10 rounded-[3rem] text-white shadow-2xl relative overflow-hidden flex flex-col justify-center text-left font-sans">
                             <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
                             <p className="text-[10px] font-black uppercase opacity-60 tracking-[0.2em] font-sans font-sans">Annual Matrix Hub</p>
-                            <p className="text-6xl font-black mt-4 tracking-tighter">${targetUser.leave_annual || 0} Days</p>
+                            <p className="text-6xl font-black mt-4 tracking-tighter font-mono">${targetUser.leave_annual || 0} Days</p>
                         </Card>
-                        <Card className="bg-white p-10 rounded-[3rem] border-2 border-slate-50 shadow-sm flex flex-col justify-center text-left font-sans font-sans">
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest tracking-[0.2em] font-sans">WOP Matrix Balance</p>
-                            <p className="text-6xl font-black mt-4 tracking-tighter text-slate-800">${targetUser.leave_casual || 0} Days</p>
+                        <Card className="bg-white p-10 rounded-[3rem] border-2 border-slate-50 shadow-sm flex flex-col justify-center text-left font-sans">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest tracking-[0.2em] font-sans font-sans">WOP Matrix Balance</p>
+                            <p className="text-6xl font-black mt-4 tracking-tighter text-slate-800 font-mono font-sans">${targetUser.leave_casual || 0} Days</p>
                         </Card>
                     </div>
-                    <div className="flex bg-slate-200 p-2 rounded-[2rem] max-w-sm mx-auto shadow-inner font-sans font-sans font-sans">
-                        <button onClick={()=>setTab('apply')} className={"flex-1 py-3 text-[10px] font-black rounded-2xl uppercase transition-all " + (tab==='apply'?'bg-white text-green-700 shadow-sm':'text-slate-500 hover:text-slate-700')}>Apply</button>
-                        <button onClick={()=>setTab('history')} className={"flex-1 py-3 text-[10px] font-black rounded-2xl uppercase transition-all " + (tab==='history'?'bg-white text-green-700 shadow-sm':'text-slate-500 hover:text-slate-700')}>History</button>
-                        {isAdmin && <button onClick={()=>setTab('oversight')} className={"flex-1 py-3 text-[10px] font-black rounded-2xl uppercase transition-all " + (tab==='oversight'?'bg-white text-green-700 shadow-sm':'text-slate-500 hover:text-slate-700')}>Oversight</button>}
+                    <div className="flex bg-slate-200 p-2 rounded-[2rem] max-w-sm mx-auto shadow-inner font-sans">
+                        <button onClick={()=>setTab('apply')} className={"flex-1 py-3 text-[10px] font-black rounded-2xl uppercase transition-all " + (tab==='apply'?'bg-white text-green-700 shadow-lg':'text-slate-500 hover:text-slate-700')}>Apply</button>
+                        <button onClick={()=>setTab('history')} className={"flex-1 py-3 text-[10px] font-black rounded-2xl uppercase transition-all " + (tab==='history'?'bg-white text-green-700 shadow-lg':'text-slate-500 hover:text-slate-700')}>History</button>
+                        {isAdmin && <button onClick={()=>setTab('oversight')} className={"flex-1 py-3 text-[10px] font-black rounded-2xl uppercase transition-all " + (tab==='oversight'?'bg-white text-green-700 shadow-lg':'text-slate-500 hover:text-slate-700')}>Oversight</button>}
                     </div>
 
                     {tab === 'apply' ? (
-                        <Card className="bg-white p-16 rounded-[4rem] max-w-2xl mx-auto border-2 shadow-2xl animate-slide-up text-left font-sans">
-                            <form onSubmit={handleApply} className="space-y-6 text-left">
-                                <div><label className="text-[10px] font-black uppercase text-slate-400 ml-2 tracking-widest">Select Leave Category Matrix</label><select value={form.type} onChange={e=>setForm({...form, type:e.target.value})} className="w-full p-4 rounded-xl border-2 font-black bg-slate-50 outline-none"><option>Annual Leave</option><option>WOP (Without Pay)</option></select></div>
-                                <div className="grid grid-cols-2 gap-8">
-                                    <div><label className="text-[10px] font-black uppercase text-slate-400 ml-2 tracking-widest font-sans">Start Period Hub</label><input type="date" value={form.startDate} onChange={e=>setForm({...form, startDate:e.target.value})} className="w-full p-4 rounded-xl border-2 font-black bg-slate-50" required /></div>
-                                    <div><label className="text-[10px] font-black uppercase text-slate-400 ml-2 tracking-widest font-sans">Matrix Duration (Days)</label><input type="number" value={form.days} onChange={e=>setForm({...form, days:e.target.value})} placeholder="0" className="w-full p-4 rounded-xl border-2 font-black bg-slate-50" required /></div>
+                        <Card className="max-w-2xl mx-auto border-2 shadow-2xl animate-slide-up !p-12 relative overflow-hidden text-left font-sans">
+                            <div className="absolute top-0 left-0 w-2 h-full bg-green-700"></div>
+                            <h3 className="font-black text-2xl mb-10 uppercase tracking-tighter text-slate-800 font-sans">New Leave Application</h3>
+                            <form onSubmit={handleApply} className="space-y-6 font-sans">
+                                <div><label className="text-[10px] font-black uppercase text-slate-400 ml-2 tracking-widest font-sans">Type Category</label><select value={form.type} onChange={e=>setForm({...form, type:e.target.value})} className="w-full p-4 rounded-xl border-2 font-black bg-slate-50 outline-none focus:bg-white font-sans"><option>Annual Leave</option><option>WOP (Without Pay)</option></select></div>
+                                <div className="grid grid-cols-2 gap-8 text-left">
+                                    <div><label className="text-[10px] font-black uppercase text-slate-400 ml-2 tracking-widest font-sans font-sans">Start Period Hub</label><input type="date" value={form.startDate} onChange={e=>setForm({...form, startDate:e.target.value})} className="w-full p-4 rounded-xl border-2 font-black bg-slate-50 focus:bg-white font-sans font-sans" required /></div>
+                                    <div><label className="text-[10px] font-black uppercase text-slate-400 ml-2 tracking-widest font-sans font-sans">Duration Warp (Days)</label><input type="number" value={form.days} onChange={e=>setForm({...form, days:e.target.value})} placeholder="0" className="w-full p-4 rounded-xl border-2 font-black bg-slate-50 focus:bg-white font-sans font-sans" required /></div>
                                 </div>
-                                <button type="submit" className="w-full py-6 bg-green-700 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl hover:bg-green-800 transition-all font-sans font-sans">Transmit Warp Request</button>
+                                <button type="submit" className="w-full py-6 bg-green-700 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl hover:bg-green-800 active:scale-95 transition-all font-sans">Transmit Identity Application</button>
                             </form>
                         </Card>
                     ) : tab === 'oversight' ? (
-                        <Card className="!p-0 border-2 overflow-hidden shadow-2xl font-sans font-sans">
-                             <table className="w-full text-left text-xs font-sans">
-                                <thead className="bg-slate-50 border-b font-black uppercase text-slate-400 tracking-widest text-left font-sans"><tr><th className="p-6">Staff Identity</th><th className="p-6">Current Availability</th><th className="p-6 text-center">Audit Actions Matrix</th></tr></thead>
-                                <tbody className="divide-y font-bold text-slate-700 font-sans font-sans">
+                        <Card className="!p-0 border-2 overflow-hidden shadow-2xl font-sans">
+                             <table className="w-full text-left text-xs font-sans font-sans font-sans">
+                                <thead className="bg-slate-50 border-b font-black uppercase text-slate-400 tracking-widest text-left font-sans"><tr><th className="p-6">Staff identity</th><th className="p-6 font-sans">Availability hub</th><th className="p-6 font-sans">Qty Hub</th><th className="p-6 text-center font-sans font-sans">Actions Matrix</th></tr></thead>
+                                <tbody className="divide-y font-bold text-slate-700 font-sans">
                                     {allLeaves.map(l => {
                                         const r = employees.find(e => e.id === l.employee_id) || {};
-                                        return (<tr key={l.id} className="hover:bg-slate-50 transition-all group text-left font-sans"><td className="p-6 uppercase font-black font-sans">${l.name} <span className="text-slate-300 font-mono text-[9px] font-sans">(${l.employee_id})</span></td><td className="p-6 text-green-700 font-black">${r.leave_annual || 0} ANN / ${r.leave_casual || 0} WOP</td><td className="p-6 flex gap-2 justify-center font-sans"><button onClick={()=>decide(l.id, 'Approved')} className="bg-green-700 text-white px-5 py-2.5 rounded-xl text-[9px] font-black uppercase shadow-lg hover:bg-green-800 font-sans font-sans">Approve</button><button onClick={()=>decide(l.id, 'Rejected')} className="bg-red-600 text-white px-5 py-2.5 rounded-xl text-[9px] font-black uppercase shadow-lg hover:bg-red-700 font-sans font-sans font-sans">Reject</button></td></tr>)
+                                        return (<tr key={l.id} className="hover:bg-slate-50 transition-all group text-left font-sans"><td className="p-6 uppercase font-black font-sans font-sans font-sans">${l.name} <span className="text-slate-300 font-mono text-[9px] font-sans font-sans">(${l.employee_id})</span></td><td className="p-6 text-green-700 font-black font-sans font-sans">${r.leave_annual || 0} ANN / ${r.leave_casual || 0} WOP</td><td className="p-6 font-black text-slate-500 uppercase font-sans font-sans font-sans">${l.days} Days</td><td className="p-6 flex gap-3 justify-center font-sans font-sans font-sans font-sans"><button onClick={()=>decide(l.id, 'Approved')} className="bg-green-700 text-white px-5 py-2.5 rounded-xl text-[9px] font-black uppercase shadow-lg hover:bg-green-800 transition-all font-sans font-sans">Approve</button><button onClick={()=>decide(l.id, 'Rejected')} className="bg-red-600 text-white px-5 py-2.5 rounded-xl text-[9px] font-black uppercase shadow-lg hover:bg-red-700 transition-all font-sans font-sans font-sans">Reject</button></td></tr>)
                                     })}
                                 </tbody>
                              </table>
@@ -623,10 +649,10 @@
                     ) : (
                         <div className="space-y-4 max-w-4xl mx-auto font-sans font-sans font-sans font-sans">
                             {leaves.map((l, i) => (
-                                <Card key={i} className="flex justify-between items-center border-2 border-slate-100 hover:border-green-200 transition-all shadow-sm text-left font-sans">
-                                    <div className="flex gap-6 items-center text-left font-sans font-sans">
-                                        <div className="bg-slate-50 p-4 rounded-2xl font-sans"><LucideIcon name="calendar" className="text-slate-400 font-sans" /></div>
-                                        <div className="text-left font-sans font-sans"><p className="font-black text-2xl uppercase tracking-tighter text-slate-800 font-sans font-sans">${l.leave_type}</p><p className="text-[10px] text-slate-400 font-black mt-1 tracking-widest font-sans font-sans">{formatDate(l.start_date)} • ${l.days} Days Matrix</p></div>
+                                <Card key={i} className="flex justify-between items-center border-2 border-slate-100 hover:border-green-200 transition-all shadow-sm text-left font-sans font-sans">
+                                    <div className="flex gap-6 items-center text-left font-sans font-sans font-sans">
+                                        <div className="bg-slate-50 p-4 rounded-2xl font-sans font-sans font-sans"><LucideIcon name="calendar" className="text-slate-400 font-sans font-sans" /></div>
+                                        <div className="text-left font-sans font-sans font-sans font-sans"><p className="font-black text-2xl uppercase tracking-tighter text-slate-800 font-sans font-sans font-sans font-sans">${l.leave_type}</p><p className="text-[10px] text-slate-400 font-black mt-1 tracking-widest font-sans font-sans font-sans font-sans font-sans font-sans">{formatDate(l.start_date)} • ${l.days} Days Matrix</p></div>
                                     </div>
                                     <Badge status={l.status} />
                                 </Card>
@@ -637,6 +663,9 @@
             );
         }
 
+        /**
+         * --- MODULE: DIRECTORY ---
+         */
         function DirectoryModule({ employees, fetchData }) {
             const [isOpen, setIsOpen] = useState(false);
             const [editMember, setEditMember] = useState(null);
@@ -646,6 +675,7 @@
                 e.preventDefault();
                 const method = editMember ? 'PUT' : 'POST';
                 const url = editMember ? API_BASE + "/employees/" + editMember.id : API_BASE + "/employees";
+                // Payload includes credential email trigger for registration
                 const res = await fetch(url, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({...form, send_identity_email: true}) });
                 if(res.ok) { notify("Identity Hub Updated."); setIsOpen(false); setEditMember(null); fetchData(); }
             };
@@ -657,37 +687,37 @@
             };
 
             return (
-                <div className="space-y-10 animate-fade-in text-left font-sans">
-                    <div className="flex justify-between items-center border-b pb-8 border-slate-100 text-left font-sans">
-                        <h2 className="text-4xl font-black uppercase tracking-tighter text-slate-800 font-sans">Staff Hub Matrix</h2>
-                        <Button onClick={() => { setIsOpen(true); setEditMember(null); setForm({ id:'', name:'', email:'', password:'', role:'employee', leave_annual:14, leave_casual:10, loan_opening_balance:0 }); }} icon="users">Add Identity Hub</Button>
+                <div className="space-y-10 animate-fade-in text-left font-sans font-sans">
+                    <div className="flex justify-between items-center border-b pb-8 border-slate-100 text-left font-sans font-sans font-sans">
+                        <h2 className="text-4xl font-black uppercase tracking-tighter text-slate-800 font-sans font-sans">Staff Hub Matrix</h2>
+                        <Button onClick={() => { setIsOpen(true); setEditMember(null); setForm({ id:'', name:'', email:'', password:'', role:'employee', leave_annual:14, leave_casual:10, loan_opening_balance:0 }); }} icon="users">Add Identity Warp</Button>
                     </div>
 
                     {isOpen && (
-                        <Card className="bg-white border-2 border-green-100 shadow-2xl mb-12 animate-slide-up relative !p-12 font-sans text-left font-sans">
-                            <button onClick={()=>setIsOpen(false)} className="absolute top-8 right-8 text-slate-300 hover:text-red-500 transition-colors font-sans"><LucideIcon name="x" size={32}/></button>
-                            <form onSubmit={submit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 font-sans">
-                                <div className="space-y-1 font-sans"><label className="text-[10px] font-black uppercase text-slate-400 ml-3 tracking-widest font-sans font-sans">ID Hub</label><input type="text" className="w-full p-4 rounded-2xl border-2 font-bold bg-slate-50 uppercase focus:bg-white focus:border-green-600 transition-all font-sans font-sans" value={form.id} onChange={e=>setForm({...form, id:e.target.value})} disabled={!!editMember} required /></div>
-                                <div className="space-y-1 font-sans"><label className="text-[10px] font-black uppercase text-slate-400 ml-3 tracking-widest font-sans font-sans">Identity Name Hub</label><input type="text" className="w-full p-4 rounded-2xl border-2 font-bold bg-slate-50 focus:bg-white focus:border-green-600 transition-all font-sans font-sans" value={form.name} onChange={e=>setForm({...form, name:e.target.value})} required /></div>
-                                <div className="space-y-1 font-sans"><label className="text-[10px] font-black uppercase text-slate-400 ml-3 tracking-widest font-sans font-sans">Email Matrix Hub</label><input type="email" className="w-full p-4 rounded-2xl border-2 font-bold bg-slate-50 focus:bg-white focus:border-green-600 transition-all font-sans font-sans" value={form.email} onChange={e=>setForm({...form, email:e.target.value})} required /></div>
-                                <div className="space-y-1 font-sans"><label className="text-[10px] font-black uppercase text-slate-400 ml-3 tracking-widest font-sans font-sans">System Key Warp</label><input type="text" className="w-full p-4 rounded-2xl border-2 font-bold bg-slate-50 focus:bg-white focus:border-green-600 transition-all font-sans font-sans" value={form.password} onChange={e=>setForm({...form, password:e.target.value})} required /></div>
-                                <div className="col-span-full pt-10 border-t flex justify-end gap-4 font-sans">
-                                    <Button variant="ghost" onClick={()=>{setIsOpen(false); setEditMember(null);}}>Cancel Identity Warp</Button>
-                                    <Button type="submit" className="px-16 shadow-2xl font-black uppercase font-sans font-sans font-sans">{editMember ? 'Sync Identity' : 'Initialize identity warp'}</Button>
+                        <Card className="bg-white border-2 border-green-100 shadow-2xl mb-12 animate-slide-up relative !p-12 font-sans text-left font-sans font-sans font-sans font-sans">
+                            <button onClick={()=>setIsOpen(false)} className="absolute top-8 right-8 text-slate-300 hover:text-red-500 transition-colors font-sans font-sans"><LucideIcon name="x" size={32}/></button>
+                            <form onSubmit={submit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 font-sans font-sans font-sans">
+                                <div className="space-y-1 font-sans font-sans font-sans"><label className="text-[10px] font-black uppercase text-slate-400 ml-3 tracking-widest font-sans font-sans font-sans font-sans">ID Hub Identity</label><input type="text" className="w-full p-4 rounded-2xl border-2 font-bold bg-slate-50 uppercase focus:bg-white outline-none focus:border-green-600 transition-all font-sans font-sans font-sans font-sans" value={form.id} onChange={e=>setForm({...form, id:e.target.value})} disabled={!!editMember} required /></div>
+                                <div className="space-y-1 font-sans font-sans font-sans font-sans"><label className="text-[10px] font-black uppercase text-slate-400 ml-3 tracking-widest font-sans font-sans font-sans font-sans font-sans">Identity Full Name Hub</label><input type="text" className="w-full p-4 rounded-2xl border-2 font-bold bg-slate-50 focus:bg-white outline-none focus:border-green-600 transition-all font-sans font-sans font-sans font-sans font-sans" value={form.name} onChange={e=>setForm({...form, name:e.target.value})} required /></div>
+                                <div className="space-y-1 font-sans font-sans font-sans font-sans font-sans font-sans"><label className="text-[10px] font-black uppercase text-slate-400 ml-3 tracking-widest font-sans font-sans font-sans font-sans font-sans font-sans">Email Matrix Warp</label><input type="email" className="w-full p-4 rounded-2xl border-2 font-bold bg-slate-50 focus:bg-white outline-none focus:border-green-600 transition-all font-sans font-sans font-sans font-sans font-sans font-sans" value={form.email} onChange={e=>setForm({...form, email:e.target.value})} required /></div>
+                                <div className="space-y-1 font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><label className="text-[10px] font-black uppercase text-slate-400 ml-3 tracking-widest font-sans font-sans font-sans font-sans font-sans font-sans font-sans">System Access Key Hub</label><input type="text" className="w-full p-4 rounded-2xl border-2 font-bold bg-slate-50 focus:bg-white outline-none focus:border-green-600 transition-all font-sans font-sans font-sans font-sans font-sans font-sans font-sans" value={form.password} onChange={e=>setForm({...form, password:e.target.value})} required /></div>
+                                <div className="col-span-full pt-10 border-t flex justify-end gap-4 font-sans font-sans font-sans">
+                                    <Button variant="ghost" onClick={()=>{setIsOpen(false); setEditMember(null);}}>Cancel Identity hub Warp</Button>
+                                    <Button type="submit" className="px-16 shadow-2xl font-black uppercase font-sans font-sans font-sans font-sans font-sans font-sans">${editMember ? 'Update Profile Matrix' : 'Initialize warp hub'}</Button>
                                 </div>
                             </form>
                         </Card>
                     )}
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 font-sans text-left font-sans">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 font-sans text-left font-sans font-sans font-sans font-sans">
                         {employees.map(e => (
-                            <Card key={e.id} className="text-center group relative overflow-hidden flex flex-col items-center hover:border-green-300 transition-all border-slate-100 p-10 font-sans shadow-lg font-sans">
-                                <div className="h-24 w-24 bg-green-50 text-green-700 flex items-center justify-center font-black rounded-[3rem] text-4xl mb-6 shadow-inner transition-all group-hover:scale-95 uppercase font-sans font-sans font-sans">${getInitial(e.name)}</div>
-                                <p className="font-black uppercase text-slate-800 text-lg tracking-tight mb-1 truncate w-full font-sans font-sans font-sans">${e.name}</p>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] font-sans font-sans font-sans">${e.id} • ${e.role}</p>
-                                <div className="mt-8 flex gap-3 opacity-0 group-hover:opacity-100 transition-all transform translate-y-2 group-hover:translate-y-0 font-sans font-sans font-sans">
-                                    <button onClick={()=>{setEditMember(e); setForm(e); setIsOpen(true);}} className="bg-blue-50 text-blue-600 p-3 rounded-2xl hover:bg-blue-600 hover:text-white transition-all shadow-md font-sans font-sans"><LucideIcon name="pencil" size={20}/></button>
-                                    <button onClick={()=>deleteMember(e.id)} className="bg-red-50 text-red-600 p-3 rounded-2xl hover:bg-red-600 hover:text-white transition-all shadow-md font-sans font-sans font-sans"><LucideIcon name="trash-2" size={20}/></button>
+                            <Card key={e.id} className="text-center group relative overflow-hidden flex flex-col items-center hover:border-green-300 transition-all border-slate-100 p-10 font-sans shadow-lg font-sans font-sans font-sans font-sans">
+                                <div className="h-24 w-24 bg-green-50 text-green-700 flex items-center justify-center font-black rounded-[3rem] text-4xl mb-6 shadow-inner transition-all group-hover:scale-95 uppercase font-sans font-sans font-sans font-sans font-sans font-sans">${getInitial(e.name)}</div>
+                                <p className="font-black uppercase text-slate-800 text-lg tracking-tight mb-1 truncate w-full font-sans font-sans font-sans font-sans font-sans font-sans">${e.name}</p>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">${e.id} • ${e.role}</p>
+                                <div className="mt-8 flex gap-3 opacity-0 group-hover:opacity-100 transition-all transform translate-y-2 group-hover:translate-y-0 font-sans font-sans font-sans font-sans font-sans font-sans">
+                                    <button onClick={()=>{setEditMember(e); setForm(e); setIsOpen(true);}} className="bg-blue-50 text-blue-600 p-3 rounded-2xl hover:bg-blue-600 hover:text-white transition-all shadow-md font-sans font-sans font-sans font-sans font-sans font-sans"><LucideIcon name="pencil" size={20}/></button>
+                                    <button onClick={()=>deleteMember(e.id)} className="bg-red-50 text-red-600 p-3 rounded-2xl hover:bg-red-600 hover:text-white transition-all shadow-md font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><LucideIcon name="trash-2" size={20}/></button>
                                 </div>
                             </Card>
                         ))}
@@ -696,6 +726,9 @@
             );
         };
 
+        /**
+         * --- MODULE: BOARD ---
+         */
         function DiscussionBoard({ user, discussions, fetchData }) {
             const [val, setVal] = useState('');
             const post = async (e) => {
@@ -705,26 +738,26 @@
                 setVal(''); fetchData(); notify("Broadcast Matrix Updated.");
             };
             return (
-                <div className="space-y-12 max-w-5xl mx-auto animate-fade-in text-left font-sans font-sans">
-                    <h2 className="text-4xl font-black uppercase tracking-tighter text-slate-800 border-b pb-6 border-slate-100 font-sans font-sans font-sans">Identity Matrix Board</h2>
-                    <div className="bg-slate-900 p-12 rounded-[5rem] shadow-2xl relative font-sans font-sans">
-                        <div className="absolute top-6 right-10 flex items-center gap-2 font-sans font-sans"><div className="h-2 w-2 rounded-full bg-green-500 animate-pulse font-sans font-sans"></div><span className="text-[9px] font-black text-slate-500 uppercase tracking-widest font-sans font-sans font-sans">Verified Live Matrix Hub</span></div>
-                        <form onSubmit={post} className="flex gap-6 mt-4 font-sans font-sans">
-                            <input value={val} onChange={e=>setVal(e.target.value)} className="flex-1 bg-white/5 border-2 border-white/10 rounded-[3rem] p-10 font-bold text-white text-xl outline-none focus:bg-white/10 focus:border-green-600 transition-all font-sans font-sans" placeholder="Initialize broadcast..." required />
-                            <button type="submit" className="bg-green-600 hover:bg-green-500 p-10 rounded-[3rem] text-white shadow-green-900 shadow-2xl active:scale-95 transition-all font-sans font-sans"><LucideIcon name="send" size={48}/></button>
+                <div className="space-y-12 max-w-5xl mx-auto animate-fade-in text-left font-sans font-sans font-sans font-sans font-sans font-sans">
+                    <h2 className="text-4xl font-black uppercase tracking-tighter text-slate-800 border-b pb-6 border-slate-100 font-sans font-sans font-sans font-sans font-sans">Identity Matrix Board</h2>
+                    <div className="bg-slate-900 p-12 rounded-[5rem] shadow-2xl relative font-sans font-sans font-sans font-sans font-sans font-sans">
+                        <div className="absolute top-6 right-10 flex items-center gap-2 font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><div className="h-2 w-2 rounded-full bg-green-500 animate-pulse font-sans font-sans font-sans font-sans font-sans font-sans font-sans"></div><span className="text-[9px] font-black text-slate-500 uppercase tracking-widest font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Verified Live Matrix Hub Warp</span></div>
+                        <form onSubmit={post} className="flex gap-6 mt-4 font-sans font-sans font-sans font-sans font-sans font-sans">
+                            <input value={val} onChange={e=>setVal(e.target.value)} className="flex-1 bg-white/5 border-2 border-white/10 rounded-[3rem] p-10 font-bold text-white text-xl outline-none focus:bg-white/10 focus:border-green-600 transition-all font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans" placeholder="Initialize broadcast Hub Warp..." required />
+                            <button type="submit" className="bg-green-600 hover:bg-green-500 p-10 rounded-[3rem] text-white shadow-green-900 shadow-2xl active:scale-95 transition-all font-sans font-sans font-sans font-sans font-sans font-sans"><LucideIcon name="send" size={48}/></button>
                         </form>
                     </div>
-                    <div className="space-y-10 font-sans font-sans">
+                    <div className="space-y-10 font-sans font-sans font-sans">
                         {discussions.map((d, i) => (
-                            <Card key={i} className="group text-left border-slate-50 p-12 font-sans font-sans font-sans font-sans">
-                                <div className="flex justify-between items-center mb-8 font-sans font-sans">
-                                    <div className="flex items-center gap-6 font-sans font-sans">
-                                        <div className="h-16 w-16 rounded-[2.5rem] bg-green-50 text-green-700 flex items-center justify-center font-black text-3xl shadow-inner uppercase font-sans font-sans">${getInitial(d.author_name)}</div>
-                                        <div><span className="font-black text-slate-800 uppercase text-lg group-hover:text-green-700 transition-all font-sans font-sans font-sans font-sans">${d.author_name}</span><p className="text-[11px] font-black text-slate-400 uppercase mt-2 tracking-widest font-sans font-sans font-sans font-sans">Verified identity Matrix Broadcaster</p></div>
+                            <Card key={i} className="group text-left border-slate-50 p-12 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
+                                <div className="flex justify-between items-center mb-8 font-sans font-sans font-sans font-sans font-sans">
+                                    <div className="flex items-center gap-6 font-sans font-sans font-sans font-sans font-sans">
+                                        <div className="h-16 w-16 rounded-[2.5rem] bg-green-50 text-green-700 flex items-center justify-center font-black text-3xl shadow-inner uppercase font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">${getInitial(d.author_name)}</div>
+                                        <div><span className="font-black text-slate-800 uppercase text-lg group-hover:text-green-700 transition-all font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">${d.author_name}</span><p className="text-[11px] font-black text-slate-400 uppercase mt-2 tracking-widest font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Verified identity Matrix Broadcaster hub</p></div>
                                     </div>
-                                    <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest font-sans font-sans font-sans">${formatDate(d.created_at)}</span>
+                                    <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">${formatDate(d.created_at)}</span>
                                 </div>
-                                <p className="text-slate-700 font-bold leading-relaxed text-2xl font-sans font-sans font-sans font-sans">${d.message}</p>
+                                <p className="text-slate-700 font-bold leading-relaxed text-2xl font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">${d.message}</p>
                             </Card>
                         ))}
                     </div>
@@ -733,7 +766,7 @@
         };
 
         /**
-         * --- MAIN APP ENGINE ---
+         * --- APP IDENTITY CORE ---
          */
         function App() {
             const [view, setView] = useState('dashboard');
@@ -754,24 +787,18 @@
                 try {
                     const isAdmin = user.role === 'admin';
                     const endpoints = [
-                        fetch(API_BASE + "/employees").then(r => r.json()),
-                        fetch(API_BASE + "/payroll-posted").then(r => r.json()),
-                        fetch(API_BASE + "/discussions").then(r => r.json()),
-                        fetch(API_BASE + "/attendance/" + user.id).then(r => r.json()),
-                        fetch(API_BASE + "/leaves/" + user.id).then(r => r.json()),
-                        fetch(API_BASE + "/loans/" + user.id).then(r => r.json())
+                        fetch(API_BASE + "/employees"), fetch(API_BASE + "/payroll-posted"), fetch(API_BASE + "/discussions"),
+                        fetch(API_BASE + "/attendance/" + user.id), fetch(API_BASE + "/leaves/" + user.id), fetch(API_BASE + "/loans/" + user.id)
                     ];
-                    if (isAdmin) { endpoints.push(fetch(API_BASE + "/admin/leaves").then(r => r.json()), fetch(API_BASE + "/admin/loans").then(r => r.json())); }
+                    if (isAdmin) { endpoints.push(fetch(API_BASE + "/admin/leaves"), fetch(API_BASE + "/admin/loans")); }
                     const resArr = await Promise.allSettled(endpoints);
-                    if(resArr[0].status==='fulfilled') setEmployees(resArr[0].value);
-                    if(resArr[1].status==='fulfilled') setPayrollPosted(resArr[1].value);
-                    if(resArr[2].status==='fulfilled') setDiscussions(resArr[2].value);
-                    if(resArr[3].status==='fulfilled') setAttendance(resArr[3].value);
-                    if(resArr[4].status==='fulfilled') setLeaves(resArr[4].value);
-                    if(resArr[5].status==='fulfilled') setUserLoans(resArr[5].value);
-                    if(isAdmin && resArr[6] && resArr[6].status==='fulfilled') setAllLeaves(resArr[6].value);
-                    if(isAdmin && resArr[7] && resArr[7].status==='fulfilled') setAllLoans(resArr[7].value);
-                } catch(e) { console.error("Matrix Sync Error", e); } finally { setLoading(false); }
+                    
+                    const p = async (idx) => { if(resArr[idx]?.status === 'fulfilled' && resArr[idx].value.ok) return await resArr[idx].value.json(); return []; };
+                    
+                    setEmployees(await p(0)); setPayrollPosted(await p(1)); setDiscussions(await p(2));
+                    setAttendance(await p(3)); setLeaves(await p(4)); setUserLoans(await p(5));
+                    if(isAdmin) { setAllLeaves(await p(6)); setAllLoans(await p(7)); }
+                } catch(e) { console.error("Matrix Sync Error hub", e); } finally { setLoading(false); }
             };
 
             const handleLogin = async (id, pass) => {
@@ -780,17 +807,17 @@
                     const r = await fetch(API_BASE + "/employees");
                     const list = await r.json();
                     const found = list.find(e => String(e.id).toUpperCase() === String(id).toUpperCase() && String(e.password) === String(pass));
-                    if(found) { setUser(found); localStorage.setItem('hr_user', JSON.stringify(found)); await syncData(); } 
+                    if(found) { setUser(found); localStorage.setItem('hr_user', JSON.stringify(found)); } 
                     else { alert("Identity Hub Matrix access Denied."); setLoading(false); }
-                } catch(e) { alert("Matrix offline. Engine error."); setLoading(false); }
+                } catch(e) { alert("Matrix Hub engine Offline."); setLoading(false); }
             };
 
             const logout = () => { localStorage.clear(); window.location.reload(); };
 
             if(loading && !user) return (
                 <div className="h-screen flex flex-col items-center justify-center bg-white">
-                    <div className="loader w-20 h-20 border-4 border-slate-50 border-t-green-700 rounded-full mb-10 shadow-xl font-sans"></div>
-                    <p className="font-black text-slate-300 uppercase tracking-[0.8em] animate-pulse">Initializing engine Hub Matrix...</p>
+                    <div className="loader w-20 h-20 border-4 border-slate-50 border-t-green-700 rounded-full mb-10 shadow-xl font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"></div>
+                    <p className="font-black text-slate-300 uppercase tracking-[0.8em] animate-pulse font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Initializing engine Hub Matrix warp...</p>
                 </div>
             );
             
@@ -810,22 +837,22 @@
             };
 
             return (
-                <div className="min-h-screen bg-slate-50 flex text-slate-900 font-sans text-left">
-                    <aside className="hidden md:flex flex-col w-72 bg-white border-r fixed h-full z-50 shadow-sm text-left font-sans">
-                        <div className="p-10 border-b text-center font-sans"><img src={LOGO_URL} className="h-12 mx-auto mb-3" alt="Logo" /><span className="text-[10px] font-black text-green-700 uppercase tracking-widest font-sans tracking-widest font-sans">Identity Hub Matrix v10</span></div>
-                        <nav className="flex-1 p-6 space-y-2 overflow-y-auto custom-scrollbar font-sans font-sans">
+                <div className="min-h-screen bg-slate-50 flex text-slate-900 font-sans text-left font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
+                    <aside className="hidden md:flex flex-col w-72 bg-white border-r fixed h-full z-50 shadow-sm text-left font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
+                        <div className="p-10 border-b text-center font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><img src={LOGO_URL} className="h-12 mx-auto mb-3" alt="Logo" /><span className="text-[10px] font-black text-green-700 uppercase tracking-widest font-sans tracking-widest font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">Identity Hub Matrix v11</span></div>
+                        <nav className="flex-1 p-6 space-y-2 overflow-y-auto custom-scrollbar font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
                             {NAV_ITEMS.filter(n => !n.admin || user.role === 'admin').map(n => (
                                 <button key={n.id} onClick={()=>setView(n.id)} className={"w-full flex items-center gap-5 p-5 rounded-3xl font-black transition-all " + (view === n.id ? 'sidebar-btn-active' : 'text-slate-500 hover:bg-slate-50')}>
-                                    <LucideIcon name={n.icon} size={20} /><span className="text-[11px] uppercase tracking-widest text-left font-sans font-sans font-sans">{n.label}</span>
+                                    <LucideIcon name={n.icon} size={20} /><span className="text-[11px] uppercase tracking-widest text-left font-sans tracking-widest font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">{n.label}</span>
                                 </button>
                             ))}
                         </nav>
-                        <div className="p-8 border-t flex justify-between items-center bg-slate-50/50 backdrop-blur font-sans font-sans">
-                            <div className="overflow-hidden font-sans font-sans font-sans"><p className="font-black text-[12px] uppercase truncate font-sans text-slate-800 font-sans">${user.name}</p><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 font-sans tracking-tighter font-sans">${user.role}</p></div>
-                            <button onClick={logout} className="text-red-500 hover:bg-red-50 p-3 rounded-2xl transition-all active:scale-90 font-sans font-sans font-sans font-sans"><LucideIcon name="log-out" size={24}/></button>
+                        <div className="p-8 border-t flex justify-between items-center bg-slate-50/50 backdrop-blur font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">
+                            <div className="overflow-hidden font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><p className="font-black text-[12px] uppercase truncate font-sans text-slate-800 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">${user.name}</p><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 font-sans tracking-tighter font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">${user.role}</p></div>
+                            <button onClick={logout} className="text-red-500 hover:bg-red-50 p-3 rounded-2xl transition-all active:scale-90 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><LucideIcon name="log-out" size={24}/></button>
                         </div>
                     </aside>
-                    <main className="flex-1 md:ml-72 p-12 font-sans font-sans font-sans font-sans font-sans font-sans"><div className="max-w-[1600px] mx-auto font-sans font-sans font-sans font-sans font-sans">{renderContent()}</div></main>
+                    <main className="flex-1 md:ml-72 p-12 font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><div className="max-w-[1600px] mx-auto font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans font-sans">{renderContent()}</div></main>
                 </div>
             );
         }
