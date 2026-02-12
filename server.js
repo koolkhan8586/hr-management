@@ -1,14 +1,12 @@
 /**
  * ==============================================================================
- * LSAF-HR MANAGEMENT SYSTEM - ROBUST BACKEND ENGINE (v10.2)
+ * LSAFHR MANAGEMENT SYSTEM - BACKEND ENGINE v11.0.0
  * ==============================================================================
- * DESCRIPTION:
- * This server handles complex employee lifecycles, geofenced attendance,
- * 11-column payroll matrix, and a relational loan/leave approval system.
- * * FIXES INCLUDED:
- * 1. Resolved 500 error on /api/loans by mapping employeeId/employee_id.
- * 2. Automated schema verification (adds missing columns automatically).
- * 3. Enhanced error logging for database transactions.
+ * CORE FEATURES:
+ * 1. Automatic Email Hub (NodeMailer) for Attendance, Registration, and Hub Requests.
+ * 2. Automatic SQL Balance Deduction for Approved Leaves.
+ * 3. Robust Identity Hub (Resolves 500 Errors by mapping employeeId/employee_id).
+ * 4. Automated Database Migrations (Schema Sync).
  * ==============================================================================
  */
 
@@ -16,33 +14,44 @@ require('dotenv').config();
 const express = require('express');
 const mysql = require('mysql2');
 const cors = require('cors');
+const nodemailer = require('nodemailer');
 
 const app = express();
-
-// MIDDLEWARE
 app.use(cors());
 app.use(express.json());
 
-// DATABASE CONNECTION POOL
+// --- DATABASE CONFIGURATION ---
 const db = mysql.createPool({
     host: process.env.DB_HOST || 'localhost',
     user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '', 
+    password: process.env.DB_PASSWORD || '',
     database: process.env.DB_NAME || 'hr_management',
     waitForConnections: true,
     connectionLimit: 15,
     queueLimit: 0
 });
 
-/**
- * --- AUTOMATED DATABASE MIGRATIONS ---
- * Ensures the MySQL schema matches the requirements of the v10.x frontend.
- */
-const runMigrations = () => {
-    console.log("LSAFHR: Checking Matrix Schema...");
+// --- EMAIL HUB CONFIGURATION ---
+const transporter = nodemailer.createTransport({
+    host: process.env.MAIL_HOST || 'smtp.gmail.com',
+    port: process.env.MAIL_PORT || 587,
+    secure: false, 
+    auth: {
+        user: process.env.MAIL_USER,
+        pass: process.env.MAIL_PASS
+    },
+    tls: { rejectUnauthorized: false }
+});
 
-    // 1. Employee Table - Adding missing Matrix columns
-    const employeeColumns = [
+/**
+ * --- DATABASE MIGRATIONS ---
+ * Automatically synchronizes the database schema with the Matrix v11 requirements.
+ */
+const syncSchema = () => {
+    console.log("LSAFHR: Checking Database Matrix Integrity...");
+
+    // Table: employees
+    const empCols = [
         "email VARCHAR(255)",
         "password VARCHAR(255)",
         "role VARCHAR(50) DEFAULT 'employee'",
@@ -61,84 +70,104 @@ const runMigrations = () => {
         "extra_leaves_deduction DECIMAL(15,2) DEFAULT 0"
     ];
 
-    employeeColumns.forEach(col => {
+    empCols.forEach(col => {
         db.query(`ALTER TABLE employees ADD COLUMN IF NOT EXISTS ${col}`, (err) => {
-            if (err && err.errno !== 1060) console.error("Migration Error:", err.message);
+            if (err && err.errno !== 1060) console.error("Migration Err (Employees):", err.message);
         });
     });
 
-    // 2. Attendance Table - Adding Geolocation
-    const attendanceColumns = [
-        "latitude DECIMAL(10,8)",
-        "longitude DECIMAL(11,8)"
-    ];
+    // Table: attendance
+    db.query(`CREATE TABLE IF NOT EXISTS attendance (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        employee_id VARCHAR(50),
+        type VARCHAR(20),
+        date_str DATE,
+        time_str VARCHAR(20),
+        latitude DECIMAL(10,8),
+        longitude DECIMAL(11,8),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
 
-    attendanceColumns.forEach(col => {
-        db.query(`ALTER TABLE attendance ADD COLUMN IF NOT EXISTS ${col}`, (err) => {
-            if (err && err.errno !== 1060) console.error("Migration Error (Geo):", err.message);
-        });
-    });
+    // Table: loans
+    db.query(`CREATE TABLE IF NOT EXISTS loans (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        employee_id VARCHAR(50),
+        amount DECIMAL(15,2),
+        reason TEXT,
+        status VARCHAR(20) DEFAULT 'Pending',
+        applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
 
-    // 3. Ensuring Relational Tables Exist
-    const tables = [
-        `CREATE TABLE IF NOT EXISTS payroll_posts (
-            id INT AUTO_INCREMENT PRIMARY KEY, 
-            month_year VARCHAR(10) UNIQUE, 
-            posted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )`,
-        `CREATE TABLE IF NOT EXISTS leaves (
-            id INT AUTO_INCREMENT PRIMARY KEY, 
-            employee_id VARCHAR(50), 
-            leave_type VARCHAR(50), 
-            start_date DATE, 
-            days INT, 
-            reason TEXT, 
-            status VARCHAR(20) DEFAULT 'Pending', 
-            applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )`,
-        `CREATE TABLE IF NOT EXISTS loans (
-            id INT AUTO_INCREMENT PRIMARY KEY, 
-            employee_id VARCHAR(50), 
-            amount DECIMAL(15,2), 
-            reason TEXT, 
-            status VARCHAR(20) DEFAULT 'Pending', 
-            applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )`,
-        `CREATE TABLE IF NOT EXISTS discussions (
-            id INT AUTO_INCREMENT PRIMARY KEY, 
-            employee_id VARCHAR(50), 
-            author_name VARCHAR(255), 
-            message TEXT, 
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )`
-    ];
+    // Table: leaves
+    db.query(`CREATE TABLE IF NOT EXISTS leaves (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        employee_id VARCHAR(50),
+        leave_type VARCHAR(50),
+        start_date DATE,
+        days INT,
+        reason TEXT,
+        status VARCHAR(20) DEFAULT 'Pending',
+        applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
 
-    tables.forEach(sql => {
-        db.query(sql, (err) => {
-            if (err) console.error("Table Migration Error:", err.message);
-        });
-    });
+    // Table: payroll_posts
+    db.query(`CREATE TABLE IF NOT EXISTS payroll_posts (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        month_year VARCHAR(10) UNIQUE,
+        posted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
 
-    console.log("LSAFHR: Matrix Hub Database Ready.");
+    // Table: discussions
+    db.query(`CREATE TABLE IF NOT EXISTS discussions (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        employee_id VARCHAR(50),
+        author_name VARCHAR(255),
+        message TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    console.log("LSAFHR: Identity Matrix Schema Verified.");
 };
+syncSchema();
 
-runMigrations();
+/**
+ * --- HELPER: DISPATCH IDENTITY EMAIL ---
+ */
+const dispatchEmail = async (to, subject, html) => {
+    try {
+        await transporter.sendMail({
+            from: `"LSAFHR Identity Hub" <${process.env.MAIL_USER}>`,
+            to, subject, html
+        });
+        return true;
+    } catch (err) {
+        console.error("Email Dispatch Error:", err.message);
+        return false;
+    }
+};
 
 /**
  * --- API ENDPOINTS ---
  */
 
-// 1. STAFF HUB
+// 1. IDENTITY & STAFF HUB
 app.get('/api/employees', (req, res) => {
-    db.query('SELECT * FROM employees ORDER BY id ASC', (err, results) => {
+    db.query('SELECT * FROM employees ORDER BY name ASC', (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json(results);
     });
 });
 
 app.post('/api/employees', (req, res) => {
+    const { id, name, email, password } = req.body;
     db.query('INSERT INTO employees SET ?', req.body, (err) => {
         if (err) return res.status(500).json({ error: err.message });
+        
+        // Dispatch credentials to new employee
+        const subject = "LSAFHR: Identity Registration Details";
+        const body = `<h2>Welcome ${name}</h2><p>Your registration in the LSAFHR Identity Hub is complete.</p><p><b>ID:</b> ${id}<br><b>Password:</b> ${password}</p><p>URL: <a href="https://hr.uolcc.edu.pk">https://hr.uolcc.edu.pk</a></p>`;
+        dispatchEmail(email, subject, body);
+        
         res.json({ success: true });
     });
 });
@@ -159,12 +188,23 @@ app.delete('/api/employees/:id', (req, res) => {
     });
 });
 
-// 2. ATTENDANCE HUB
+// 2. ATTENDANCE CENTER
 app.post('/api/attendance', (req, res) => {
-    const { employee_id, type, date_str, time_str, latitude, longitude } = req.body;
+    const { employee_id, type, date_str, time_str, latitude, longitude, trigger_email } = req.body;
     const sql = 'INSERT INTO attendance (employee_id, type, date_str, time_str, latitude, longitude) VALUES (?, ?, ?, ?, ?, ?)';
+    
     db.query(sql, [employee_id, type, date_str, time_str, latitude, longitude], (err) => {
         if (err) return res.status(500).json({ error: err.message });
+        
+        if (trigger_email || true) { // Defaulting to true as per request
+            db.query('SELECT name, email FROM employees WHERE id = ?', [employee_id], (err, results) => {
+                if (results && results[0]) {
+                    const subject = `LSAFHR Mark: ${type}`;
+                    const body = `<p>Hello ${results[0].name},</p><p>Your identity marking (<b>${type}</b>) has been recorded at ${time_str} on ${date_str}.</p>`;
+                    dispatchEmail(results[0].email, subject, body);
+                }
+            });
+        }
         res.json({ success: true });
     });
 });
@@ -176,18 +216,25 @@ app.get('/api/attendance/:id', (req, res) => {
     });
 });
 
-// 3. LOANS HUB (Robust Mapping to fix 500 error)
+app.delete('/api/attendance/:id', (req, res) => {
+    db.query('DELETE FROM attendance WHERE id = ?', [req.params.id], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ success: true });
+    });
+});
+
+// 3. LOAN HUB (ROBUST FIELD MAPPING)
 app.post('/api/loans', (req, res) => {
-    // Map both potential naming conventions from frontend
+    // Handles employeeId (React) and employee_id (Vanilla)
     const empId = req.body.employee_id || req.body.employeeId;
     const { amount, reason } = req.body;
 
-    if (!empId) return res.status(400).json({ error: "Missing identity ID" });
+    if (!empId || !amount) return res.status(400).json({ error: "Missing identity ID or amount" });
 
     const sql = 'INSERT INTO loans (employee_id, amount, reason, status) VALUES (?, ?, ?, ?)';
     db.query(sql, [empId, amount, reason, 'Pending'], (err) => {
         if (err) {
-            console.error("SQL Error in Loans:", err);
+            console.error("SQL Matrix Error:", err);
             return res.status(500).json({ error: err.message });
         }
         res.json({ success: true });
@@ -210,18 +257,28 @@ app.get('/api/admin/loans', (req, res) => {
 });
 
 app.put('/api/admin/loans/:id', (req, res) => {
-    db.query('UPDATE loans SET status = ? WHERE id = ?', [req.body.status, req.params.id], (err) => {
+    const { status } = req.body;
+    db.query('UPDATE loans SET status = ? WHERE id = ?', [status, req.params.id], (err) => {
         if (err) return res.status(500).json({ error: err.message });
+        
+        // Notify employee
+        db.query('SELECT e.email, e.name, l.amount FROM loans l JOIN employees e ON l.employee_id = e.id WHERE l.id = ?', [req.params.id], (err, res) => {
+            if (res && res[0]) {
+                const body = `<h3>Loan Identity Update</h3><p>Your loan request for Rs. ${res[0].amount} has been <b>${status}</b>.</p>`;
+                dispatchEmail(res[0].email, "LSAFHR: Loan Status Updated", body);
+            }
+        });
         res.json({ success: true });
     });
 });
 
-// 4. LEAVES HUB
+// 4. LEAVES HUB (AUTO DEDUCTION)
 app.post('/api/leaves', (req, res) => {
     const empId = req.body.employee_id || req.body.employeeId;
     const { type, startDate, days, reason } = req.body;
-    const sql = 'INSERT INTO leaves (employee_id, leave_type, start_date, days, reason) VALUES (?, ?, ?, ?, ?)';
-    db.query(sql, [empId, type, startDate, days, reason], (err) => {
+
+    const sql = 'INSERT INTO leaves (employee_id, leave_type, start_date, days, reason, status) VALUES (?, ?, ?, ?, ?, ?)';
+    db.query(sql, [empId, type, startDate, days, reason, 'Pending'], (err) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json({ success: true });
     });
@@ -245,14 +302,25 @@ app.get('/api/admin/leaves', (req, res) => {
 app.put('/api/admin/leaves/:id', (req, res) => {
     const { status } = req.body;
     db.query('SELECT * FROM leaves WHERE id = ?', [req.params.id], (err, results) => {
-        if (results.length === 0) return res.status(404).send();
+        if (err || results.length === 0) return res.status(404).send();
         const leave = results[0];
+
         db.query('UPDATE leaves SET status = ? WHERE id = ?', [status, req.params.id], (err) => {
-            // Auto-deduct from balance on approval
+            if (err) return res.status(500).json({ error: err.message });
+
+            // AUTOMATIC BALANCE DEDUCTION MATRIX
             if (status === 'Approved') {
-                const column = (leave.leave_type === 'Annual Leave') ? 'leave_annual' : 'leave_casual';
-                db.query(`UPDATE employees SET \${column} = \${column} - ? WHERE id = ?`, [leave.days, leave.employee_id]);
+                const col = (leave.leave_type === 'Annual Leave') ? 'leave_annual' : 'leave_casual';
+                db.query(`UPDATE employees SET ${col} = ${col} - ? WHERE id = ?`, [leave.days, leave.employee_id]);
             }
+
+            // EMAIL NOTIFICATION
+            db.query('SELECT name, email FROM employees WHERE id = ?', [leave.employee_id], (err, empRes) => {
+                if (empRes && empRes[0]) {
+                    const body = `<h3>Leave Status Warp</h3><p>Your ${leave.leave_type} request for ${leave.days} day(s) has been <b>${status}</b>.</p>`;
+                    dispatchEmail(empRes[0].email, `LSAFHR Leave: ${status}`, body);
+                }
+            });
             res.json({ success: true });
         });
     });
@@ -273,7 +341,7 @@ app.post('/api/discussions', (req, res) => {
     });
 });
 
-// 6. PAYROLL CONTROL
+// 6. PAYROLL POSTING CONTROL
 app.get('/api/payroll-posted', (req, res) => {
     db.query('SELECT month_year FROM payroll_posts', (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -288,15 +356,8 @@ app.post('/api/payroll-post', (req, res) => {
     });
 });
 
-app.delete('/api/payroll-post/:month', (req, res) => {
-    db.query('DELETE FROM payroll_posts WHERE month_year = ?', [req.params.month], (err) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({ success: true });
-    });
-});
-
-// START ENGINE
+// PORT LISTEN
 const PORT = process.env.PORT || 5050;
 app.listen(PORT, () => {
-    console.log(`LSAFHR Engine active on port \${PORT}`);
+    console.log(`LSAFHR Backend Hub active on port ${PORT}`);
 });
