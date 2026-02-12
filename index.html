@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LSAFHR Management System - v10.7.0</title>
+    <title>LSAFHR Management System - v10.8.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
@@ -22,14 +22,12 @@
             background-color: #f8fafc;
         }
 
-        /* Animations and Transitions */
         .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
         
         .animate-slide-up { animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-        @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* Custom UI Elements */
         .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
@@ -43,35 +41,35 @@
             border-radius: 2.5rem; 
             z-index: 10; 
             border: 2px solid #e2e8f0; 
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
         }
 
         .btn-clock-in {
             background-color: #15803d;
             color: white;
-            border-radius: 1.5rem;
+            border-radius: 1.25rem;
             box-shadow: 0 10px 15px -3px rgba(21, 128, 61, 0.3);
             transition: all 0.2s;
             font-weight: 800;
         }
-        .btn-clock-in:hover { background-color: #166534; transform: translateY(-2px); box-shadow: 0 15px 20px -3px rgba(21, 128, 61, 0.4); }
+        .btn-clock-in:hover { background-color: #166534; transform: translateY(-1px); }
         
         .btn-clock-out {
             background-color: white;
             color: #1e293b;
             border: 2px solid #e2e8f0;
-            border-radius: 1.5rem;
+            border-radius: 1.25rem;
             transition: all 0.2s;
             font-weight: 800;
         }
-        .btn-clock-out:hover { background-color: #f8fafc; transform: translateY(-2px); border-color: #cbd5e1; }
+        .btn-clock-out:hover { background-color: #f8fafc; border-color: #cbd5e1; }
 
         .status-badge { 
             font-weight: 900; 
             text-transform: uppercase; 
-            font-size: 10px; 
-            padding: 6px 12px; 
-            border-radius: 10px; 
+            font-size: 9px; 
+            padding: 4px 10px; 
+            border-radius: 8px; 
             letter-spacing: 0.05em; 
             display: inline-block; 
             border-width: 1px;
@@ -83,116 +81,44 @@
         .sidebar-btn-active {
             background-color: #15803d;
             color: white !important;
-            box-shadow: 0 10px 20px -3px rgba(21, 128, 61, 0.3);
+            box-shadow: 0 10px 15px -3px rgba(21, 128, 61, 0.25);
             transform: scale(1.05);
         }
 
         input[type="number"]::-webkit-inner-spin-button { display: none; }
     </style>
 </head>
-<body>
+<body class="bg-slate-50 text-slate-900 text-left">
+
     <div id="root"></div>
+    <div id="status-toast" class="fixed top-12 left-1/2 -translate-x-1/2 z-[1000] bg-slate-900 text-white px-10 py-5 rounded-[1.5rem] font-black uppercase text-[11px] tracking-widest shadow-2xl opacity-0 pointer-events-none transition-all duration-300 transform translate-y-[-20px] text-center">Status Matrix Updated</div>
 
     <script type="text/babel">
         const { useState, useEffect, useRef, useMemo } = React;
 
-        /**
-         * --- GLOBAL CONFIGURATION ---
-         */
         const API_BASE = '/api'; 
         const LOGO_URL = "/UOL-Green-V1.png";
 
         /**
-         * --- LUCIDE ICON HELPER ---
-         * Resolves "got: array" warning by rendering Lucide icons through the library's createIcons method.
+         * --- UI HELPERS ---
          */
-        const Icon = ({ name, size = 18, className = "" }) => {
-            const iconRef = useRef(null);
+        const LucideIcon = ({ name, size = 18, className = "" }) => {
+            const ref = useRef(null);
             useEffect(() => {
-                if (iconRef.current && window.lucide) {
-                    iconRef.current.innerHTML = '';
-                    const lucideIcon = lucide.icons[name];
-                    if (lucideIcon) {
+                if (ref.current && window.lucide) {
+                    ref.current.innerHTML = '';
+                    const icon = lucide.icons[name];
+                    if (icon) {
                         lucide.createIcons({
-                            icons: { [name]: lucideIcon },
+                            icons: { [name]: icon },
                             attrs: { strokeWidth: 2, width: size, height: size, class: className }
                         });
                     }
                 }
             }, [name, size, className]);
-            return <span ref={iconRef} className="inline-flex items-center justify-center"></span>;
+            return <span ref={ref} className="inline-flex items-center justify-center"></span>;
         };
 
-        const NAV_ITEMS = [
-            { id: 'dashboard', label: 'Dashboard', icon: 'home', admin: false },
-            { id: 'attendance', label: 'Attendance', icon: 'clock', admin: false },
-            { id: 'payroll', label: 'Salary Hub', icon: 'dollar-sign', admin: false },
-            { id: 'loans', label: 'Loans Hub', icon: 'wallet', admin: false },
-            { id: 'leaves', label: 'Leaves Hub', icon: 'calendar', admin: false },
-            { id: 'discussion', label: 'Matrix Board', icon: 'message-square', admin: false },
-            { id: 'directory', label: 'Staff Hub', icon: 'users', admin: true }
-        ];
-
-        /**
-         * --- CORE UTILITIES ---
-         */
-        const cleanNumber = (val) => {
-            if (val === undefined || val === null || val === '' || isNaN(val)) return 0;
-            return parseFloat(val);
-        };
-
-        const getInitial = (name) => name ? String(name).charAt(0).toUpperCase() : '?';
-        
-        const formatDate = (d) => {
-            if (!d) return 'N/A';
-            const date = new Date(d);
-            return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-        };
-
-        const getPktTime = () => new Date().toLocaleTimeString('en-US', { timeZone: 'Asia/Karachi', hour: '2-digit', minute: '2-digit', hour12: true });
-        const getPktDate = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Karachi' });
-
-        const notify = (msg) => {
-            const t = document.getElementById('status-toast');
-            if (t) {
-                t.innerText = msg;
-                t.style.opacity = '1';
-                t.style.transform = 'translateY(0) translateX(-50%)';
-                setTimeout(() => {
-                    t.style.opacity = '0';
-                    t.style.transform = 'translateY(-20px) translateX(-50%)';
-                }, 4000);
-            }
-        };
-
-        const calculateWorkTime = (inTime, outTime) => {
-            if (!inTime || !outTime) return "0h 0m";
-            try {
-                const parseTime = (tStr) => {
-                    const [time, modifier] = tStr.split(' ');
-                    let [hours, minutes] = time.split(':');
-                    if (hours === '12') hours = '00';
-                    if (modifier === 'PM') hours = parseInt(hours, 10) + 12;
-                    return new Date(2000, 0, 1, hours, minutes);
-                };
-                const diff = parseTime(outTime) - parseTime(inTime);
-                if (diff < 0) return "0h 0m";
-                const h = Math.floor(diff / 3600000);
-                const m = Math.floor((diff % 3600000) / 60000);
-                return `${h}h ${m}m`;
-            } catch(e) { return "0h 0m"; }
-        };
-
-        const calculateSalaryMetrics = (emp) => {
-            if (!emp) return { netPaid: 0 };
-            const add = cleanNumber(emp.basic_salary) + cleanNumber(emp.invigilation) + cleanNumber(emp.t_payment) + cleanNumber(emp.increment) + cleanNumber(emp.eidi);
-            const sub = cleanNumber(emp.tax) + cleanNumber(emp.loan_deduction) + cleanNumber(emp.insurance) + cleanNumber(emp.others_deduction) + cleanNumber(emp.extra_leaves_deduction);
-            return { netPaid: add - sub };
-        };
-
-        /**
-         * --- UI COMPONENTS ---
-         */
         const Card = ({ children, className = "" }) => (
             <div className={"bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm transition-all hover:shadow-md " + className}>{children}</div>
         );
@@ -207,53 +133,69 @@
             };
             return (
                 <button type={type} onClick={onClick} disabled={disabled} className={base + " " + styles[variant] + " " + className}>
-                    {icon && <Icon name={icon} size={14} />}{children}
+                    {icon && <LucideIcon name={icon} size={14} />}{children}
                 </button>
             );
         };
 
-        /**
-         * --- LOGIN VIEW ---
-         */
-        function LoginView({ onLogin, loading }) {
-            const [id, setId] = useState('');
-            const [pass, setPass] = useState('');
-            const handleSubmit = (e) => { e.preventDefault(); onLogin(id, pass); };
-            return (
-                <div className="min-h-screen flex items-center justify-center bg-slate-100 w-full px-4">
-                    <Card className="w-full max-w-md p-12 shadow-2xl animate-slide-up text-center">
-                        <div className="mb-10">
-                            <img src={LOGO_URL} className="h-24 mx-auto mb-6 object-contain" alt="LSAFHR" />
-                            <h1 className="text-3xl font-black text-slate-800 uppercase tracking-widest font-sans">Identity Hub</h1>
-                            <p className="text-slate-400 text-[10px] font-black uppercase mt-2 tracking-[0.2em]">Authorized Access Matrix</p>
-                        </div>
-                        <form onSubmit={handleSubmit} className="space-y-6 text-left">
-                            <div className="space-y-1">
-                                <label className="block text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">Employee ID</label>
-                                <input value={id} onChange={e=>setId(e.target.value)} className="w-full p-5 rounded-3xl border-2 border-slate-50 font-black uppercase bg-slate-50 focus:bg-white focus:border-green-600 outline-none transition-all" placeholder="ID-001" required />
-                            </div>
-                            <div className="space-y-1">
-                                <label className="block text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">Access Key</label>
-                                <input type="password" value={pass} onChange={e=>setPass(e.target.value)} className="w-full p-5 rounded-3xl border-2 border-slate-50 font-black bg-slate-50 focus:bg-white focus:border-green-600 outline-none transition-all" placeholder="••••••••" required />
-                            </div>
-                            <Button type="submit" className="w-full py-6 text-base" disabled={loading}>{loading ? "Synchronizing..." : "Initialize Session"}</Button>
-                        </form>
-                    </Card>
-                </div>
-            );
-        }
+        const Badge = ({ status }) => {
+            const styles = { 
+                Approved: 'bg-green-100 text-green-700 border-green-200', 
+                Pending: 'bg-amber-100 text-amber-700 border-amber-200', 
+                Rejected: 'bg-red-100 text-red-700 border-red-200'
+            };
+            return <span className={"px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-tighter border " + (styles[status] || 'bg-slate-100 text-slate-600 border-slate-200')}>{status}</span>;
+        };
 
         /**
-         * --- DASHBOARD HUB ---
+         * --- CORE UTILITIES ---
          */
+        const cleanNumber = (val) => {
+            if (val === undefined || val === null || val === '' || isNaN(val)) return 0;
+            return parseFloat(val);
+        };
+        const getInitial = (name) => name ? String(name).charAt(0).toUpperCase() : '?';
+        const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A';
+        const getPktTime = () => new Date().toLocaleTimeString('en-US', { timeZone: 'Asia/Karachi', hour: '2-digit', minute: '2-digit', hour12: true });
+        const getPktDate = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Karachi' });
+
+        const calculateWorkTime = (inTime, outTime) => {
+            if (!inTime || !outTime) return "0h 0m";
+            try {
+                const parse = (t) => {
+                    const [time, mod] = t.split(' ');
+                    let [h, m] = time.split(':');
+                    if (h === '12') h = '00';
+                    let hh = parseInt(h);
+                    if (mod === 'PM') hh += 12;
+                    return new Date(2000, 0, 1, hh, parseInt(m));
+                };
+                const diff = parse(outTime) - parse(inTime);
+                if (diff < 0) return "0h 0m";
+                const hh = Math.floor(diff / 3600000);
+                const mm = Math.floor((diff % 3600000) / 60000);
+                return hh + "h " + mm + "m";
+            } catch(e) { return "0h 0m"; }
+        };
+
+        const calculateSalaryMetrics = (emp) => {
+            const add = cleanNumber(emp.basic_salary) + cleanNumber(emp.invigilation) + cleanNumber(emp.t_payment) + cleanNumber(emp.increment) + cleanNumber(emp.eidi);
+            const sub = cleanNumber(emp.tax) + cleanNumber(emp.loan_deduction) + cleanNumber(emp.insurance) + cleanNumber(emp.others_deduction) + cleanNumber(emp.extra_leaves_deduction);
+            return { netPaid: add - sub };
+        };
+
+        /**
+         * --- VIEWS ---
+         */
+
         function DashboardView({ user }) {
             const loanBal = cleanNumber(user.loan_opening_balance - user.loan_deduction);
             return (
                 <div className="animate-fade-in space-y-12">
                     <div className="flex flex-col md:flex-row justify-between items-center gap-6 border-b pb-8 border-slate-100">
                         <div className="text-left">
-                            <h2 className="text-6xl font-black text-slate-800 tracking-tighter uppercase font-sans">Identity Base</h2>
-                            <p className="text-slate-400 text-[11px] font-black uppercase tracking-widest mt-3 tracking-[0.3em]">Authorized Identity: {user.name}</p>
+                            <h2 className="text-6xl font-black text-slate-800 tracking-tighter uppercase">Identity Base</h2>
+                            <p className="text-slate-400 text-[11px] font-black uppercase tracking-widest mt-3 tracking-[0.3em]">Identity: {user.name}</p>
                         </div>
                         <Card className="bg-white p-6 !rounded-[2rem] border shadow-sm text-right">
                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Digital Matrix Time</p>
@@ -271,20 +213,19 @@
                             <p className="text-5xl font-black text-red-500 mt-2 font-mono">Rs. {loanBal.toLocaleString()}</p>
                         </Card>
                         <Card className="flex flex-col justify-center py-12 text-left border-2 border-slate-100 shadow-xl">
-                            <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Clearance Level</p>
-                            <p className="text-4xl font-black text-slate-800 mt-2 capitalize font-sans tracking-tight">{user.role}</p>
+                            <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Access Level</p>
+                            <p className="text-4xl font-black text-slate-800 mt-2 capitalize font-sans">{user.role}</p>
                         </Card>
                     </div>
                 </div>
             );
         }
 
-        /**
-         * --- ATTENDANCE HUB (GPS FIXED) ---
-         */
-        function AttendanceHub({ user, attendance, fetchData }) {
+        function AttendanceHub({ user, attendance, fetchData, employees }) {
             const [selectedMonth, setSelectedMonth] = useState(getPktDate().slice(0, 7));
+            const [manualForm, setManualForm] = useState(null);
             const mapRef = useRef(null);
+            const isAdmin = user.role === 'admin';
 
             useEffect(() => {
                 if (document.getElementById('attendance-map') && window.L) {
@@ -296,7 +237,7 @@
                     navigator.geolocation.getCurrentPosition((p) => {
                         const { latitude, longitude } = p.coords;
                         map.setView([latitude, longitude], 16);
-                        window.L.marker([latitude, longitude]).addTo(map).bindPopup("<b>Verified Entry Location</b>").openPopup();
+                        window.L.marker([latitude, longitude]).addTo(map).bindPopup("<b>Verified Hub Point</b>").openPopup();
                     }, (err) => console.warn("GPS Verification Failed."), { enableHighAccuracy: true });
                 }
                 return () => { if(mapRef.current) { mapRef.current.remove(); mapRef.current = null; } };
@@ -310,10 +251,10 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             employee_id: user.id, type, date_str: getPktDate(), time_str: getPktTime(),
-                            latitude: pos.coords.latitude, longitude: pos.coords.longitude
+                            latitude: pos.coords.latitude, longitude: pos.coords.longitude, trigger_email: true
                         })
                     });
-                    if (res.ok) { notify(type + " Matrix Mark Confirmed."); fetchData(); }
+                    if (res.ok) { notify(type + " Matrix Record dispatched."); fetchData(); }
                 });
             };
 
@@ -321,8 +262,14 @@
                 if (mapRef.current && lat && lng) {
                     mapRef.current.setView([lat, lng], 17);
                     window.L.marker([lat, lng]).addTo(mapRef.current).bindPopup(`<b>${label}: ${time}</b>`).openPopup();
-                    window.scrollTo({ top: 100, behavior: 'smooth' });
+                    window.scrollTo({ top: 150, behavior: 'smooth' });
                 }
+            };
+
+            const deleteAttendance = async (id) => {
+                if(!confirm("Purge Attendance Log?")) return;
+                const res = await fetch(API_BASE + "/attendance/" + id, { method: 'DELETE' });
+                if(res.ok) { notify("Log Purged."); fetchData(); }
             };
 
             const groupedData = useMemo(() => {
@@ -335,43 +282,50 @@
             }, [attendance, selectedMonth]);
 
             return (
-                <div className="animate-fade-in space-y-8 font-sans">
-                    <div className="flex justify-between items-center">
-                        <h2 className="text-3xl font-black uppercase tracking-tighter text-slate-800 text-left">Attendance Hub</h2>
-                        <input type="month" value={selectedMonth} onChange={e=>setSelectedMonth(e.target.value)} className="p-3 border-2 rounded-2xl font-black bg-white focus:border-green-600 outline-none shadow-sm" />
+                <div className="space-y-8 animate-fade-in font-sans">
+                    <div className="flex justify-between items-center border-b pb-6">
+                        <h2 className="text-3xl font-black uppercase tracking-tighter text-slate-800 text-left">Attendance Center</h2>
+                        <div className="flex gap-4">
+                            <input type="month" value={selectedMonth} onChange={e=>setSelectedMonth(e.target.value)} className="p-3 border-2 rounded-2xl font-black bg-white focus:border-green-600 outline-none shadow-sm" />
+                            {isAdmin && <Button variant="secondary" onClick={() => exportToCSV(attendance, "Attendance_Ledger.csv")} icon="download">Export Ledger</Button>}
+                        </div>
                     </div>
+                    
                     <Card className="!p-0 h-[450px] overflow-hidden border-2 relative shadow-2xl">
                         <div id="attendance-map" className="h-full w-full"></div>
                     </Card>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <Card className="flex flex-col items-center justify-center py-16 bg-slate-50 border-2 border-dashed border-slate-200 shadow-inner">
-                             <Icon name="clock" size={64} className="text-slate-200 mb-6" />
+                        <Card className="flex flex-col items-center justify-center py-16 bg-slate-50 border-2 border-dashed border-slate-200">
+                             <LucideIcon name="clock" size={64} className="text-slate-200 mb-6" />
                              <h3 className="text-7xl font-black text-slate-800 font-mono mb-10 leading-none">{getPktTime()}</h3>
                              <div className="flex flex-col gap-4 w-full max-w-xs px-6">
-                                <button onClick={() => handleClock('Clock In')} className="btn-clock-in w-full py-5 text-xl uppercase tracking-widest transition-all">Verify In</button>
+                                <button onClick={() => handleClock('Clock In')} className="btn-clock-in w-full py-5 text-xl uppercase tracking-widest transition-all shadow-xl">Verify In</button>
                                 <button onClick={() => handleClock('Clock Out')} className="btn-clock-out w-full py-5 text-xl uppercase tracking-widest border-2 transition-all">Verify Out</button>
                              </div>
                         </Card>
-                        <Card className="!p-0 flex flex-col max-h-[520px] border-2 shadow-sm text-left font-sans">
+
+                        <Card className="!p-0 flex flex-col max-h-[520px] border-2 shadow-sm text-left font-sans font-sans">
                             <div className="p-6 border-b bg-slate-50 font-black text-xs uppercase text-slate-400 tracking-widest">Monthly Shift Matrix</div>
-                            <div className="flex-1 overflow-y-auto divide-y custom-scrollbar font-sans">
+                            <div className="flex-1 overflow-y-auto divide-y custom-scrollbar">
                                 {Object.keys(groupedData).sort((a,b) => new Date(b)-new Date(a)).map(date => {
                                     const cin = groupedData[date].find(x => x.type === 'Clock In');
                                     const cout = [...groupedData[date]].reverse().find(x => x.type === 'Clock Out');
                                     return (
-                                        <div key={date} className="p-6 flex justify-between items-center hover:bg-slate-50 transition-all group font-sans">
-                                            <div className="text-left font-sans">
+                                        <div key={date} className="p-6 flex justify-between items-center hover:bg-slate-50 transition-all group">
+                                            <div className="text-left">
                                                 <p className="font-black text-slate-800 text-sm group-hover:text-green-700">{date}</p>
-                                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter mt-1">Verified Time: {calculateWorkTime(cin?.time_str, cout?.time_str)}</p>
+                                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter mt-1">Verified Work: {calculateWorkTime(cin?.time_str, cout?.time_str)}</p>
                                             </div>
-                                            <div className="flex gap-4">
-                                                {cin && <button onClick={() => focusOnMap(cin.latitude, cin.longitude, 'In', cin.time_str)} className="text-green-600 font-black text-xs border-b border-green-200 hover:text-green-800 transition-all uppercase">{cin.time_str} IN</button>}
-                                                {cout && <button onClick={() => focusOnMap(cout.latitude, cout.longitude, 'Out', cout.time_str)} className="text-red-600 font-black text-xs border-b border-red-200 transition-all hover:text-red-800 uppercase">{cout.time_str} OUT</button>}
+                                            <div className="flex gap-4 items-center">
+                                                {cin && <button onClick={() => focusOnMap(cin.latitude, cin.longitude, 'In', cin.time_str)} className="text-green-600 font-black text-[10px] border-b border-green-200 uppercase">{cin.time_str} IN</button>}
+                                                {cout && <button onClick={() => focusOnMap(cout.latitude, cout.longitude, 'Out', cout.time_str)} className="text-red-600 font-black text-[10px] border-b border-red-100 uppercase">{cout.time_str} OUT</button>}
+                                                {isAdmin && <button onClick={()=>deleteAttendance(cin?.id || cout?.id)} className="text-red-200 hover:text-red-600 transition-colors ml-4"><LucideIcon name="trash-2" size={14}/></button>}
                                             </div>
                                         </div>
                                     )
                                 })}
-                                {Object.keys(groupedData).length === 0 && <div className="p-24 text-center font-black uppercase text-slate-200 tracking-widest opacity-25">No logs in current period</div>}
+                                {Object.keys(groupedData).length === 0 && <div className="p-24 text-center font-black uppercase text-slate-200 tracking-widest opacity-30">No Records Detected</div>}
                             </div>
                         </Card>
                     </div>
@@ -379,17 +333,14 @@
             );
         }
 
-        /**
-         * --- SALARY HUB HUB ---
-         */
         function SalaryHub({ user, employees, fetchData, postedMonths }) {
             const [editingId, setEditingId] = useState(null);
             const [month, setMonth] = useState(getPktDate().slice(0, 7));
             const isAdmin = user.role === 'admin';
             const isPosted = postedMonths.includes(month);
 
-            const handleSave = async (id) => {
-                const data = {
+            const handleSaveSalary = async (id) => {
+                const payload = {
                     basic_salary: cleanNumber(document.getElementById("eb-" + id).value),
                     invigilation: cleanNumber(document.getElementById("ei-" + id).value),
                     t_payment: cleanNumber(document.getElementById("et-" + id).value),
@@ -401,37 +352,69 @@
                     others_deduction: cleanNumber(document.getElementById("eo-" + id).value),
                     extra_leaves_deduction: cleanNumber(document.getElementById("eld-" + id).value)
                 };
-                const res = await fetch(API_BASE + "/employees/" + id, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
-                if (res.ok) { notify("Matrix hub Updated."); setEditingId(null); fetchData(); }
+                const res = await fetch(API_BASE + "/employees/" + id, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (res.ok) { notify("Salary Synchronized."); setEditingId(null); fetchData(); }
+            };
+
+            const handleImport = (e) => {
+                const file = e.target.files[0]; if(!file) return;
+                const reader = new FileReader();
+                reader.onload = async (ev) => {
+                    const text = ev.target.result;
+                    const rows = text.split('\n').slice(1);
+                    notify("Processing Bulk Matrix Ledger...");
+                    for(let row of rows) {
+                        const cols = row.split(',');
+                        if(cols.length < 12) continue;
+                        const id = cols[0].replace(/"/g, '').trim().toUpperCase();
+                        const payload = { 
+                            basic_salary: cleanNumber(cols[2]), invigilation: cleanNumber(cols[3]), t_payment: cleanNumber(cols[4]), 
+                            increment: cleanNumber(cols[5]), eidi: cleanNumber(cols[6]), tax: cleanNumber(cols[7]), 
+                            loan_deduction: cleanNumber(cols[8]), insurance: cleanNumber(cols[9]), others_deduction: cleanNumber(cols[10]), 
+                            extra_leaves_deduction: cleanNumber(cols[11]) 
+                        };
+                        await fetch(API_BASE + "/employees/" + id, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+                    }
+                    notify("Bulk Matrix Synchronized."); fetchData();
+                };
+                reader.readAsText(file);
             };
 
             return (
-                <div className="animate-fade-in space-y-8 text-left font-sans">
+                <div className="space-y-8 animate-fade-in text-left font-sans">
                     <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-                        <h2 className="text-4xl font-black uppercase tracking-tighter text-slate-800">Financial Matrix Hub</h2>
-                        <div className="flex gap-2">
+                        <h2 className="text-3xl font-black uppercase tracking-tighter text-slate-800">Financial Matrix</h2>
+                        <div className="flex flex-wrap gap-2 justify-center">
                              <input type="month" value={month} onChange={e=>setMonth(e.target.value)} className="p-3 border-2 rounded-2xl font-black bg-white focus:border-green-600 outline-none shadow-sm" />
-                             {isAdmin && <Button variant="secondary" onClick={() => exportToCSV(employees, 'Payroll_Audit_LSAFHR.csv')} icon="download">Export Matrix</Button>}
+                             {isAdmin && (
+                                <>
+                                    <Button variant="secondary" onClick={() => exportToCSV(employees, 'Payroll_Matrix.csv')} icon="download">Export Matrix</Button>
+                                    <label className="bg-green-50 text-green-700 px-8 py-3.5 rounded-2xl font-black text-[10px] uppercase tracking-widest cursor-pointer hover:bg-green-100 flex items-center gap-2 border-2 border-green-100 transition-all font-sans font-sans">
+                                        <LucideIcon name="upload" size={14}/>Import Matrix<input type="file" onChange={handleImport} className="hidden" accept=".csv"/>
+                                    </label>
+                                    <Button variant="secondary" onClick={() => exportToCSV([{ID:"EMP101", Name:"Sample", Basic:50000}], "Sample_Matrix.csv")} icon="file-text">Sample</Button>
+                                </>
+                             )}
                         </div>
                     </div>
                     {!isAdmin && !isPosted ? (
-                        <Card className="py-48 text-center flex flex-col items-center border-dashed border-2 border-slate-200">
-                            <Icon name="lock" size={64} className="text-slate-200 mb-8" />
-                            <p className="text-slate-400 font-black uppercase text-xs tracking-widest">Restricted Access - Release Pending</p>
+                        <Card className="py-40 text-center flex flex-col items-center border-dashed border-2 border-slate-200">
+                            <LucideIcon name="lock" size={64} className="text-slate-200 mb-6" />
+                            <p className="text-slate-400 font-black uppercase text-xs tracking-widest">Access Restricted - Release Pending</p>
                         </Card>
                     ) : (
-                        <Card className="!p-0 overflow-hidden border-2 shadow-2xl text-left">
+                        <Card className="!p-0 overflow-hidden border-2 shadow-2xl font-sans text-left">
                             <div className="overflow-x-auto custom-scrollbar">
                                 <table className="w-full text-[10px] text-left">
-                                    <thead className="bg-slate-50 border-b font-black uppercase text-slate-400 tracking-widest font-sans">
+                                    <thead className="bg-slate-50 border-b font-black uppercase text-slate-400 tracking-widest">
                                         <tr>
-                                            <th className="p-5 font-sans">ID</th><th className="p-5 font-sans">Identity Name</th>
+                                            <th className="p-5">ID</th><th className="p-5">Identity</th>
                                             <th className="p-5 text-right font-sans">Basic</th><th className="p-5 text-right font-sans">Invig</th>
                                             <th className="p-5 text-right font-sans">T.Pay</th><th className="p-4 text-right font-sans">Incr</th>
                                             <th className="p-4 text-right font-sans">Eidi</th><th className="p-4 text-right font-sans text-slate-400">Tax</th>
                                             <th className="p-4 text-right font-sans text-slate-400">Loan</th><th className="p-4 text-right font-sans text-slate-400">Ins</th>
                                             <th className="p-4 text-right font-sans text-slate-400">Other</th><th className="p-4 text-right font-sans text-red-500">L.Ded</th>
-                                            <th className="p-5 text-right font-black font-sans text-slate-900 bg-slate-50/50">Net Paid</th>
+                                            <th className="p-5 text-right font-black font-sans text-slate-900 bg-slate-50/50 uppercase">Net Paid</th>
                                             {isAdmin && <th className="p-5 text-center font-sans">Audit</th>}
                                         </tr>
                                     </thead>
@@ -454,8 +437,9 @@
                                                     <td className="p-4 text-right font-mono text-slate-400">{edit ? <input id={"eo-"+e.id} className="w-16 border rounded p-1 text-right" defaultValue={e.others_deduction}/> : cleanNumber(e.others_deduction).toLocaleString()}</td>
                                                     <td className="p-4 text-right font-mono text-red-500">{edit ? <input id={"eld-"+e.id} className="w-16 border rounded p-1 text-right" defaultValue={e.extra_leaves_deduction}/> : cleanNumber(e.extra_leaves_deduction).toLocaleString()}</td>
                                                     <td className="p-5 text-right font-black bg-slate-50/50 text-slate-900 text-xs">Rs. {m.netPaid.toLocaleString()}</td>
-                                                    {isAdmin && <td className="p-5 text-center">
-                                                        {edit ? <button onClick={() => handleSave(e.id)} className="text-green-600 hover:text-green-800 transition-all"><Icon name="save" size={20}/></button> : <button onClick={()=>setEditingId(e.id)} className="text-blue-500 hover:text-blue-700 transition-all"><Icon name="pencil" size={20}/></button>}
+                                                    {isAdmin && <td className="p-5 text-center flex gap-2 justify-center">
+                                                        {edit ? <button onClick={() => handleSaveSalary(e.id)} className="text-green-600 transition-all"><LucideIcon name="save" size={18}/></button> : <button onClick={()=>setEditingId(e.id)} className="text-blue-500 hover:text-blue-700 transition-all"><LucideIcon name="pencil" size={18}/></button>}
+                                                        <button onClick={async ()=>{if(confirm("Wipe Payroll Data?")){await fetch(API_BASE+"/employees/"+e.id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({basic_salary:0,tax:0,loan_deduction:0})});fetchData();}}} className="text-red-300 hover:text-red-600 transition-colors"><LucideIcon name="trash-2" size={18}/></button>
                                                     </td>}
                                                 </tr>
                                             )
@@ -469,15 +453,10 @@
             );
         }
 
-        /**
-         * --- LOANS MODULE (FIXED) ---
-         */
         function LoansHub({ user, userLoans, allLoans, employees, fetchData }) {
             const [tab, setTab] = useState('apply');
             const [amt, setAmt] = useState('');
             const [rsn, setRsn] = useState('');
-            const [loading, setLoading] = useState(false);
-            
             const isAdmin = user.role === 'admin';
             const targetUser = employees.find(e => e.id === user.id) || user;
             const totalApproved = userLoans.filter(l => l.status === 'Approved').reduce((s,l) => s + cleanNumber(l.amount), 0);
@@ -486,81 +465,80 @@
             const handleApply = async (e) => {
                 e.preventDefault();
                 if(!amt || !rsn) return;
-                setLoading(true);
-                // Dual payload standard to handle any server field mapping issues
                 const res = await fetch(API_BASE + "/loans", {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ employeeId: user.id, employee_id: user.id, amount: cleanNumber(amt), reason: rsn })
+                    body: JSON.stringify({ 
+                        employeeId: user.id, 
+                        employee_id: user.id, // Support both standards
+                        amount: cleanNumber(amt), 
+                        reason: rsn,
+                        trigger_email: true
+                    })
                 });
-                setLoading(false);
-                if(res.ok) { notify("Matrix Application dispatched."); setTab('history'); fetchData(); setAmt(''); setRsn(''); }
-                else notify("Sync 500 Error: Internal Logic Failure.");
+                if(res.ok) { notify("Request Dispatched."); setTab('history'); fetchData(); setAmt(''); setRsn(''); }
+                else notify("Sync Error 500.");
             };
 
             const decide = async (id, status) => {
                 await fetch(API_BASE + "/admin/loans/" + id, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ status }) });
-                notify("Identity warp decision recorded: " + status); fetchData();
+                notify("Loan warp decision recorded."); fetchData();
             };
 
             return (
                 <div className="space-y-8 animate-fade-in text-left font-sans">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <Card className="border-2 border-slate-100 shadow-sm relative overflow-hidden flex flex-col justify-center">
-                            <div className="absolute top-0 left-0 w-2 h-full bg-slate-300"></div>
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Opening Balance Matrix</p>
+                            <div className="absolute top-0 left-0 w-1.5 h-full bg-slate-300 font-sans"></div>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Opening Balance</p>
                             <p className="text-5xl font-black mt-4 font-mono text-slate-800">Rs. {cleanNumber(targetUser.loan_opening_balance).toLocaleString()}</p>
                         </Card>
-                        <Card className="bg-red-50 border-red-100 border-2 shadow-sm relative overflow-hidden flex flex-col justify-center">
-                            <div className="absolute top-0 left-0 w-2 h-full bg-red-600"></div>
+                        <Card className="bg-red-50 border-red-100 border-2 shadow-sm relative overflow-hidden flex flex-col justify-center font-sans">
+                            <div className="absolute top-0 left-0 w-1.5 h-full bg-red-600"></div>
                             <p className="text-[10px] font-black text-red-400 uppercase tracking-widest font-sans">Outstanding Debt</p>
                             <p className="text-5xl font-black mt-4 font-mono text-red-600">Rs. {netOutstanding.toLocaleString()}</p>
                         </Card>
                     </div>
 
                     <div className="flex bg-slate-200 p-2 rounded-3xl max-w-sm mx-auto shadow-inner">
-                        <button onClick={()=>setTab('apply')} className={"flex-1 py-3.5 text-[11px] font-black rounded-2xl uppercase tracking-widest transition-all " + (tab==='apply'?'bg-white text-green-700 shadow-lg':'text-slate-500 hover:text-slate-800')}>Apply</button>
-                        <button onClick={()=>setTab('history')} className={"flex-1 py-3.5 text-[11px] font-black rounded-2xl uppercase tracking-widest transition-all " + (tab==='history'?'bg-white text-green-700 shadow-lg':'text-slate-500 hover:text-slate-800')}>History</button>
-                        {isAdmin && <button onClick={()=>setTab('oversight')} className={"flex-1 py-3.5 text-[11px] font-black rounded-2xl uppercase tracking-widest transition-all " + (tab==='oversight'?'bg-white text-green-700 shadow-lg':'text-slate-500 hover:text-slate-800')}>Oversight</button>}
+                        <button onClick={()=>setTab('apply')} className={"flex-1 py-3 text-[10px] font-black rounded-2xl uppercase transition-all " + (tab==='apply'?'bg-white text-green-700 shadow-lg':'text-slate-500 hover:text-slate-700')}>Apply</button>
+                        <button onClick={()=>setTab('history')} className={"flex-1 py-3 text-[10px] font-black rounded-2xl uppercase transition-all " + (tab==='history'?'bg-white text-green-700 shadow-lg':'text-slate-500 hover:text-slate-700')}>History</button>
+                        {isAdmin && <button onClick={()=>setTab('oversight')} className={"flex-1 py-3 text-[10px] font-black rounded-2xl uppercase transition-all " + (tab==='oversight'?'bg-white text-green-700 shadow-lg':'text-slate-500 hover:text-slate-700')}>Oversight</button>}
                     </div>
 
                     {tab === 'apply' ? (
-                        <Card className="max-w-2xl mx-auto shadow-2xl !p-12 border-2 border-slate-50 relative overflow-hidden font-sans">
-                            <div className="absolute top-0 left-0 w-2 h-full bg-green-700"></div>
-                            <h3 className="font-black text-2xl mb-8 uppercase tracking-tighter text-slate-800">New Application Request</h3>
+                        <Card className="max-w-2xl mx-auto shadow-2xl !p-12 border-2 border-slate-50 relative overflow-hidden text-left font-sans">
+                            <div className="absolute top-0 left-0 w-2 h-full bg-green-700 font-sans"></div>
+                            <h3 className="font-black text-2xl mb-8 uppercase tracking-tighter text-slate-800 font-sans">New Application Hub</h3>
                             <form onSubmit={handleApply} className="space-y-8 font-sans">
-                                <div><label className="text-[11px] font-black uppercase text-slate-400 ml-2 tracking-widest">Principal Amount (PKR)</label><input type="number" value={amt} onChange={e=>setAmt(e.target.value)} className="w-full p-6 rounded-[1.5rem] border-2 border-slate-100 font-black text-2xl bg-slate-50 focus:bg-white transition-all outline-none" placeholder="0.00" required /></div>
-                                <div><label className="text-[11px] font-black uppercase text-slate-400 ml-2 tracking-widest">Identity Justification</label><textarea value={rsn} onChange={e=>setRsn(e.target.value)} className="w-full p-6 rounded-[1.5rem] border-2 border-slate-100 font-bold h-36 bg-slate-50 focus:bg-white transition-all text-sm outline-none" placeholder="Clearly describe the warp request..." required></textarea></div>
-                                <button type="submit" disabled={loading} className="w-full py-6 bg-green-700 text-white rounded-[1.5rem] font-black uppercase tracking-[0.3em] shadow-2xl active:scale-95 disabled:opacity-50 transition-all">{loading ? "Synchronizing Matrix..." : "Transmit Matrix Hub Request"}</button>
+                                <div><label className="text-[10px] font-black uppercase text-slate-400 ml-2 tracking-widest">Amount (PKR)</label><input type="number" value={amt} onChange={e=>setAmt(e.target.value)} className="w-full p-6 rounded-2xl border-2 font-black text-xl bg-slate-50 focus:bg-white outline-none" placeholder="0.00" required /></div>
+                                <div><label className="text-[10px] font-black uppercase text-slate-400 ml-2 tracking-widest">Reason / Justification</label><textarea value={rsn} onChange={e=>setRsn(e.target.value)} className="w-full p-6 rounded-2xl border-2 font-bold h-32 bg-slate-50 focus:bg-white outline-none text-sm" placeholder="Provide clarity..." required></textarea></div>
+                                <button type="submit" className="w-full py-6 bg-green-700 text-white rounded-2xl font-black uppercase tracking-[0.3em] shadow-2xl active:scale-95 font-sans">Transmit request</button>
                             </form>
                         </Card>
                     ) : tab === 'oversight' ? (
                         <Card className="!p-0 border-2 overflow-hidden shadow-2xl font-sans">
                              <table className="w-full text-left text-xs font-sans">
-                                <thead className="bg-slate-50 border-b font-black uppercase text-slate-400 tracking-widest"><tr><th className="p-6">Staff Identity</th><th className="p-6">Date</th><th className="p-6 text-right">Requested</th><th className="p-6 text-center">Status</th><th className="p-6 text-center">Action Hub</th></tr></thead>
-                                <tbody className="divide-y font-bold text-slate-700 font-sans">
+                                <thead className="bg-slate-50 border-b font-black uppercase text-slate-400 tracking-widest"><tr><th className="p-6">Requester</th><th className="p-6">Submission Date</th><th className="p-6 text-right">Amount</th><th className="p-6 text-center">Action Hub</th></tr></thead>
+                                <tbody className="divide-y font-bold text-slate-700 font-sans font-sans">
                                     {allLoans.map(l => (
-                                        <tr key={l.id} className="hover:bg-slate-50 transition-colors font-sans">
-                                            <td className="p-6 uppercase font-black text-slate-900">{l.name} <span className="text-slate-300 ml-1 font-mono text-[9px]">(${l.employee_id})</span></td>
-                                            <td className="p-6 font-mono text-slate-400">{formatDate(l.applied_at)}</td>
-                                            <td className="p-6 text-right font-black text-sm">Rs. {cleanNumber(l.amount).toLocaleString()}</td>
-                                            <td className="p-6 text-center"><Badge status={l.status} /></td>
-                                            <td className="p-6 flex gap-3 justify-center">
-                                                <button onClick={()=>decide(l.id, 'Approved')} className="bg-green-700 text-white px-5 py-2.5 rounded-xl text-[9px] font-black uppercase shadow-lg hover:bg-green-800 transition-all">Approve</button>
-                                                <button onClick={()=>decide(l.id, 'Rejected')} className="bg-red-600 text-white px-5 py-2.5 rounded-xl text-[9px] font-black uppercase shadow-lg hover:bg-red-700 transition-all">Reject</button>
-                                            </td>
+                                        <tr key={l.id} className="hover:bg-slate-50 transition-colors">
+                                            <td className="p-6 uppercase font-black">{l.name} <span className="text-slate-300 ml-1 font-mono text-[9px]">(${l.employee_id})</span></td>
+                                            <td className="p-6 font-mono text-slate-500 uppercase">{formatDate(l.applied_at)}</td>
+                                            <td className="p-6 text-right font-black text-sm text-slate-900">Rs. {cleanNumber(l.amount).toLocaleString()}</td>
+                                            <td className="p-6 flex gap-3 justify-center"><button onClick={()=>decide(l.id, 'Approved')} className="bg-green-700 text-white px-5 py-2.5 rounded-xl text-[9px] font-black uppercase shadow-lg hover:bg-green-800 transition-all font-sans">Approve</button><button onClick={()=>decide(l.id, 'Rejected')} className="bg-red-600 text-white px-5 py-2.5 rounded-xl text-[9px] font-black uppercase shadow-lg hover:bg-red-700 transition-all font-sans">Reject</button></td>
                                         </tr>
                                     ))}
-                                    {allLoans.length === 0 && <tr><td colSpan="5" className="p-32 text-center font-black uppercase text-slate-200 tracking-[0.5em]">No Pending Oversight</td></tr>}
+                                    {allLoans.length === 0 && <tr><td colSpan="4" className="p-32 text-center font-black uppercase text-slate-200 tracking-[0.5em]">Zero Pending Oversight</td></tr>}
                                 </tbody>
                              </table>
                         </Card>
                     ) : (
-                        <div className="space-y-4 max-w-4xl mx-auto font-sans">
+                        <div className="space-y-4 max-w-4xl mx-auto font-sans font-sans">
                             {userLoans.map((l, i) => (
                                 <Card key={i} className="flex justify-between items-center border-2 border-slate-100 transition-all hover:bg-slate-50 shadow-sm text-left">
-                                    <div className="flex items-center gap-6"><div className="bg-slate-50 p-4 rounded-2xl"><Icon name="wallet" className="text-slate-400" /></div><div className="text-left"><p className="font-black text-2xl text-slate-800 leading-tight">Rs. {cleanNumber(l.amount).toLocaleString()}</p><p className="text-[10px] text-slate-400 uppercase font-black mt-1">Matrix Date: {formatDate(l.applied_at)}</p></div></div>
-                                    <div className="text-right flex flex-col items-end gap-2"><Badge status={l.status} /><p className="text-[9px] text-slate-300 font-bold uppercase tracking-tighter">Outstanding: Rs. {netOutstanding.toLocaleString()}</p></div>
+                                    <div className="flex items-center gap-6 text-left font-sans"><div className="bg-slate-50 p-4 rounded-2xl font-sans"><LucideIcon name="wallet" className="text-slate-400" /></div><div className="text-left font-sans"><p className="font-black text-2xl text-slate-800 leading-tight">Rs. {cleanNumber(l.amount).toLocaleString()}</p><p className="text-[10px] text-slate-400 uppercase font-black mt-1 tracking-widest font-sans">{formatDate(l.applied_at)}</p></div></div>
+                                    <div className="text-right flex flex-col items-end gap-2 font-sans"><Badge status={l.status} /><p className="text-[9px] text-slate-300 font-bold uppercase tracking-tighter font-sans">Outstanding Context: Rs. {netOutstanding.toLocaleString()}</p></div>
                                 </Card>
                             ))}
                         </div>
@@ -569,9 +547,88 @@
             );
         }
 
-        /**
-         * --- STAFF HUB MODULE ---
-         */
+        function LeavesHub({ user, allLeaves, employees, fetchData, leaves }) {
+            const [tab, setTab] = useState('apply');
+            const [form, setForm] = useState({ type: 'Annual Leave', startDate: '', days: 1, reason: 'Identity Warp Hub Request' });
+            const isAdmin = user.role === 'admin';
+            const targetUser = employees.find(e => e.id === user.id) || user;
+
+            const handleApply = async (e) => {
+                e.preventDefault();
+                const res = await fetch(API_BASE + "/leaves", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ employeeId: user.id, ...form, trigger_email: true })
+                });
+                if(res.ok) { notify("Request dispatched."); setTab('history'); fetchData(); }
+            };
+
+            const decide = async (id, status) => {
+                await fetch(API_BASE + "/admin/leaves/" + id, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ status, trigger_email: true, deduct_balance: true }) });
+                notify("Status Warp Complete."); fetchData();
+            };
+
+            return (
+                <div className="space-y-8 animate-fade-in text-left font-sans">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 font-sans">
+                        <Card className="bg-green-700 p-10 rounded-[3rem] text-white shadow-2xl relative overflow-hidden flex flex-col justify-center text-left font-sans">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
+                            <p className="text-[10px] font-black uppercase opacity-60 tracking-[0.2em] font-sans">Annual Allowance</p>
+                            <p className="text-6xl font-black mt-4 tracking-tighter">${targetUser.leave_annual || 0} Days</p>
+                        </Card>
+                        <Card className="bg-white p-10 rounded-[3rem] border-2 border-slate-50 shadow-sm flex flex-col justify-center text-left">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest tracking-[0.2em]">WOP Matrix Balance</p>
+                            <p className="text-6xl font-black mt-4 tracking-tighter text-slate-800">${targetUser.leave_casual || 0} Days</p>
+                        </Card>
+                    </div>
+                    <div className="flex bg-slate-200 p-2 rounded-[2rem] max-w-sm mx-auto shadow-inner font-sans font-sans">
+                        <button onClick={()=>setTab('apply')} className={"flex-1 py-3 text-[10px] font-black rounded-2xl uppercase transition-all " + (tab==='apply'?'bg-white text-green-700 shadow-sm':'text-slate-500 hover:text-slate-700')}>Apply</button>
+                        <button onClick={()=>setTab('history')} className={"flex-1 py-3 text-[10px] font-black rounded-2xl uppercase transition-all " + (tab==='history'?'bg-white text-green-700 shadow-sm':'text-slate-500 hover:text-slate-700')}>History</button>
+                        {isAdmin && <button onClick={()=>setTab('oversight')} className={"flex-1 py-3 text-[10px] font-black rounded-2xl uppercase transition-all " + (tab==='oversight'?'bg-white text-green-700 shadow-sm':'text-slate-500 hover:text-slate-700')}>Oversight</button>}
+                    </div>
+
+                    {tab === 'apply' ? (
+                        <Card className="max-w-2xl mx-auto border-2 shadow-2xl animate-slide-up !p-12 relative overflow-hidden text-left font-sans">
+                            <div className="absolute top-0 left-0 w-2 h-full bg-green-700"></div>
+                            <h3 className="font-black text-3xl mb-10 uppercase tracking-tighter text-slate-800 font-sans">New Leave Matrix Entry</h3>
+                            <form onSubmit={handleApply} className="space-y-6">
+                                <div className="text-left font-sans"><label className="text-[10px] font-black uppercase text-slate-400 ml-2 tracking-widest">Type Matrix</label><select value={form.type} onChange={e=>setForm({...form, type:e.target.value})} className="w-full p-4 rounded-xl border-2 font-black bg-slate-50 outline-none focus:bg-white"><option>Annual Leave</option><option>WOP (Without Pay)</option></select></div>
+                                <div className="grid grid-cols-2 gap-8 text-left font-sans">
+                                    <div><label className="text-[10px] font-black uppercase text-slate-400 ml-2 tracking-widest">Start Period</label><input type="date" value={form.startDate} onChange={e=>setForm({...form, startDate:e.target.value})} className="w-full p-4 rounded-xl border-2 font-black bg-slate-50 focus:bg-white" required /></div>
+                                    <div><label className="text-[10px] font-black uppercase text-slate-400 ml-2 tracking-widest">Duration (Days)</label><input type="number" value={form.days} onChange={e=>setForm({...form, days:e.target.value})} placeholder="0" className="w-full p-4 rounded-xl border-2 font-black bg-slate-50 focus:bg-white" required /></div>
+                                </div>
+                                <button type="submit" className="w-full py-6 bg-green-700 text-white rounded-2xl font-black uppercase tracking-[0.4em] shadow-2xl hover:bg-green-800 transition-all font-sans font-sans">Transmit Application</button>
+                            </form>
+                        </Card>
+                    ) : tab === 'oversight' ? (
+                        <Card className="!p-0 border-2 overflow-hidden shadow-2xl">
+                             <table className="w-full text-left text-xs font-sans">
+                                <thead className="bg-slate-50 border-b font-black uppercase text-slate-400 tracking-widest text-left font-sans"><tr><th className="p-6 font-sans">Requester Identity</th><th className="p-6 font-sans">Current Balance</th><th className="p-6 font-sans">Qty</th><th className="p-6 text-center font-sans font-sans">Actions</th></tr></thead>
+                                <tbody className="divide-y font-bold text-slate-700 font-sans">
+                                    {allLeaves.map(l => {
+                                        const r = employees.find(e => e.id === l.employee_id) || {};
+                                        return (<tr key={l.id} className="hover:bg-slate-50 transition-all group text-left font-sans"><td className="p-6 uppercase font-black font-sans">{l.name} <span className="text-slate-300 font-mono">(${l.employee_id})</span></td><td className="p-6 text-green-700 font-black">${r.leave_annual || 0} ANN / ${r.leave_casual || 0} WOP</td><td className="p-6 font-black text-slate-500 uppercase font-sans">${l.days} Days</td><td className="p-6 flex gap-2 justify-center font-sans font-sans"><button onClick={()=>decide(l.id, 'Approved')} className="bg-green-700 text-white px-5 py-2.5 rounded-xl text-[9px] font-black uppercase shadow-lg hover:bg-green-800 transition-all">Approve</button><button onClick={()=>decide(l.id, 'Rejected')} className="bg-red-600 text-white px-5 py-2.5 rounded-xl text-[9px] font-black uppercase shadow-lg hover:bg-red-700 transition-all font-sans">Reject</button></td></tr>)
+                                    })}
+                                </tbody>
+                             </table>
+                        </Card>
+                    ) : (
+                        <div className="space-y-4 max-w-4xl mx-auto font-sans font-sans">
+                            {leaves.map((l, i) => (
+                                <Card key={i} className="flex justify-between items-center border-2 border-slate-100 hover:border-green-200 transition-all shadow-sm text-left">
+                                    <div className="flex gap-6 items-center text-left font-sans">
+                                        <div className="bg-slate-50 p-4 rounded-2xl font-sans font-sans"><LucideIcon name="calendar" className="text-slate-400" /></div>
+                                        <div className="text-left font-sans"><p className="font-black text-2xl uppercase tracking-tighter text-slate-800 font-sans">${l.leave_type}</p><p className="text-[10px] text-slate-400 font-black mt-1 tracking-widest font-sans">{formatDate(l.start_date)} • {l.days} Days Matrix</p></div>
+                                    </div>
+                                    <Badge status={l.status} />
+                                </Card>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
         function DirectoryModule({ employees, fetchData }) {
             const [isOpen, setIsOpen] = useState(false);
             const [editMember, setEditMember] = useState(null);
@@ -581,7 +638,7 @@
                 e.preventDefault();
                 const method = editMember ? 'PUT' : 'POST';
                 const url = editMember ? API_BASE + "/employees/" + editMember.id : API_BASE + "/employees";
-                const res = await fetch(url, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(form) });
+                const res = await fetch(url, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({...form, send_email: true}) });
                 if(res.ok) { notify("Identity Hub Synchronized."); setIsOpen(false); setEditMember(null); fetchData(); }
             };
 
@@ -592,37 +649,37 @@
             };
 
             return (
-                <div className="space-y-10 animate-fade-in text-left font-sans">
-                    <div className="flex justify-between items-center border-b pb-8 border-slate-100 text-left">
-                        <h2 className="text-4xl font-black uppercase tracking-tighter text-slate-800">Staff Hub Matrix</h2>
+                <div className="space-y-10 animate-fade-in text-left font-sans font-sans">
+                    <div className="flex justify-between items-center border-b pb-8 border-slate-100 text-left font-sans font-sans">
+                        <h2 className="text-4xl font-black uppercase tracking-tighter text-slate-800 font-sans">Staff Hub Matrix</h2>
                         <Button onClick={() => { setIsOpen(true); setEditMember(null); setForm({ id:'', name:'', email:'', password:'', role:'employee', leave_annual:14, leave_casual:10, loan_opening_balance:0 }); }} icon="users">Add Identity</Button>
                     </div>
 
                     {isOpen && (
-                        <Card className="bg-white border-2 border-green-100 shadow-2xl mb-12 animate-slide-up relative !p-12 text-left font-sans">
-                            <button onClick={()=>{setIsOpen(false); setEditMember(null);}} className="absolute top-8 right-8 text-slate-300 hover:text-red-500 transition-colors"><Icon name="x" size={32}/></button>
-                            <form onSubmit={submit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                                <div className="space-y-1 font-sans text-left"><label className="text-[10px] font-black uppercase text-slate-400 ml-3 tracking-widest font-sans">ID</label><input type="text" className="w-full p-4 rounded-2xl border-2 font-bold bg-slate-50 uppercase focus:bg-white focus:border-green-600 outline-none" value={form.id} onChange={e=>setForm({...form, id:e.target.value})} disabled={!!editMember} required /></div>
-                                <div className="space-y-1 font-sans text-left"><label className="text-[10px] font-black uppercase text-slate-400 ml-3 tracking-widest font-sans">Full Name</label><input type="text" className="w-full p-4 rounded-2xl border-2 font-bold bg-slate-50 focus:bg-white focus:border-green-600 outline-none" value={form.name} onChange={e=>setForm({...form, name:e.target.value})} required /></div>
-                                <div className="space-y-1 font-sans text-left"><label className="text-[10px] font-black uppercase text-slate-400 ml-3 tracking-widest font-sans">Email Hub</label><input type="email" className="w-full p-4 rounded-2xl border-2 font-bold bg-slate-50 focus:bg-white focus:border-green-600 outline-none" value={form.email} onChange={e=>setForm({...form, email:e.target.value})} required /></div>
-                                <div className="space-y-1 font-sans text-left"><label className="text-[10px] font-black uppercase text-slate-400 ml-3 tracking-widest font-sans">Warp Key</label><input type="text" className="w-full p-4 rounded-2xl border-2 font-bold bg-slate-50 focus:bg-white focus:border-green-600 outline-none" value={form.password} onChange={e=>setForm({...form, password:e.target.value})} required /></div>
-                                <div className="col-span-full pt-10 border-t flex justify-end gap-4 font-sans font-sans font-sans font-sans">
+                        <Card className="bg-white border-2 border-green-100 shadow-2xl mb-12 animate-slide-up relative !p-12 font-sans text-left font-sans font-sans font-sans">
+                            <button onClick={()=>setIsOpen(false)} className="absolute top-8 right-8 text-slate-300 hover:text-red-500 transition-colors"><LucideIcon name="x" size={32}/></button>
+                            <form onSubmit={submit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 font-sans">
+                                <div className="space-y-1 font-sans font-sans"><label className="text-[10px] font-black uppercase text-slate-400 ml-3 tracking-widest font-sans">ID Matrix</label><input type="text" className="w-full p-4 rounded-2xl border-2 font-bold bg-slate-50 uppercase focus:bg-white focus:border-green-600 transition-all font-sans" value={form.id} onChange={e=>setForm({...form, id:e.target.value})} disabled={!!editMember} required /></div>
+                                <div className="space-y-1 font-sans font-sans"><label className="text-[10px] font-black uppercase text-slate-400 ml-3 tracking-widest font-sans">Full Name Hub</label><input type="text" className="w-full p-4 rounded-2xl border-2 font-bold bg-slate-50 focus:bg-white focus:border-green-600 transition-all font-sans" value={form.name} onChange={e=>setForm({...form, name:e.target.value})} required /></div>
+                                <div className="space-y-1 font-sans font-sans"><label className="text-[10px] font-black uppercase text-slate-400 ml-3 tracking-widest font-sans">Identity Email</label><input type="email" className="w-full p-4 rounded-2xl border-2 font-bold bg-slate-50 focus:bg-white focus:border-green-600 transition-all font-sans font-sans" value={form.email} onChange={e=>setForm({...form, email:e.target.value})} required /></div>
+                                <div className="space-y-1 font-sans font-sans"><label className="text-[10px] font-black uppercase text-slate-400 ml-3 tracking-widest font-sans">System Key</label><input type="text" className="w-full p-4 rounded-2xl border-2 font-bold bg-slate-50 focus:bg-white focus:border-green-600 transition-all font-sans" value={form.password} onChange={e=>setForm({...form, password:e.target.value})} required /></div>
+                                <div className="col-span-full pt-10 border-t flex justify-end gap-4 font-sans font-sans font-sans">
                                     <Button variant="ghost" onClick={()=>{setIsOpen(false); setEditMember(null);}}>Cancel Identity Warp</Button>
-                                    <Button type="submit" className="px-16 shadow-2xl font-black uppercase">{editMember ? 'Sync Matrix' : 'Initialize identity'}</Button>
+                                    <Button type="submit" className="px-16 shadow-2xl font-black uppercase font-sans">{editMember ? 'Sync Identity' : 'Initialize warp'}</Button>
                                 </div>
                             </form>
                         </Card>
                     )}
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 font-sans">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 font-sans text-left font-sans font-sans">
                         {employees.map(e => (
-                            <Card key={e.id} className="text-center group relative overflow-hidden flex flex-col items-center hover:border-green-300 transition-all border-slate-100 p-10 font-sans shadow-lg">
-                                <div className="h-24 w-24 bg-green-50 text-green-700 flex items-center justify-center font-black rounded-[3rem] text-4xl mb-6 shadow-inner transition-all group-hover:scale-90 uppercase font-sans">{getInitial(e.name)}</div>
-                                <p className="font-black uppercase text-slate-800 text-lg tracking-tight mb-1 truncate w-full px-2">{e.name}</p>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">{e.id} • {e.role}</p>
-                                <div className="mt-8 flex gap-3 opacity-0 group-hover:opacity-100 transition-all transform translate-y-2 group-hover:translate-y-0">
-                                    <button onClick={()=>{setEditMember(e); setForm(e); setIsOpen(true);}} className="bg-blue-50 text-blue-600 p-3 rounded-2xl hover:bg-blue-600 hover:text-white transition-all shadow-md font-sans"><Icon name="pencil" size={20}/></button>
-                                    <button onClick={()=>deleteMember(e.id)} className="bg-red-50 text-red-600 p-3 rounded-2xl hover:bg-red-600 hover:text-white transition-all shadow-md font-sans"><Icon name="trash-2" size={20}/></button>
+                            <Card key={e.id} className="text-center group relative overflow-hidden flex flex-col items-center hover:border-green-300 transition-all border-slate-100 p-10 font-sans shadow-lg font-sans font-sans font-sans font-sans">
+                                <div className="h-24 w-24 bg-green-50 text-green-700 flex items-center justify-center font-black rounded-[3rem] text-4xl mb-6 shadow-inner transition-all group-hover:scale-95 uppercase font-sans">{getInitial(e.name)}</div>
+                                <p className="font-black uppercase text-slate-800 text-lg tracking-tight mb-1 truncate w-full font-sans">${e.name}</p>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] font-sans font-sans">${e.id} • ${e.role}</p>
+                                <div className="mt-8 flex gap-3 opacity-0 group-hover:opacity-100 transition-all transform translate-y-2 group-hover:translate-y-0 font-sans font-sans font-sans font-sans">
+                                    <button onClick={()=>{setEditMember(e); setForm(e); setIsOpen(true);}} className="bg-blue-50 text-blue-600 p-3 rounded-2xl hover:bg-blue-600 hover:text-white transition-all shadow-md font-sans"><LucideIcon name="pencil" size={20}/></button>
+                                    <button onClick={()=>deleteMember(e.id)} className="bg-red-50 text-red-600 p-3 rounded-2xl hover:bg-red-600 hover:text-white transition-all shadow-md font-sans"><LucideIcon name="trash-2" size={20}/></button>
                                 </div>
                             </Card>
                         ))}
@@ -631,125 +688,41 @@
             );
         };
 
-        /**
-         * --- BOARD MODULE ---
-         */
         function DiscussionBoard({ user, discussions, fetchData }) {
             const [val, setVal] = useState('');
             const post = async (e) => {
                 e.preventDefault();
                 if(!val.trim()) return;
                 await fetch(API_BASE + "/discussions", { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ employee_id: user.id, author_name: user.name, message: val }) });
-                setVal(''); fetchData(); notify("Broadcast Matrix Dispatched.");
+                setVal(''); fetchData(); notify("Broadcast Matrix Updated.");
             };
             return (
-                <div className="space-y-12 max-w-5xl mx-auto animate-fade-in text-left font-sans">
-                    <h2 className="text-4xl font-black uppercase tracking-tighter text-slate-800 border-b pb-6 border-slate-100 font-sans">Matrix Hub Board</h2>
+                <div className="space-y-12 max-w-5xl mx-auto animate-fade-in text-left font-sans font-sans font-sans font-sans">
+                    <h2 className="text-4xl font-black uppercase tracking-tighter text-slate-800 border-b pb-6 border-slate-100 font-sans">Identity Matrix Board</h2>
                     <div className="bg-slate-900 p-12 rounded-[5rem] shadow-2xl relative font-sans">
-                        <div className="absolute top-6 right-12 flex items-center gap-3 font-sans font-sans"><div className="h-3 w-3 rounded-full bg-green-500 animate-pulse font-sans"></div><span className="text-[10px] font-black text-slate-500 uppercase tracking-widest font-sans font-sans">Broadcast Identity Hub</span></div>
-                        <form onSubmit={post} className="flex gap-6 mt-6 font-sans font-sans">
-                            <input value={val} onChange={e=>setVal(e.target.value)} className="flex-1 bg-white/5 border-2 border-white/10 rounded-[3rem] p-10 font-bold text-white text-2xl outline-none focus:bg-white/10 focus:border-green-600 transition-all font-sans font-sans" placeholder="Initialize broadcast..." required />
-                            <button type="submit" className="bg-green-600 hover:bg-green-500 p-10 rounded-[3rem] text-white shadow-green-900 shadow-2xl active:scale-95 transition-all"><Icon name="send" size={48}/></button>
+                        <div className="absolute top-6 right-10 flex items-center gap-2 font-sans font-sans font-sans font-sans"><div className="h-2 w-2 rounded-full bg-green-500 animate-pulse font-sans font-sans font-sans font-sans"></div><span className="text-[9px] font-black text-slate-500 uppercase tracking-widest font-sans font-sans">Verified Live Hub</span></div>
+                        <form onSubmit={post} className="flex gap-6 mt-6 font-sans font-sans font-sans font-sans">
+                            <input value={val} onChange={e=>setVal(e.target.value)} className="flex-1 bg-white/5 border-2 border-white/10 rounded-[3rem] p-10 font-bold text-white text-xl outline-none focus:bg-white/10 focus:border-green-600 transition-all font-sans font-sans font-sans font-sans" placeholder="Initialize broadcast..." required />
+                            <button type="submit" className="bg-green-600 hover:bg-green-500 p-10 rounded-[3rem] text-white shadow-green-900 shadow-2xl active:scale-95 transition-all font-sans font-sans font-sans"><LucideIcon name="send" size={48}/></button>
                         </form>
                     </div>
-                    <div className="space-y-10 font-sans font-sans">
+                    <div className="space-y-10 font-sans">
                         {discussions.map((d, i) => (
-                            <Card key={i} className="group text-left border-slate-50 p-12 font-sans font-sans font-sans">
-                                <div className="flex justify-between items-center mb-8 font-sans">
-                                    <div className="flex items-center gap-6">
-                                        <div className="h-16 w-16 rounded-[2.5rem] bg-green-50 text-green-700 flex items-center justify-center font-black text-3xl shadow-inner uppercase font-sans font-sans">{getInitial(d.author_name)}</div>
-                                        <div><span className="font-black text-slate-800 uppercase text-lg group-hover:text-green-700 transition-all font-sans font-sans">{d.author_name}</span><p className="text-[11px] font-black text-slate-400 uppercase mt-2 tracking-widest font-sans font-sans font-sans font-sans">Verified Identity Matrix Broadcaster</p></div>
+                            <div key={i} className="bg-white p-12 rounded-[4rem] border border-slate-100 shadow-sm transition-all hover:shadow-md group text-left font-sans font-sans">
+                                <div className="flex justify-between items-center mb-8 font-sans font-sans font-sans">
+                                    <div className="flex items-center gap-6 font-sans font-sans">
+                                        <div className="h-16 w-16 rounded-[2.5rem] bg-green-50 text-green-700 flex items-center justify-center font-black text-3xl shadow-inner uppercase font-sans font-sans font-sans font-sans">{getInitial(d.author_name)}</div>
+                                        <div><span className="font-black text-slate-800 uppercase text-lg group-hover:text-green-700 transition-all font-sans font-sans font-sans font-sans">${d.author_name}</span><p className="text-[11px] font-black text-slate-400 uppercase mt-2 tracking-widest font-sans font-sans font-sans">Verified Broadcaster</p></div>
                                     </div>
-                                    <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest font-sans font-sans">{formatDate(d.created_at)}</span>
+                                    <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest font-sans font-sans font-sans font-sans">${formatDate(d.created_at)}</span>
                                 </div>
-                                <p className="text-slate-700 font-bold leading-relaxed text-2xl font-sans font-sans">{d.message}</p>
-                            </Card>
+                                <p className="text-slate-700 font-bold leading-relaxed text-2xl font-sans font-sans font-sans">${d.message}</p>
+                            </div>
                         ))}
                     </div>
                 </div>
             );
         };
-
-        /**
-         * --- LEAVES MODULE ---
-         */
-        function LeavesHub({ user, allLeaves, employees, fetchData, leaves }) {
-            const [tab, setTab] = useState('apply');
-            const [form, setForm] = useState({ type: 'Annual Leave', startDate: '', days: 1, reason: 'Identity Matrix warp Request' });
-            const isAdmin = user.role === 'admin';
-            const targetUser = employees.find(e => e.id === user.id) || user;
-
-            const handleApply = async (e) => {
-                e.preventDefault();
-                const res = await fetch(API_BASE + "/leaves", { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ employeeId: user.id, ...form }) });
-                if(res.ok) { notify("Leave matrix dispatched."); setTab('history'); fetchData(); }
-            };
-
-            const decide = async (id, status) => {
-                await fetch(API_BASE + "/admin/leaves/" + id, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ status }) });
-                notify("Status Warp Complete."); fetchData();
-            };
-
-            return (
-                <div className="space-y-8 animate-fade-in text-left font-sans text-left font-sans">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <Card className="bg-green-700 p-10 rounded-[3rem] text-white shadow-2xl relative overflow-hidden flex flex-col justify-center text-left">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
-                            <p className="text-[10px] font-black uppercase opacity-60 tracking-[0.2em]">Annual Matrix Hub</p>
-                            <p className="text-6xl font-black mt-4 tracking-tighter">${targetUser.leave_annual || 0} Days</p>
-                        </Card>
-                        <Card className="bg-white p-10 rounded-[3rem] border-2 border-slate-50 shadow-sm flex flex-col justify-center text-left">
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest tracking-[0.2em]">Casual Balance Matrix</p>
-                            <p className="text-6xl font-black mt-4 tracking-tighter text-slate-800 font-sans">${targetUser.leave_casual || 0} Days</p>
-                        </Card>
-                    </div>
-                    <div className="flex bg-slate-200 p-2 rounded-[2rem] max-w-sm mx-auto shadow-inner font-sans">
-                        <button onClick={()=>setTab('apply')} className={"flex-1 py-3 text-[10px] font-black rounded-2xl uppercase transition-all " + (tab==='apply'?'bg-white text-green-700 shadow-sm':'text-slate-500 hover:text-slate-700')}>Apply</button>
-                        <button onClick={()=>setTab('history')} className={"flex-1 py-3 text-[10px] font-black rounded-2xl uppercase transition-all " + (tab==='history'?'bg-white text-green-700 shadow-sm':'text-slate-500 hover:text-slate-700')}>History</button>
-                        {isAdmin && <button onClick={()=>setTab('oversight')} className={"flex-1 py-3 text-[10px] font-black rounded-2xl uppercase transition-all " + (tab==='oversight'?'bg-white text-green-700 shadow-sm':'text-slate-500 hover:text-slate-700')}>Oversight</button>}
-                    </div>
-
-                    {tab === 'apply' ? (
-                        <Card className="max-w-2xl mx-auto border-2 shadow-2xl animate-slide-up !p-12 relative overflow-hidden font-sans">
-                            <div className="absolute top-0 left-0 w-2 h-full bg-green-700"></div>
-                            <h3 className="font-black text-2xl mb-8 uppercase tracking-tighter text-slate-800">New Leave Matrix Request</h3>
-                            <form onSubmit={handleApply} className="space-y-6">
-                                <div className="text-left font-sans font-sans font-sans"><label className="text-[10px] font-black uppercase text-slate-400 ml-2 tracking-widest">Type Matrix</label><select value={form.type} onChange={e=>setForm({...form, type:e.target.value})} className="w-full p-4 rounded-xl border-2 font-black bg-slate-50 outline-none focus:bg-white font-sans"><option>Annual Leave</option><option>WOP (Without Pay)</option></select></div>
-                                <div className="grid grid-cols-2 gap-8 text-left">
-                                    <div className="font-sans font-sans font-sans"><label className="text-[10px] font-black uppercase text-slate-400 ml-2 tracking-widest">Start Period</label><input type="date" value={form.startDate} onChange={e=>setForm({...form, startDate:e.target.value})} className="w-full p-4 rounded-xl border-2 font-black bg-slate-50 focus:bg-white font-sans" required /></div>
-                                    <div className="font-sans font-sans font-sans"><label className="text-[10px] font-black uppercase text-slate-400 ml-2 tracking-widest">Matrix Days</label><input type="number" value={form.days} onChange={e=>setForm({...form, days:e.target.value})} placeholder="0" className="w-full p-4 rounded-xl border-2 font-black bg-slate-50 focus:bg-white font-sans" required /></div>
-                                </div>
-                                <button type="submit" className="w-full py-6 bg-green-700 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl hover:bg-green-800 active:scale-95 font-sans font-sans">Transmit Identity Application</button>
-                            </form>
-                        </Card>
-                    ) : tab === 'oversight' ? (
-                        <Card className="!p-0 border-2 overflow-hidden shadow-2xl font-sans">
-                             <table className="w-full text-left text-xs font-sans">
-                                <thead className="bg-slate-50 border-b font-black uppercase text-slate-400 tracking-widest text-left font-sans"><tr><th className="p-6 font-sans">Staff</th><th className="p-6 font-sans">Allowance Hub</th><th className="p-6 font-sans">Qty Matrix</th><th className="p-6 text-center font-sans">Audit</th></tr></thead>
-                                <tbody className="divide-y font-bold text-slate-700 font-sans">
-                                    {allLeaves.map(l => {
-                                        const r = employees.find(e => e.id === l.employee_id) || {};
-                                        return (<tr key={l.id} className="hover:bg-slate-50 transition-all group text-left font-sans"><td className="p-6 uppercase font-black">{l.name} <span className="text-slate-300 font-mono">(${l.employee_id})</span></td><td className="p-6 text-green-700 font-black">${r.leave_annual || 0} ANN / ${r.leave_casual || 0} WOP</td><td className="p-6 font-black text-slate-500 uppercase">${l.days} Days</td><td className="p-6 flex gap-2 justify-center font-sans"><button onClick={()=>decide(l.id, 'Approved')} className="bg-green-700 text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase shadow-lg hover:bg-green-800">Approve</button><button onClick={()=>decide(l.id, 'Rejected')} className="bg-red-600 text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase shadow-lg hover:bg-red-700">Reject</button></td></tr>)
-                                    })}
-                                </tbody>
-                             </table>
-                        </Card>
-                    ) : (
-                        <div className="space-y-4 max-w-4xl mx-auto font-sans font-sans">
-                            {leaves.map((l, i) => (
-                                <Card key={i} className="flex justify-between items-center border-2 border-slate-100 hover:border-green-200 transition-all shadow-sm text-left">
-                                    <div className="flex gap-6 items-center text-left font-sans">
-                                        <div className="bg-slate-50 p-4 rounded-2xl"><Icon name="calendar" className="text-slate-400" /></div>
-                                        <div className="text-left font-sans"><p className="font-black text-2xl uppercase tracking-tighter text-slate-800 font-sans font-sans">${l.leave_type}</p><p className="text-[10px] text-slate-400 font-black mt-1 tracking-widest font-sans">{formatDate(l.start_date)} • {l.days} Days Matrix</p></div>
-                                    </div>
-                                    <Badge status={l.status} />
-                                </Card>
-                            ))}
-                        </div>
-                    )}
-                </div>
-            );
-        }
 
         /**
          * --- MAIN APP ENGINE ---
@@ -799,7 +772,7 @@
                     const r = await fetch(API_BASE + "/employees");
                     const list = await r.json();
                     const found = list.find(e => String(e.id).toUpperCase() === String(id).toUpperCase() && String(e.password) === String(pass));
-                    if(found) { setUser(found); localStorage.setItem('hr_user', JSON.stringify(found)); } 
+                    if(found) { setUser(found); localStorage.setItem('hr_user', JSON.stringify(found)); await syncData(); } 
                     else { alert("Identity Matrix Validation Failed."); setLoading(false); }
                 } catch(e) { alert("Matrix Hub Core Offline."); setLoading(false); }
             };
@@ -808,8 +781,8 @@
 
             if(loading && !user) return (
                 <div className="h-screen flex flex-col items-center justify-center bg-white">
-                    <div className="loader w-20 h-20 border-4 border-slate-50 border-t-green-700 rounded-full mb-10 shadow-xl"></div>
-                    <p className="font-black text-slate-300 uppercase tracking-[0.8em] animate-pulse">Initializing LSAFHR Core Matrix...</p>
+                    <div className="loader w-20 h-20 border-4 border-slate-50 border-t-green-700 rounded-full mb-10 shadow-xl font-sans font-sans"></div>
+                    <p className="font-black text-slate-300 uppercase tracking-[0.8em] animate-pulse font-sans font-sans">Initializing Engine Matrix...</p>
                 </div>
             );
             
@@ -818,7 +791,7 @@
             const renderContent = () => {
                 switch(view) {
                     case 'dashboard': return <DashboardView user={user} />;
-                    case 'attendance': return <AttendanceHub user={user} attendance={attendance} fetchData={fetchMatrixData} />;
+                    case 'attendance': return <AttendanceHub user={user} attendance={attendance} fetchData={fetchMatrixData} employees={employees} />;
                     case 'payroll': return <SalaryHub user={user} employees={employees} fetchData={fetchMatrixData} postedMonths={payrollPosted} />;
                     case 'directory': return <DirectoryModule employees={employees} fetchData={fetchMatrixData} />;
                     case 'loans': return <LoansHub user={user} employees={employees} allLoans={allLoans} userLoans={userLoans} fetchData={fetchMatrixData} />;
@@ -829,22 +802,22 @@
             };
 
             return (
-                <div className="min-h-screen bg-slate-50 flex text-slate-900 font-sans text-left">
-                    <aside className="hidden md:flex flex-col w-72 bg-white border-r fixed h-full z-50 shadow-sm text-left">
-                        <div className="p-10 border-b text-center font-sans"><img src={LOGO_URL} className="h-12 mx-auto mb-3" alt="Logo" /><span className="text-[10px] font-black text-green-700 uppercase tracking-widest font-sans tracking-widest">LSAFHR CORE v10</span></div>
-                        <nav className="flex-1 p-6 space-y-2 overflow-y-auto custom-scrollbar font-sans">
+                <div className="min-h-screen bg-slate-50 flex text-slate-900 font-sans text-left font-sans font-sans">
+                    <aside className="hidden md:flex flex-col w-72 bg-white border-r fixed h-full z-50 shadow-sm text-left font-sans font-sans">
+                        <div className="p-10 border-b text-center font-sans font-sans"><img src={LOGO_URL} className="h-12 mx-auto mb-3" alt="Logo" /><span className="text-[10px] font-black text-green-700 uppercase tracking-widest font-sans tracking-widest font-sans">Identity Hub Matrix</span></div>
+                        <nav className="flex-1 p-6 space-y-2 overflow-y-auto custom-scrollbar font-sans font-sans">
                             {NAV_ITEMS.filter(n => !n.admin || user.role === 'admin').map(n => (
                                 <button key={n.id} onClick={()=>setView(n.id)} className={"w-full flex items-center gap-5 p-5 rounded-3xl font-black transition-all " + (view === n.id ? 'sidebar-btn-active' : 'text-slate-500 hover:bg-slate-50')}>
-                                    <Icon name={n.icon} size={20} /><span className="text-[11px] uppercase tracking-widest text-left font-sans tracking-widest">{n.label}</span>
+                                    <LucideIcon name={n.icon} size={20} /><span className="text-[11px] uppercase tracking-widest text-left font-sans font-sans">{n.label}</span>
                                 </button>
                             ))}
                         </nav>
-                        <div className="p-8 border-t flex justify-between items-center bg-slate-50/50 backdrop-blur font-sans">
-                            <div className="overflow-hidden font-sans"><p className="font-black text-[12px] uppercase truncate font-sans text-slate-800">{user.name}</p><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 font-sans tracking-tighter">{user.role}</p></div>
-                            <button onClick={logout} className="text-red-500 hover:bg-red-50 p-3 rounded-2xl transition-all active:scale-90 font-sans"><Icon name="log-out" size={24}/></button>
+                        <div className="p-8 border-t flex justify-between items-center bg-slate-50/50 backdrop-blur font-sans font-sans font-sans">
+                            <div className="overflow-hidden font-sans font-sans font-sans"><p className="font-black text-[12px] uppercase truncate font-sans text-slate-800 font-sans">${user.name}</p><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 font-sans tracking-tighter font-sans">${user.role}</p></div>
+                            <button onClick={logout} className="text-red-500 hover:bg-red-50 p-3 rounded-2xl transition-all active:scale-90 font-sans font-sans"><LucideIcon name="log-out" size={24}/></button>
                         </div>
                     </aside>
-                    <main className="flex-1 md:ml-72 p-12 font-sans"><div className="max-w-[1600px] mx-auto font-sans">{renderContent()}</div></main>
+                    <main className="flex-1 md:ml-72 p-12 font-sans font-sans font-sans font-sans font-sans font-sans font-sans"><div className="max-w-[1600px] mx-auto font-sans font-sans font-sans font-sans font-sans">{renderContent()}</div></main>
                 </div>
             );
         }
